@@ -1,0 +1,12 @@
+﻿namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Remainder
+{
+    public class CreateReminderResponseDTO
+    {
+        public int ReminderId { get; set; }
+        public int UserId { get; set; }
+        public int? EventId { get; set; }
+        public string ReminderTitle { get; set; } = string.Empty;
+        public DateTime ReminderDateTime { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

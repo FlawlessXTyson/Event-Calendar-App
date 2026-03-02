@@ -1,0 +1,59 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Note;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize] // Login required
+public class NoteController : ControllerBase
+{
+    private readonly INoteService _service;
+
+    public NoteController(INoteService service)
+    {
+        _service = service;
+    }
+
+    // =========================================
+    // CREATE NOTE (Logged-in User Only)
+    // =========================================
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateNoteRequestDTO dto)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        dto.UserId = userId; // Override any fake userId
+
+        return Ok(await _service.CreateAsync(dto));
+    }
+
+    // =========================================
+    // GET MY NOTES
+    // =========================================
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMyNotes()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        return Ok(await _service.GetByUserAsync(userId));
+    }
+
+    // =========================================
+    // DELETE MY NOTE
+    // =========================================
+    [HttpDelete("{noteId}")]
+    public async Task<IActionResult> Delete(int noteId)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var notes = await _service.GetByUserAsync(userId);
+
+        if (!notes.Any(n => n.NoteId == noteId))
+            return Forbid("You can delete only your own notes.");
+
+        await _service.DeleteAsync(noteId);
+
+        return NoContent();
+    }
+}
