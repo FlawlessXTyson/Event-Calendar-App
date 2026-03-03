@@ -2,8 +2,7 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.User;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
-using System.Security.Cryptography;
-using System.Text;
+using BCrypt.Net;
 
 namespace EventCalenderApi.Services
 {
@@ -16,7 +15,9 @@ namespace EventCalenderApi.Services
             _userRepository = userRepository;
         }
 
-        // CREATE USER
+        // =========================================
+        // CREATE USER (Admin Manual Creation)
+        // =========================================
         public async Task<CreateUserResponseDTO> CreateUserAsync(CreateUserRequestDTO request)
         {
             var users = await _userRepository.GetAllAsync();
@@ -24,14 +25,17 @@ namespace EventCalenderApi.Services
             if (users.Any(u => u.Email == request.Email))
                 throw new Exception("User with this email already exists.");
 
+            // 🔥 Use BCrypt (same as AuthenticationService)
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
             var user = new User
             {
                 Name = request.Name,
                 Email = request.Email,
-                PasswordHash = HashPassword(request.Password),
+                PasswordHash = passwordHash,
                 Role = request.Role,
                 Status = AccountStatus.ACTIVE,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             var createdUser = await _userRepository.AddAsync(user);
@@ -39,7 +43,9 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(createdUser);
         }
 
-        // GET BY ID
+        // =========================================
+        // GET USER BY ID
+        // =========================================
         public async Task<CreateUserResponseDTO?> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
@@ -50,7 +56,9 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(user);
         }
 
-        // GET ALL
+        // =========================================
+        // GET ALL USERS (Admin)
+        // =========================================
         public async Task<IEnumerable<CreateUserResponseDTO>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();
@@ -58,7 +66,9 @@ namespace EventCalenderApi.Services
             return users.Select(u => MapToResponseDTO(u));
         }
 
-        // UPDATE
+        // =========================================
+        // UPDATE USER
+        // =========================================
         public async Task<CreateUserResponseDTO?> UpdateUserAsync(int userId, UpdateUserRequestDTO request)
         {
             var existingUser = await _userRepository.GetByIdAsync(userId);
@@ -79,7 +89,9 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(updatedUser);
         }
 
-        // DELETE
+        // =========================================
+        // DELETE USER
+        // =========================================
         public async Task<bool> DeleteUserAsync(int userId)
         {
             var deletedUser = await _userRepository.DeleteAsync(userId);
@@ -87,16 +99,9 @@ namespace EventCalenderApi.Services
             return deletedUser != null;
         }
 
-        // PASSWORD HASHING
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
-        }
-
+        // =========================================
         // ENTITY TO DTO
+        // =========================================
         private CreateUserResponseDTO MapToResponseDTO(User user)
         {
             return new CreateUserResponseDTO

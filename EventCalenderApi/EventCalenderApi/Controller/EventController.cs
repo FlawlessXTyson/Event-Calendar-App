@@ -101,7 +101,7 @@ namespace EventCalenderApi.Controllers
         }
         [HttpGet("paged")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 5)
         {
             return Ok(await _service.GetPagedAsync(pageNumber, pageSize));
         }

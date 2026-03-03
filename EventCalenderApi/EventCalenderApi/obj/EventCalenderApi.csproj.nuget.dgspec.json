@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\yogesh j\\C#\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj": {}
+    "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj": {}
   },
   "projects": {
-    "C:\\yogesh j\\C#\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj": {
+    "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\yogesh j\\C#\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
+        "projectUniqueName": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
         "projectName": "EventCalenderApi",
-        "projectPath": "C:\\yogesh j\\C#\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
+        "projectPath": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
         "packagesPath": "C:\\Users\\Yogesh.J\\.nuget\\packages\\",
-        "outputPath": "C:\\yogesh j\\C#\\EventCalenderApi\\EventCalenderApi\\obj\\",
+        "outputPath": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

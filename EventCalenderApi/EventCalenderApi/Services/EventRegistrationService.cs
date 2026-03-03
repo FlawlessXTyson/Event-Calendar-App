@@ -31,11 +31,23 @@ namespace EventCalenderApi.Services
             if (ev.ApprovalStatus != ApprovalStatus.APPROVED)
                 throw new Exception("Event is not approved.");
 
+            // 🔥 CHECK DUPLICATE REGISTRATION
+            var allRegistrations = await _registrationRepo.GetAllAsync();
+
+            var existingRegistration = allRegistrations
+                .FirstOrDefault(r =>
+                    r.EventId == dto.EventId &&
+                    r.UserId == dto.UserId &&
+                    r.Status != RegistrationStatus.CANCELLED);
+
+            if (existingRegistration != null)
+                throw new Exception("You are already registered for this event.");
+
             var registration = new EventRegistration
             {
                 EventId = dto.EventId,
                 UserId = dto.UserId,
-                RegisteredAt = DateTime.Now,
+                RegisteredAt = DateTime.UtcNow,
                 Status = RegistrationStatus.REGISTERED
             };
 
@@ -59,7 +71,7 @@ namespace EventCalenderApi.Services
 
             // USER can cancel only own registration
             if (role == "USER" && registration.UserId != userId)
-                return null;
+                throw new Exception("You can cancel only your own registration.");
 
             registration.Status = RegistrationStatus.CANCELLED;
 
