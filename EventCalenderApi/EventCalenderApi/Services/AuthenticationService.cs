@@ -5,6 +5,7 @@ using BCrypt.Net;
 using EventCalenderApi.EventCalenderAppDataLibrary;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
+using EventCalenderApi.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -24,12 +25,12 @@ namespace EventCalenderApi.Services
         }
 
         // ==============================
-        // REGISTER (Returns LoginResponseDTO)
+        // REGISTER
         // ==============================
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-                throw new Exception("Email already registered.");
+                throw new BadRequestException("Email already registered.");
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
@@ -58,13 +59,13 @@ namespace EventCalenderApi.Services
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if (user == null)
-                throw new Exception("Invalid email or password.");
+                throw new UnauthorizedException("Invalid email or password.");
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                throw new Exception("Invalid email or password.");
+                throw new UnauthorizedException("Invalid email or password.");
 
             if (user.Status != AccountStatus.ACTIVE)
-                throw new Exception("Account is not active.");
+                throw new UnauthorizedException("Account is not active.");
 
             return GenerateTokenResponse(user);
         }

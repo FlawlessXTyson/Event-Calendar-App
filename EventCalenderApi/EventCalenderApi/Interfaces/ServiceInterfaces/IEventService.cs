@@ -15,8 +15,13 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<EventResponseDTO?> ApproveAsync(int eventId, int adminId);
 
         Task<EventResponseDTO?> RejectAsync(int eventId, int adminId);
+
+        Task<EventResponseDTO?> CancelEventAsync(int eventId);
+
         Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword);
+
         Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end);
+
         Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize);
     }
 }

@@ -2,7 +2,7 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.User;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
-using BCrypt.Net;
+using EventCalenderApi.Exceptions;
 
 namespace EventCalenderApi.Services
 {
@@ -23,9 +23,8 @@ namespace EventCalenderApi.Services
             var users = await _userRepository.GetAllAsync();
 
             if (users.Any(u => u.Email == request.Email))
-                throw new Exception("User with this email already exists.");
+                throw new BadRequestException("User with this email already exists.");
 
-            // 🔥 Use BCrypt (same as AuthenticationService)
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User
@@ -46,12 +45,12 @@ namespace EventCalenderApi.Services
         // =========================================
         // GET USER BY ID
         // =========================================
-        public async Task<CreateUserResponseDTO?> GetUserByIdAsync(int userId)
+        public async Task<CreateUserResponseDTO> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
 
             if (user == null)
-                return null;
+                throw new NotFoundException("User not found.");
 
             return MapToResponseDTO(user);
         }
@@ -69,12 +68,12 @@ namespace EventCalenderApi.Services
         // =========================================
         // UPDATE USER
         // =========================================
-        public async Task<CreateUserResponseDTO?> UpdateUserAsync(int userId, UpdateUserRequestDTO request)
+        public async Task<CreateUserResponseDTO> UpdateUserAsync(int userId, UpdateUserRequestDTO request)
         {
             var existingUser = await _userRepository.GetByIdAsync(userId);
 
             if (existingUser == null)
-                return null;
+                throw new NotFoundException("User not found.");
 
             existingUser.Name = request.Name ?? existingUser.Name;
             existingUser.Email = request.Email ?? existingUser.Email;
@@ -83,10 +82,7 @@ namespace EventCalenderApi.Services
 
             var updatedUser = await _userRepository.UpdateAsync(userId, existingUser);
 
-            if (updatedUser == null)
-                return null;
-
-            return MapToResponseDTO(updatedUser);
+            return MapToResponseDTO(updatedUser!);
         }
 
         // =========================================
@@ -96,7 +92,10 @@ namespace EventCalenderApi.Services
         {
             var deletedUser = await _userRepository.DeleteAsync(userId);
 
-            return deletedUser != null;
+            if (deletedUser == null)
+                throw new NotFoundException("User not found.");
+
+            return true;
         }
 
         // =========================================

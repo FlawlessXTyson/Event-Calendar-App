@@ -19,6 +19,9 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public EventCategory Category { get; set; } = EventCategory.PUBLIC;
         public EventVisibility Visibility { get; set; } = EventVisibility.PUBLIC;
 
+        // EVENT STATUS 
+        public EventStatus Status { get; set; } = EventStatus.ACTIVE;
+
         // Creator (Organizer/Admin/User)
         public int CreatedByUserId { get; set; }
         public User? CreatedBy { get; set; }
@@ -39,6 +42,8 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public bool IsPaidEvent { get; set; } = false;
         public float TicketPrice { get; set; } = 0;
         public float CommissionPercentage { get; set; } = 10; // default 10%
+
+        // 
 
         // Navigation
         public List<EventRegistration> Registrations { get; set; } = new();

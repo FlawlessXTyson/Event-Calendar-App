@@ -4,6 +4,7 @@ using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Commission;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
+using EventCalenderApi.Exceptions;
 
 namespace EventCalenderApi.Services
 {
@@ -25,7 +26,7 @@ namespace EventCalenderApi.Services
                 .FirstOrDefaultAsync(e => e.EventId == request.EventId);
 
             if (eventEntity == null)
-                throw new Exception("Event not found.");
+                throw new NotFoundException("Event not found.");
 
             var existingPayment = await _context.Payments
                 .FirstOrDefaultAsync(p =>
@@ -34,11 +35,11 @@ namespace EventCalenderApi.Services
                     p.Status == PaymentStatus.SUCCESS);
 
             if (existingPayment != null)
-                throw new Exception("You already paid for this event.");
+                throw new BadRequestException("You already paid for this event.");
 
             float price = eventEntity.TicketPrice;
 
-            float commission = price /10;
+            float commission = price / 10;
 
             float organizerAmount = price - commission;
 
@@ -121,10 +122,10 @@ namespace EventCalenderApi.Services
                 .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
 
             if (payment == null)
-                return null;
+                throw new NotFoundException("Payment not found.");
 
             if (payment.Status == PaymentStatus.REFUNDED)
-                throw new Exception("Already refunded.");
+                throw new BadRequestException("Payment already refunded.");
 
             payment.Status = PaymentStatus.REFUNDED;
 

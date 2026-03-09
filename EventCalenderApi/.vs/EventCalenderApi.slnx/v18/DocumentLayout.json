@@ -3,36 +3,40 @@
   "WorkspaceRootPath": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\paymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\paymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\controller\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\noteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\noteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\eventservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\eventservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\services\\authenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\authenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\controller\\eventcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\eventcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\controller\\eventregistrationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\eventregistrationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\middlewares\\exceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\middlewares\\exceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\yogesh j\\github\\event-calendar-app\\eventcalenderapi\\eventcalenderapi\\interfaces\\serviceinterfaces\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\interfaces\\serviceinterfaces\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -42,7 +46,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,100 +62,112 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "NoteService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\NoteService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\NoteService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\NoteService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Services\\NoteService.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-08T07:41:39.266Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ExceptionMiddleware.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\MiddleWares\\ExceptionMiddleware.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\MiddleWares\\ExceptionMiddleware.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\MiddleWares\\ExceptionMiddleware.cs",
+              "RelativeToolTip": "EventCalenderApi\\MiddleWares\\ExceptionMiddleware.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-08T07:39:45.444Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "IUserService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Interfaces\\ServiceInterfaces\\IUserService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Interfaces\\ServiceInterfaces\\IUserService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Interfaces\\ServiceInterfaces\\IUserService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Interfaces\\ServiceInterfaces\\IUserService.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-08T07:38:49.902Z"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "EventRegistrationService.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventRegistrationService.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\EventRegistrationService.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventRegistrationService.cs",
-              "RelativeToolTip": "EventCalenderApi\\Services\\EventRegistrationService.cs",
-              "ViewState": "AgIAADwAAAAAAAAAAAAYwG0AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T07:24:08.033Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "AuthenticationService.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\AuthenticationService.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\AuthenticationService.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\AuthenticationService.cs",
-              "RelativeToolTip": "EventCalenderApi\\Services\\AuthenticationService.cs",
-              "ViewState": "AgIAAGAAAAAAAAAAAAAYwHoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T06:53:13.182Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "UserController.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\UserController.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\UserController.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\UserController.cs",
-              "RelativeToolTip": "EventCalenderApi\\Controller\\UserController.cs",
-              "ViewState": "AgIAAEAAAAAAAAAAAAAQwFkAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T06:52:42.36Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
               "Title": "UserService.cs",
               "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\UserService.cs",
               "RelativeDocumentMoniker": "EventCalenderApi\\Services\\UserService.cs",
               "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\UserService.cs",
               "RelativeToolTip": "EventCalenderApi\\Services\\UserService.cs",
-              "ViewState": "AgIAAFsAAAAAAAAAAAAYwHUAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAADgAAAAAAAAAAAAgwHQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T06:52:11.472Z"
+              "WhenOpened": "2026-03-08T07:36:09.129Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "EventRegistrationController.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\EventRegistrationController.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\EventRegistrationController.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\EventRegistrationController.cs",
-              "RelativeToolTip": "EventCalenderApi\\Controller\\EventRegistrationController.cs",
-              "ViewState": "AgIAADsAAAAAAAAAAAAgwAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "PaymentService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\PaymentService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\PaymentService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\PaymentService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Services\\PaymentService.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwJ8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T01:24:19.547Z"
+              "WhenOpened": "2026-03-08T07:35:13.629Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "EventRegistrationService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventRegistrationService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\EventRegistrationService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventRegistrationService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Services\\EventRegistrationService.cs",
+              "ViewState": "AgIAACYAAAAAAAAAAAAmwHgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-08T07:34:27.287Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "EventService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\EventService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\EventService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Services\\EventService.cs",
+              "ViewState": "AgIAAI0AAAAAAAAAAAAcwOkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-08T07:33:38.026Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "EventController.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\EventController.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\EventController.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\EventController.cs",
-              "RelativeToolTip": "EventCalenderApi\\Controller\\EventController.cs",
-              "ViewState": "AgIAAFgAAAAAAAAAAAAwwGcAAABWAAAAAAAAAA==",
+              "Title": "AuthenticationService.cs",
+              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\AuthenticationService.cs",
+              "RelativeDocumentMoniker": "EventCalenderApi\\Services\\AuthenticationService.cs",
+              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Services\\AuthenticationService.cs",
+              "RelativeToolTip": "EventCalenderApi\\Services\\AuthenticationService.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAAgwHsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-03T01:24:13.919Z"
+              "WhenOpened": "2026-03-08T07:31:58.286Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 6,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Program.cs",
               "RelativeDocumentMoniker": "EventCalenderApi\\Program.cs",
               "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Program.cs",
               "RelativeToolTip": "EventCalenderApi\\Program.cs",
-              "ViewState": "AgIAAGkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAI4AAAAAAAAAAAAAAI4AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-02T08:49:14.571Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AuthenticationController.cs",
-              "DocumentMoniker": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\AuthenticationController.cs",
-              "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\AuthenticationController.cs",
-              "ToolTip": "C:\\yogesh j\\Github\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\Controller\\AuthenticationController.cs",
-              "RelativeToolTip": "EventCalenderApi\\Controller\\AuthenticationController.cs",
-              "ViewState": "AgIAACMAAAAAAAAAAAAYwDUAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-02T08:09:34.183Z"
+              "WhenOpened": "2026-03-08T07:30:57.418Z"
             }
           ]
         }

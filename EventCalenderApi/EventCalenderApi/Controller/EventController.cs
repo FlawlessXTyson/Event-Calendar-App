@@ -8,7 +8,7 @@ namespace EventCalenderApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // All endpoints require login
+    [Authorize] // All endpoints require login by default
     public class EventController : ControllerBase
     {
         private readonly IEventService _service;
@@ -25,28 +25,34 @@ namespace EventCalenderApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateEventRequestDTO dto)
         {
-            return Ok(await _service.CreateEventAsync(dto));
+            var result = await _service.CreateEventAsync(dto);
+            return Ok(result);
         }
 
         // =====================================
-        // GET ALL EVENTS (Any Logged User)
+        // GET ALL EVENTS (Public)
         // =====================================
         [HttpGet]
-        [AllowAnonymous] // Optional: Allow public viewing
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _service.GetAllAsync());
+            var result = await _service.GetAllAsync();
+            return Ok(result);
         }
 
         // =====================================
-        // GET BY ID
+        // GET EVENT BY ID
         // =====================================
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> Get(int id)
         {
             var result = await _service.GetByIdAsync(id);
-            return result == null ? NotFound() : Ok(result);
+
+            if (result == null)
+                return NotFound("Event not found");
+
+            return Ok(result);
         }
 
         // =====================================
@@ -57,7 +63,11 @@ namespace EventCalenderApi.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _service.DeleteAsync(id);
-            return result == null ? NotFound() : Ok(result);
+
+            if (result == null)
+                return NotFound("Event not found");
+
+            return Ok(result);
         }
 
         // =====================================
@@ -71,7 +81,10 @@ namespace EventCalenderApi.Controllers
 
             var result = await _service.ApproveAsync(id, adminId);
 
-            return result == null ? NotFound() : Ok(result);
+            if (result == null)
+                return NotFound("Event not found");
+
+            return Ok(result);
         }
 
         // =====================================
@@ -85,25 +98,58 @@ namespace EventCalenderApi.Controllers
 
             var result = await _service.RejectAsync(id, adminId);
 
-            return result == null ? NotFound() : Ok(result);
+            if (result == null)
+                return NotFound("Event not found");
+
+            return Ok(result);
         }
+
+        // =====================================
+        // CANCEL EVENT (Admin Only)
+        // =====================================
+        [Authorize(Roles = "ADMIN")]
+        [HttpPut("{id}/cancel")]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            var result = await _service.CancelEventAsync(id);
+
+            if (result == null)
+                return NotFound("Event not found");
+
+            return Ok(result);
+        }
+
+        // =====================================
+        // SEARCH EVENTS
+        // =====================================
         [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
         {
-            return Ok(await _service.SearchAsync(keyword));
+            var result = await _service.SearchAsync(keyword);
+            return Ok(result);
         }
+
+        // =====================================
+        // GET EVENTS BY DATE RANGE
+        // =====================================
         [HttpGet("range")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByDateRange(DateTime start, DateTime end)
         {
-            return Ok(await _service.GetByDateRangeAsync(start, end));
+            var result = await _service.GetByDateRangeAsync(start, end);
+            return Ok(result);
         }
+
+        // =====================================
+        // PAGINATION
+        // =====================================
         [HttpGet("paged")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 5)
         {
-            return Ok(await _service.GetPagedAsync(pageNumber, pageSize));
+            var result = await _service.GetPagedAsync(pageNumber, pageSize);
+            return Ok(result);
         }
     }
 }

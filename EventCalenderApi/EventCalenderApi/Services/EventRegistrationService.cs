@@ -1,5 +1,6 @@
 ﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.EventRegisration;
+using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 
@@ -18,20 +19,29 @@ namespace EventCalenderApi.Services
             _eventRepo = eventRepo;
         }
 
-        // ============================
-        // REGISTER
-        // ============================
+        // =========================================
+        // REGISTER FOR EVENT
+        // =========================================
         public async Task<EventRegistrationResponseDTO> RegisterAsync(EventRegisterationRequestDTO dto)
         {
             var ev = await _eventRepo.GetByIdAsync(dto.EventId);
 
             if (ev == null)
-                throw new Exception("Event not found.");
+                throw new NotFoundException("Event not found.");
 
+            // Event not approved
             if (ev.ApprovalStatus != ApprovalStatus.APPROVED)
-                throw new Exception("Event is not approved.");
+                throw new BadRequestException("Event is not approved.");
 
-            // 🔥 CHECK DUPLICATE REGISTRATION
+            // Event cancelled
+            if (ev.Status == EventStatus.CANCELLED)
+                throw new BadRequestException("This event has been cancelled.");
+
+            // Event completed
+            if (ev.Status == EventStatus.COMPLETED)
+                throw new BadRequestException("This event has already been completed.");
+
+            // Duplicate registration check
             var allRegistrations = await _registrationRepo.GetAllAsync();
 
             var existingRegistration = allRegistrations
@@ -41,8 +51,9 @@ namespace EventCalenderApi.Services
                     r.Status != RegistrationStatus.CANCELLED);
 
             if (existingRegistration != null)
-                throw new Exception("You are already registered for this event.");
+                throw new BadRequestException("You are already registered for this event.");
 
+            // Create registration
             var registration = new EventRegistration
             {
                 EventId = dto.EventId,
@@ -56,9 +67,9 @@ namespace EventCalenderApi.Services
             return MapToDTO(created);
         }
 
-        // ============================
-        // CANCEL
-        // ============================
+        // =========================================
+        // CANCEL REGISTRATION
+        // =========================================
         public async Task<EventRegistrationResponseDTO?> CancelAsync(
             int registrationId,
             int userId,
@@ -67,11 +78,11 @@ namespace EventCalenderApi.Services
             var registration = await _registrationRepo.GetByIdAsync(registrationId);
 
             if (registration == null)
-                return null;
+                throw new NotFoundException("Registration not found.");
 
             // USER can cancel only own registration
             if (role == "USER" && registration.UserId != userId)
-                throw new Exception("You can cancel only your own registration.");
+                throw new UnauthorizedException("You can cancel only your own registration.");
 
             registration.Status = RegistrationStatus.CANCELLED;
 
@@ -80,9 +91,9 @@ namespace EventCalenderApi.Services
             return MapToDTO(updated!);
         }
 
-        // ============================
-        // GET BY EVENT
-        // ============================
+        // =========================================
+        // GET REGISTRATIONS BY EVENT
+        // =========================================
         public async Task<IEnumerable<EventRegistrationResponseDTO>> GetByEventAsync(int eventId)
         {
             var all = await _registrationRepo.GetAllAsync();
@@ -92,9 +103,9 @@ namespace EventCalenderApi.Services
                 .Select(MapToDTO);
         }
 
-        // ============================
+        // =========================================
         // MAPPING
-        // ============================
+        // =========================================
         private EventRegistrationResponseDTO MapToDTO(EventRegistration registration)
         {
             return new EventRegistrationResponseDTO
