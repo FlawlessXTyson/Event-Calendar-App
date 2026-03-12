@@ -16,9 +16,7 @@ namespace EventCalenderApi.Controllers
             _authenticationService = authenticationService;
         }
 
-        // =========================================
-        // REGISTER
-        // =========================================
+        //register
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
         {
@@ -37,9 +35,7 @@ namespace EventCalenderApi.Controllers
             }
         }
 
-        // =========================================
-        // LOGIN
-        // =========================================
+        //login 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
         {

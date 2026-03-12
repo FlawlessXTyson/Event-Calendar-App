@@ -60,9 +60,7 @@ namespace EventCalenderApi.Services
             return MapToDTO(created);
         }
 
-        // ======================================
-        // GET ALL EVENTS
-        // ======================================
+        //get all events
         public async Task<IEnumerable<EventResponseDTO>> GetAllAsync()
         {
             var events = await _eventRepo.GetAllAsync();
@@ -72,9 +70,8 @@ namespace EventCalenderApi.Services
                 .Select(MapToDTO);
         }
 
-        // ======================================
-        // GET EVENT BY ID
-        // ======================================
+
+        //get event by the id
         public async Task<EventResponseDTO?> GetByIdAsync(int id)
         {
             var ev = await _eventRepo.GetByIdAsync(id);
@@ -84,10 +81,8 @@ namespace EventCalenderApi.Services
 
             return MapToDTO(ev);
         }
-
-        // ======================================
-        // DELETE EVENT
-        // ======================================
+        
+        //delete event 
         public async Task<EventResponseDTO?> DeleteAsync(int id)
         {
             var registrations = await _registrationRepo.GetAllAsync();

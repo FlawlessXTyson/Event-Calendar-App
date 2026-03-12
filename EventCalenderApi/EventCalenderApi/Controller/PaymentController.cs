@@ -18,9 +18,8 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        // =========================================
-        // CREATE PAYMENT
-        // =========================================
+
+        //create payment
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PaymentRequestDTO request)
         {
@@ -31,9 +30,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // GET MY PAYMENTS
-        // =========================================
+
+        //get my payments
         [HttpGet("my-payments")]
         public async Task<IActionResult> GetMyPayments()
         {
@@ -42,18 +40,16 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByUserAsync(userId));
         }
 
-        // =========================================
-        // GET PAYMENTS BY EVENT
-        // =========================================
+
+        //get payemnts by event (only org and admin)
         [HttpGet("event/{eventId}")]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
             return Ok(await _service.GetByEventAsync(eventId));
         }
 
-        // =========================================
-        // REFUND
-        // =========================================
+
+        //refund payment
         [HttpPut("{paymentId}/refund")]
         public async Task<IActionResult> Refund(int paymentId)
         {
@@ -65,9 +61,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // COMMISSION SUMMARY
-        // =========================================
+
+        //commision summary (for admin)
         [Authorize(Roles = "ADMIN")]
         [HttpGet("commission-summary")]
         public async Task<IActionResult> GetCommissionSummary()

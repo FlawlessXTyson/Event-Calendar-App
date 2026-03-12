@@ -15,9 +15,7 @@ namespace EventCalenderApi.Services
             _userRepository = userRepository;
         }
 
-        // =========================================
-        // CREATE USER (Admin Manual Creation)
-        // =========================================
+        //create user manually
         public async Task<CreateUserResponseDTO> CreateUserAsync(CreateUserRequestDTO request)
         {
             var users = await _userRepository.GetAllAsync();
@@ -42,9 +40,8 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(createdUser);
         }
 
-        // =========================================
-        // GET USER BY ID
-        // =========================================
+
+        //get user by the id
         public async Task<CreateUserResponseDTO> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
@@ -55,9 +52,8 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(user);
         }
 
-        // =========================================
-        // GET ALL USERS (Admin)
-        // =========================================
+
+        // gett all users for an admin dashboard
         public async Task<IEnumerable<CreateUserResponseDTO>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();
@@ -65,9 +61,7 @@ namespace EventCalenderApi.Services
             return users.Select(u => MapToResponseDTO(u));
         }
 
-        // =========================================
-        // UPDATE USER
-        // =========================================
+        //update user
         public async Task<CreateUserResponseDTO> UpdateUserAsync(int userId, UpdateUserRequestDTO request)
         {
             var existingUser = await _userRepository.GetByIdAsync(userId);
@@ -85,9 +79,7 @@ namespace EventCalenderApi.Services
             return MapToResponseDTO(updatedUser!);
         }
 
-        // =========================================
-        // DELETE USER
-        // =========================================
+        //delete userrr
         public async Task<bool> DeleteUserAsync(int userId)
         {
             var deletedUser = await _userRepository.DeleteAsync(userId);
@@ -98,9 +90,7 @@ namespace EventCalenderApi.Services
             return true;
         }
 
-        // =========================================
-        // ENTITY TO DTO
-        // =========================================
+        //entity to DTO mapping
         private CreateUserResponseDTO MapToResponseDTO(User user)
         {
             return new CreateUserResponseDTO

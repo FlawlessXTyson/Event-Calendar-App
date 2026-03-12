@@ -15,9 +15,8 @@ public class NoteController : ControllerBase
         _service = service;
     }
 
-    // =========================================
-    // CREATE NOTE (Logged-in User Only)
-    // =========================================
+
+    //create note ~~ loggedin user only 
     [HttpPost]
     public async Task<IActionResult> Create(CreateNoteRequestDTO dto)
     {
@@ -28,9 +27,8 @@ public class NoteController : ControllerBase
         return Ok(await _service.CreateAsync(dto));
     }
 
-    // =========================================
-    // GET MY NOTES
-    // =========================================
+
+    //get my notes
     [HttpGet("me")]
     public async Task<IActionResult> GetMyNotes()
     {
@@ -39,9 +37,8 @@ public class NoteController : ControllerBase
         return Ok(await _service.GetByUserAsync(userId));
     }
 
-    // =========================================
-    // DELETE MY NOTE
-    // =========================================
+
+    //delete my note
     [HttpDelete("{noteId}")]
     public async Task<IActionResult> Delete(int noteId)
     {

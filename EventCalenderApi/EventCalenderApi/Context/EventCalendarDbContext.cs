@@ -23,9 +23,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
         {
             base.OnModelCreating(modelBuilder);
 
-            // ===============================
-            // PRIMARY KEYS
-            // ===============================
+
+            // primary keys
 
             // User
             modelBuilder.Entity<User>()
@@ -55,9 +54,7 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
             modelBuilder.Entity<Todo>()
                 .HasKey(t => t.TodoId);
 
-            // ===============================
-            // EVENT RELATIONSHIPS
-            // ===============================
+            //relaionships btw themm
 
             // Event → CreatedBy (User)
             modelBuilder.Entity<Event>()
@@ -73,9 +70,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(e => e.ApprovedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ===============================
-            // EVENT REGISTRATION
-            // ===============================
+
+            //event registration relationships
 
             // Registration → User
             modelBuilder.Entity<EventRegistration>()
@@ -91,9 +87,7 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(r => r.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ===============================
-            // PAYMENT RELATIONSHIPS
-            // ===============================
+            //payment relationships
 
             // Payment → User
             modelBuilder.Entity<Payment>()
@@ -109,9 +103,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(p => p.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ===============================
-            // NOTES
-            // ===============================
+
+            //notes
 
             modelBuilder.Entity<Note>()
                 .HasOne(n => n.User)
@@ -119,9 +112,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ===============================
-            // REMINDERS
-            // ===============================
+
+            //reminders
 
             modelBuilder.Entity<Reminder>()
                 .HasOne(r => r.User)
@@ -129,9 +121,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ===============================
-            // TODOS
-            // ===============================
+
+            //todos
 
             modelBuilder.Entity<Todo>()
                 .HasOne(t => t.User)

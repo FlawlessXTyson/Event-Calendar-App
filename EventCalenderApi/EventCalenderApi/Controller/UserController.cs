@@ -18,9 +18,7 @@ namespace EventCalenderApi.Controllers
             _userService = userService;
         }
 
-        // =========================================
-        // CREATE USER (Admin Only)
-        // =========================================
+        //create user (admin nly)
         [Authorize(Roles = "ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateUserRequestDTO request)
@@ -29,9 +27,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // GET MY PROFILE
-        // =========================================
+
+        //get my profile
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
@@ -45,9 +42,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // GET ALL USERS (Admin Only)
-        // =========================================
+        //get all users (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -56,9 +51,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // UPDATE MY PROFILE
-        // =========================================
+
+        //update my profile
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMyProfile(UpdateUserRequestDTO request)
         {
@@ -72,9 +66,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =========================================
-        // DELETE USER (Admin Only)
-        // =========================================
+
+        //delete user (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)

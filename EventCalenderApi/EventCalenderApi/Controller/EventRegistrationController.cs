@@ -18,9 +18,7 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        // ============================
-        // REGISTER FOR EVENT (USER)
-        // ============================
+        //register for event (only user can register for themselves)
         [Authorize(Roles = "USER")]
         [HttpPost]
         public async Task<IActionResult> Register(EventRegisterationRequestDTO dto)
@@ -34,11 +32,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ============================
-        // CANCEL REGISTRATION
-        // USER → Own registration
-        // ADMIN → Any registration
-        // ============================
+
+        // cancel registrationn (only user can cancel their own registration r admin can cancel any registration)
         [Authorize(Roles = "USER,ADMIN")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
@@ -54,10 +49,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ============================
-        // VIEW REGISTRATIONS FOR EVENT
-        // ORGANIZER or ADMIN
-        // ============================
+
+        //view registrations for an event (only organizer and admin can view all registrations for their events)
         [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpGet("event/{eventId}")]
         public async Task<IActionResult> GetByEvent(int eventId)

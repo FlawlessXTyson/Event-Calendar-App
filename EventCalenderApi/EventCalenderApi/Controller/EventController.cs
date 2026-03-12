@@ -18,9 +18,7 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        // =====================================
-        // CREATE EVENT (Organizer or Admin)
-        // =====================================
+        //create event (Organizer and Admin only)
         [Authorize(Roles = "ORGANIZER,ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateEventRequestDTO dto)
@@ -29,9 +27,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // GET ALL EVENTS (Public)
-        // =====================================
+        // getall events (public)
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll()
@@ -40,9 +36,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // GET EVENT BY ID
-        // =====================================
+        // get event by id (public)
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> Get(int id)
@@ -55,9 +49,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // DELETE EVENT (Admin Only)
-        // =====================================
+
+        //delete thee event (Admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -70,9 +63,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // APPROVE EVENT (Admin Only)
-        // =====================================
+
+        // approve event (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> Approve(int id)
@@ -87,9 +79,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // REJECT EVENT (Admin Only)
-        // =====================================
+
+        // reject event (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/reject")]
         public async Task<IActionResult> Reject(int id)
@@ -104,9 +95,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // CANCEL EVENT (Admin Only)
-        // =====================================
+        //cancel event (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
@@ -119,9 +108,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // SEARCH EVENTS
-        // =====================================
+
+        //search events (public)
         [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
@@ -130,9 +118,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // GET EVENTS BY DATE RANGE
-        // =====================================
+        //get the events withinaa date range (public)
         [HttpGet("range")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByDateRange(DateTime start, DateTime end)
@@ -141,9 +127,8 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // =====================================
-        // PAGINATION
-        // =====================================
+
+        //pagination
         [HttpGet("paged")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 5)
