@@ -19,9 +19,8 @@ namespace EventCalenderApi.Services
             _eventRepo = eventRepo;
         }
 
-        // =========================================
-        // REGISTER FOR EVENT
-        // =========================================
+ 
+        //register for event
         public async Task<EventRegistrationResponseDTO> RegisterAsync(EventRegisterationRequestDTO dto)
         {
             var ev = await _eventRepo.GetByIdAsync(dto.EventId);

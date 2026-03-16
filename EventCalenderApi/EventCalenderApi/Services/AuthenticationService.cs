@@ -24,9 +24,8 @@ namespace EventCalenderApi.Services
             _configuration = configuration;
         }
 
-        // ==============================
-        // REGISTER
-        // ==============================
+
+        //register 
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
@@ -50,9 +49,8 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(user);
         }
 
-        // ==============================
-        // LOGIN
-        // ==============================
+
+        //login
         public async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
         {
             var user = await _context.Users
@@ -70,9 +68,8 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(user);
         }
 
-        // ==============================
-        // TOKEN GENERATION
-        // ==============================
+
+        //token generation
         private LoginResponseDTO GenerateTokenResponse(User user)
         {
             var jwtSection = _configuration.GetSection("Jwt");

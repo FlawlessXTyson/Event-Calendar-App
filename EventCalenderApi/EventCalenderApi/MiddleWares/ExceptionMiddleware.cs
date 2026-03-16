@@ -23,15 +23,15 @@ namespace EventCalenderApi.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.Message);// used to store the log int the logger 
 
-                context.Response.ContentType = "application/json";
+                context.Response.ContentType = "application/json";// we are setting the response type 
 
                 var statusCode = ex switch
                 {
-                    BadRequestException => StatusCodes.Status400BadRequest,
-                    NotFoundException => StatusCodes.Status404NotFound,
-                    UnauthorizedException => StatusCodes.Status401Unauthorized,
+                    BadRequestException => StatusCodes.Status400BadRequest,//400
+                    NotFoundException => StatusCodes.Status404NotFound,//404
+                    UnauthorizedException => StatusCodes.Status401Unauthorized,//401
                     _ => StatusCodes.Status500InternalServerError
                 };
 

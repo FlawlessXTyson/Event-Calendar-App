@@ -22,9 +22,8 @@ namespace EventCalenderApi.Services
             _registrationRepo = registrationRepo;
         }
 
-        // ======================================
-        // CREATE EVENT
-        // ======================================
+
+        //create eventcc
         public async Task<EventResponseDTO> CreateEventAsync(CreateEventRequestDTO dto)
         {
             var user = await _userRepo.GetByIdAsync(dto.CreatedByUserId);
@@ -98,9 +97,8 @@ namespace EventCalenderApi.Services
             return MapToDTO(deleted);
         }
 
-        // ======================================
-        // APPROVE EVENT
-        // ======================================
+
+        //approve event
         public async Task<EventResponseDTO?> ApproveAsync(int eventId, int adminId)
         {
             var ev = await _eventRepo.GetByIdAsync(eventId);
@@ -116,9 +114,8 @@ namespace EventCalenderApi.Services
             return MapToDTO(updated!);
         }
 
-        // ======================================
-        // REJECT EVENT
-        // ======================================
+
+        //reject event
         public async Task<EventResponseDTO?> RejectAsync(int eventId, int adminId)
         {
             var ev = await _eventRepo.GetByIdAsync(eventId);
@@ -134,9 +131,8 @@ namespace EventCalenderApi.Services
             return MapToDTO(updated!);
         }
 
-        // ======================================
-        // CANCEL EVENT
-        // ======================================
+
+        //cancel event
         public async Task<EventResponseDTO?> CancelEventAsync(int eventId)
         {
             var ev = await _eventRepo.GetByIdAsync(eventId);
@@ -151,9 +147,8 @@ namespace EventCalenderApi.Services
             return MapToDTO(updated!);
         }
 
-        // ======================================
-        // SEARCH EVENT
-        // ======================================
+
+        //serach event
         public async Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword)
         {
             var events = await _eventRepo.GetAllAsync();
@@ -164,9 +159,8 @@ namespace EventCalenderApi.Services
                 .Select(MapToDTO);
         }
 
-        // ======================================
-        // DATE RANGE
-        // ======================================
+ 
+        //date range
         public async Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end)
         {
             var events = await _eventRepo.GetAllAsync();
@@ -180,9 +174,8 @@ namespace EventCalenderApi.Services
                 .Select(MapToDTO);
         }
 
-        // ======================================
-        // PAGINATION
-        // ======================================
+
+        //pagination
         public async Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize)
         {
             var events = await _eventRepo.GetAllAsync();
@@ -206,9 +199,8 @@ namespace EventCalenderApi.Services
             };
         }
 
-        // ======================================
-        // DTO MAPPING
-        // ======================================
+
+        //dto mapping 
         private EventResponseDTO MapToDTO(Event ev)
         {
             return new EventResponseDTO

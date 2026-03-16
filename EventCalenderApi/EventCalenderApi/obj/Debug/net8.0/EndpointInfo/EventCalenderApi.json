@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "My API",
+    "title": "Event Calendar API",
     "version": "v1"
   },
   "paths": {

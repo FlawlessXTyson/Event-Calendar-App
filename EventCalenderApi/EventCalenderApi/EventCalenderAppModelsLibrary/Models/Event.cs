@@ -33,8 +33,8 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public User? ApprovedBy { get; set; }
 
         // Optional controls
-        public int? SeatsLimit { get; set; }
-        public DateTime? RegistrationDeadline { get; set; }
+        //public int? SeatsLimit { get; set; }
+        //public DateTime? RegistrationDeadline { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 

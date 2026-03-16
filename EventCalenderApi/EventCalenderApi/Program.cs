@@ -12,16 +12,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --------------------
-// Add Services
-// --------------------
+
+
+//addservices
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// --------------------
-// Swagger + JWT
-// --------------------
+
+//swagger +jwt
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -53,23 +52,21 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// --------------------
-// Database
-// --------------------
+
+
+//database
 
 builder.Services.AddDbContext<EventCalendarDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// --------------------
-// Repository
-// --------------------
+
+
+//repository
 
 builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
 
-// --------------------
-// Services
-// --------------------
+// ~services
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEventService, EventService>();
@@ -78,9 +75,9 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-// --------------------
-// JWT Authentication
-// --------------------
+
+
+//jwt authentication
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 
@@ -117,9 +114,10 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// --------------------
-// Swagger
-// --------------------
+
+
+
+//swagger
 
 if (app.Environment.IsDevelopment())
 {
@@ -127,9 +125,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// --------------------
-// Middleware Pipeline
-// --------------------
+
+//middleware pipelineeeeee
 
 app.UseHttpsRedirection();
 

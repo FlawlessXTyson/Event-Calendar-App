@@ -17,9 +17,8 @@ namespace EventCalenderApi.Services
             _context = context;
         }
 
-        // =========================================
-        // CREATE PAYMENT
-        // =========================================
+
+        //create payment
         public async Task<PaymentResponseDTO> CreatePaymentAsync(int userId, PaymentRequestDTO request)
         {
             var eventEntity = await _context.Events
@@ -77,9 +76,8 @@ namespace EventCalenderApi.Services
             };
         }
 
-        // =========================================
-        // GET PAYMENTS BY USER
-        // =========================================
+
+        //get payments buy user 
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
             return await _context.Payments
@@ -95,9 +93,8 @@ namespace EventCalenderApi.Services
                 .ToListAsync();
         }
 
-        // =========================================
-        // GET PAYMENTS BY EVENT
-        // =========================================
+
+        //get payments by event
         public async Task<IEnumerable<PaymentResponseDTO>> GetByEventAsync(int eventId)
         {
             return await _context.Payments
@@ -113,9 +110,8 @@ namespace EventCalenderApi.Services
                 .ToListAsync();
         }
 
-        // =========================================
-        // REFUND
-        // =========================================
+
+        //refundd
         public async Task<PaymentResponseDTO?> RefundAsync(int paymentId)
         {
             var payment = await _context.Payments
@@ -141,9 +137,8 @@ namespace EventCalenderApi.Services
             };
         }
 
-        // =========================================
-        // COMMISSION SUMMARY
-        // =========================================
+
+        //commission summary
         public async Task<CommissionSummaryDTO> GetCommissionSummaryAsync()
         {
             var successfulPayments = _context.Payments
