@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "aHfwjR0axiA=",
+  "dgSpecHash": "4no6mgRDAvA=",
   "success": true,
-  "projectFilePath": "C:\\EventCalenderApi\\Event-Calendar-App\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
+  "projectFilePath": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\EventCalenderApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Yogesh.J\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Yogesh.J\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

@@ -79,6 +79,20 @@ builder.Services.AddScoped<IReminderService, ReminderService>();
 builder.Services.AddScoped<ITodoService, TodoService>();
 
 
+//  CORS 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:4200")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
+
 //jwt authentication
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -132,7 +146,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseMiddleware<ExceptionMiddleware>();   // GLOBAL ERROR HANDLER
+app.UseCors("AllowAngular"); // 
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
