@@ -17,7 +17,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public string ReminderTitle { get; set; } = string.Empty;
         public DateTime ReminderDateTime { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int CompareTo(Reminder? other)
         {

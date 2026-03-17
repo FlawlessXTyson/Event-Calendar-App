@@ -14,7 +14,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public DateTime? DueDate { get; set; }
 
         public TodoStatus Status { get; set; } = TodoStatus.PENDING;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int CompareTo(Todo? other)
         {

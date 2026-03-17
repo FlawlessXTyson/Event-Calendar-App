@@ -65,12 +65,6 @@ namespace EventCalenderApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("RegistrationDeadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("SeatsLimit")
-                        .HasColumnType("int");
-
                     b.Property<TimeSpan?>("StartTime")
                         .HasColumnType("time");
 

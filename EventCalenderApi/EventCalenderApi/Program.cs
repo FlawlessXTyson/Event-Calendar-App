@@ -13,14 +13,13 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 
-
-//addservices
+//add services
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 
-//swagger +jwt
+//swagger + jwt
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -53,7 +52,6 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
-
 //database
 
 builder.Services.AddDbContext<EventCalendarDbContext>(options =>
@@ -61,12 +59,12 @@ builder.Services.AddDbContext<EventCalendarDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
-
 //repository
 
 builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
 
-// ~services
+
+//services
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEventService, EventService>();
@@ -75,6 +73,10 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
+//new services
+
+builder.Services.AddScoped<IReminderService, ReminderService>();
+builder.Services.AddScoped<ITodoService, TodoService>();
 
 
 //jwt authentication
@@ -103,6 +105,7 @@ builder.Services.AddAuthentication(options =>
 
         ValidIssuer = jwtIssuer,
         ValidAudience = jwtAudience,
+
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtKey)),
 
@@ -112,9 +115,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+
 var app = builder.Build();
-
-
 
 
 //swagger
@@ -126,7 +128,7 @@ if (app.Environment.IsDevelopment())
 }
 
 
-//middleware pipelineeeeee
+//middleware pipeline
 
 app.UseHttpsRedirection();
 

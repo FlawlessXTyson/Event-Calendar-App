@@ -27,18 +27,23 @@ namespace EventCalenderApi.Services
             if (eventEntity == null)
                 throw new NotFoundException("Event not found.");
 
-            var existingPayment = await _context.Payments
-                .FirstOrDefaultAsync(p =>
+            if (!eventEntity.IsPaidEvent)
+                throw new BadRequestException("This event does not require payment.");
+
+            //duplicate payment check
+            var alreadyPaid = await _context.Payments
+                .AnyAsync(p =>
                     p.UserId == userId &&
                     p.EventId == request.EventId &&
                     p.Status == PaymentStatus.SUCCESS);
 
-            if (existingPayment != null)
+            if (alreadyPaid)
                 throw new BadRequestException("You already paid for this event.");
 
             float price = eventEntity.TicketPrice;
 
-            float commission = price / 10;
+            //commission calculation
+            float commission = price * eventEntity.CommissionPercentage / 100;
 
             float organizerAmount = price - commission;
 
@@ -55,11 +60,13 @@ namespace EventCalenderApi.Services
 
             await _context.Payments.AddAsync(payment);
 
+            //create event registration automatically after payment
             var registration = new EventRegistration
             {
                 UserId = userId,
                 EventId = request.EventId,
-                RegisteredAt = DateTime.UtcNow
+                RegisteredAt = DateTime.UtcNow,
+                Status = RegistrationStatus.REGISTERED
             };
 
             await _context.EventRegistrations.AddAsync(registration);
@@ -77,7 +84,7 @@ namespace EventCalenderApi.Services
         }
 
 
-        //get payments buy user 
+        //get payments by user
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
             return await _context.Payments
@@ -111,7 +118,7 @@ namespace EventCalenderApi.Services
         }
 
 
-        //refundd
+        //refund payment
         public async Task<PaymentResponseDTO?> RefundAsync(int paymentId)
         {
             var payment = await _context.Payments

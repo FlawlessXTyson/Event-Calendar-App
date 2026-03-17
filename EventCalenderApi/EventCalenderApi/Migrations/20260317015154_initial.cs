@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EventCalenderApi.Migrations
 {
     /// <inheritdoc />
-    public partial class inital : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -47,8 +47,6 @@ namespace EventCalenderApi.Migrations
                     CreatedByUserId = table.Column<int>(type: "int", nullable: false),
                     ApprovalStatus = table.Column<int>(type: "int", nullable: false),
                     ApprovedByUserId = table.Column<int>(type: "int", nullable: true),
-                    SeatsLimit = table.Column<int>(type: "int", nullable: true),
-                    RegistrationDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsPaidEvent = table.Column<bool>(type: "bit", nullable: false),
                     TicketPrice = table.Column<float>(type: "real", nullable: false),

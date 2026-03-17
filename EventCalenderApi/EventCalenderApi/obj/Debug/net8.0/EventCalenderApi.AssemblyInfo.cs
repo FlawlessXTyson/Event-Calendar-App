@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EventCalenderApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7aed36ed47adc26d58f325f6d185b92b204ab197")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71646b661ad8cf187c61afedda2d17b3e234d1d9")]
 [assembly: System.Reflection.AssemblyProductAttribute("EventCalenderApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EventCalenderApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

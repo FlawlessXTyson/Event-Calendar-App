@@ -2,6 +2,7 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Note;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 public class NoteService : INoteService
 {
@@ -19,7 +20,7 @@ public class NoteService : INoteService
             UserId = dto.UserId,
             Title = dto.Title,
             Content = dto.Content,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
         };
 
         var created = await _repo.AddAsync(note);
@@ -36,18 +37,19 @@ public class NoteService : INoteService
 
     public async Task<IEnumerable<CreateNoteResponseDTO>> GetByUserAsync(int userId)
     {
-        var notes = await _repo.GetAllAsync();
-
-        return notes
+        var notes = await _repo
+            .GetQueryable()
             .Where(n => n.UserId == userId)
-            .Select(n => new CreateNoteResponseDTO
-            {
-                NoteId = n.NoteId,
-                UserId = n.UserId,
-                Title = n.Title,
-                Content = n.Content,
-                CreatedAt = n.CreatedAt
-            });
+            .ToListAsync();
+
+        return notes.Select(n => new CreateNoteResponseDTO
+        {
+            NoteId = n.NoteId,
+            UserId = n.UserId,
+            Title = n.Title,
+            Content = n.Content,
+            CreatedAt = n.CreatedAt
+        });
     }
 
     public async Task DeleteAsync(int noteId)

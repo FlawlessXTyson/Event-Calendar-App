@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCalenderApi.Migrations
 {
     [DbContext(typeof(EventCalendarDbContext))]
-    [Migration("20260312093312_inital")]
-    partial class inital
+    [Migration("20260317015154_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -67,12 +67,6 @@ namespace EventCalenderApi.Migrations
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RegistrationDeadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("SeatsLimit")
-                        .HasColumnType("int");
 
                     b.Property<TimeSpan?>("StartTime")
                         .HasColumnType("time");

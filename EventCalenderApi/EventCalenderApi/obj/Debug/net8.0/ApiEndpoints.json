@@ -244,7 +244,7 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "NoteController",
+    "ContainingType": "EventCalenderApi.Controllers.NoteController",
     "Method": "Create",
     "RelativePath": "api/Note",
     "HttpMethod": "POST",
@@ -260,7 +260,7 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "NoteController",
+    "ContainingType": "EventCalenderApi.Controllers.NoteController",
     "Method": "Delete",
     "RelativePath": "api/Note/{noteId}",
     "HttpMethod": "DELETE",
@@ -276,7 +276,7 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "NoteController",
+    "ContainingType": "EventCalenderApi.Controllers.NoteController",
     "Method": "GetMyNotes",
     "RelativePath": "api/Note/me",
     "HttpMethod": "GET",
@@ -347,6 +347,90 @@
     "ContainingType": "EventCalenderApi.Controllers.PaymentController",
     "Method": "GetMyPayments",
     "RelativePath": "api/Payment/my-payments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.ReminderController",
+    "Method": "Create",
+    "RelativePath": "api/Reminder",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Remainder.CreateReminderRequestDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.ReminderController",
+    "Method": "Delete",
+    "RelativePath": "api/Reminder/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.ReminderController",
+    "Method": "GetMyReminders",
+    "RelativePath": "api/Reminder/me",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.TodoController",
+    "Method": "Create",
+    "RelativePath": "api/Todo",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Todo.CreateTodoRequestDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.TodoController",
+    "Method": "Complete",
+    "RelativePath": "api/Todo/{id}/complete",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.TodoController",
+    "Method": "GetMyTodos",
+    "RelativePath": "api/Todo/me",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
