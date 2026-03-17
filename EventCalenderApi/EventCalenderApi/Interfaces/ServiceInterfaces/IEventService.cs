@@ -23,5 +23,6 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end);
 
         Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize);
+        Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId);
     }
 }

@@ -57,5 +57,16 @@ namespace EventCalenderApi.Controllers
         {
             return Ok(await _service.GetByEventAsync(eventId));
         }
+        //get my registered events
+        [HttpGet("my")]
+        public async Task<IActionResult> GetMyRegistrations()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _service.GetMyRegistrationsAsync(userId);
+
+            return Ok(result);
+        }
     }
+
 }

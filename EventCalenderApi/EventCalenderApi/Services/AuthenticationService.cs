@@ -1,7 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using BCrypt.Net;
 using EventCalenderApi.EventCalenderAppDataLibrary;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
@@ -24,8 +23,7 @@ namespace EventCalenderApi.Services
             _configuration = configuration;
         }
 
-
-        //register 
+        //register
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
@@ -49,7 +47,6 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(user);
         }
 
-
         //login
         public async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
         {
@@ -67,7 +64,6 @@ namespace EventCalenderApi.Services
 
             return GenerateTokenResponse(user);
         }
-
 
         //token generation
         private LoginResponseDTO GenerateTokenResponse(User user)
@@ -110,11 +106,12 @@ namespace EventCalenderApi.Services
 
             return new LoginResponseDTO
             {
-                Token = tokenString,
-                Expiration = expiry,
-                UserName = user.Name,
-                Email = user.Email,
-                Role = user.Role.ToString()
+                Token = tokenString
+
+                //Expiration = expiry,
+                //UserName = user.Name,
+                //Email = user.Email,
+                //Role = user.Role.ToString()
             };
         }
     }

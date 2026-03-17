@@ -304,6 +304,18 @@
         }
       }
     },
+    "/api/Event/my": {
+      "get": {
+        "tags": [
+          "Event"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/EventRegistration": {
       "post": {
         "tags": [
@@ -373,6 +385,18 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/EventRegistration/my": {
+      "get": {
+        "tags": [
+          "EventRegistration"
         ],
         "responses": {
           "200": {
@@ -876,10 +900,6 @@
       "CreateReminderRequestDTO": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "eventId": {
             "type": "integer",
             "format": "int32",
@@ -891,7 +911,13 @@
           },
           "reminderDateTime": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
+          },
+          "minutesBefore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false

@@ -2,9 +2,16 @@
 {
     public class CreateReminderRequestDTO
     {
-        public int UserId { get; set; }
+        //public int UserId { get; set; }   //removed
+
         public int? EventId { get; set; }
+
         public string ReminderTitle { get; set; } = string.Empty;
-        public DateTime ReminderDateTime { get; set; }
+
+        //manual
+        public DateTime? ReminderDateTime { get; set; }
+
+        //auto
+        public int? MinutesBefore { get; set; }
     }
 }

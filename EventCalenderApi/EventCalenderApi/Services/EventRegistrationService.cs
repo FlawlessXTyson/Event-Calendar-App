@@ -82,7 +82,16 @@ namespace EventCalenderApi.Services
 
             return registrations.Select(MapToDTO);
         }
+        //get my registrations
+        public async Task<IEnumerable<EventRegistrationResponseDTO>> GetMyRegistrationsAsync(int userId)
+        {
+            var registrations = await _registrationRepo
+                .GetQueryable()
+                .Where(r => r.UserId == userId && r.Status == RegistrationStatus.REGISTERED)
+                .ToListAsync();
 
+            return registrations.Select(MapToDTO);
+        }
         private EventRegistrationResponseDTO MapToDTO(EventRegistration r)
         {
             return new EventRegistrationResponseDTO

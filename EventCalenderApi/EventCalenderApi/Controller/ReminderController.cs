@@ -24,9 +24,9 @@ namespace EventCalenderApi.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            dto.UserId = userId;
+            var result = await _service.CreateAsync(dto, userId);
 
-            return Ok(await _service.CreateAsync(dto));
+            return Ok(result);
         }
 
         //get my reminders
@@ -35,7 +35,9 @@ namespace EventCalenderApi.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            return Ok(await _service.GetByUserAsync(userId));
+            var result = await _service.GetByUserAsync(userId);
+
+            return Ok(result);
         }
 
         //delete reminder

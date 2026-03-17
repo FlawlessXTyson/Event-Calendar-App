@@ -139,6 +139,16 @@
   },
   {
     "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetMyEvents",
+    "RelativePath": "api/Event/my",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
     "Method": "GetPaged",
     "RelativePath": "api/Event/paged",
     "HttpMethod": "GET",
@@ -241,6 +251,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventRegistrationController",
+    "Method": "GetMyRegistrations",
+    "RelativePath": "api/EventRegistration/my",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {

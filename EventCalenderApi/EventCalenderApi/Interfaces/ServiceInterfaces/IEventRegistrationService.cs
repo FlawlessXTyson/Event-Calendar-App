@@ -9,5 +9,7 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<EventRegistrationResponseDTO?> CancelAsync(int registrationId, int userId, string role);
 
         Task<IEnumerable<EventRegistrationResponseDTO>> GetByEventAsync(int eventId);
+        //get logged-in user's registrations
+        Task<IEnumerable<EventRegistrationResponseDTO>> GetMyRegistrationsAsync(int userId);
     }
 }

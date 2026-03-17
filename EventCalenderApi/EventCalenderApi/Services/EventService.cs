@@ -191,6 +191,16 @@ namespace EventCalenderApi.Services
                 Data = events.Select(MapToDTO)
             };
         }
+        //get events created by organizer
+        public async Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId)
+        {
+            var events = await _eventRepo
+                .GetQueryable()
+                .Where(e => e.CreatedByUserId == userId)
+                .ToListAsync();
+
+            return events.Select(MapToDTO);
+        }
 
         private EventResponseDTO MapToDTO(Event ev)
         {

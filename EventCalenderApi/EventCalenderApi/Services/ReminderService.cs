@@ -10,21 +10,52 @@ namespace EventCalenderApi.Services
     public class ReminderService : IReminderService
     {
         private readonly IRepository<int, Reminder> _repo;
+        private readonly IRepository<int, Event> _eventRepo;
 
-        public ReminderService(IRepository<int, Reminder> repo)
+        public ReminderService(
+            IRepository<int, Reminder> repo,
+            IRepository<int, Event> eventRepo)
         {
             _repo = repo;
+            _eventRepo = eventRepo;
         }
 
         //create reminder
-        public async Task<CreateReminderResponseDTO> CreateAsync(CreateReminderRequestDTO dto)
+        public async Task<CreateReminderResponseDTO> CreateAsync(CreateReminderRequestDTO dto, int userId)
         {
+            DateTime finalReminderTime;
+
+            //manual reminder
+            if (dto.ReminderDateTime != null)
+            {
+                finalReminderTime = dto.ReminderDateTime.Value;
+            }
+            //auto reminder (before event)
+            else if (dto.EventId != null && dto.MinutesBefore != null)
+            {
+                var ev = await _eventRepo.GetByIdAsync(dto.EventId.Value);
+
+                if (ev == null)
+                    throw new NotFoundException("Event not found");
+
+                if (ev.StartTime == null)
+                    throw new BadRequestException("Event start time is missing");
+
+                var eventDateTime = ev.EventDate.Date + ev.StartTime.Value;
+
+                finalReminderTime = eventDateTime.AddMinutes(-dto.MinutesBefore.Value);
+            }
+            else
+            {
+                throw new BadRequestException("Provide either ReminderDateTime or MinutesBefore");
+            }
+
             var reminder = new Reminder
             {
-                UserId = dto.UserId,
+                UserId = userId,
                 EventId = dto.EventId,
                 ReminderTitle = dto.ReminderTitle,
-                ReminderDateTime = dto.ReminderDateTime,
+                ReminderDateTime = finalReminderTime,
                 CreatedAt = DateTime.UtcNow
             };
 

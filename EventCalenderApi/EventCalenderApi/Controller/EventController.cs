@@ -138,5 +138,17 @@ namespace EventCalenderApi.Controllers
 
             return Ok(result);
         }
+
+        //get my created events (organizer)
+        [Authorize(Roles = "ORGANIZER,ADMIN")]
+        [HttpGet("my")]
+        public async Task<IActionResult> GetMyEvents()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _service.GetMyEventsAsync(userId);
+
+            return Ok(result);
+        }
     }
 }
