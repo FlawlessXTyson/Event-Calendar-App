@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using EventCalenderApi.Exceptions;
+using EventCalenderApi.EventCalenderAppDataLibrary;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 
 namespace EventCalenderApi.Middlewares
 {
@@ -7,12 +9,16 @@ namespace EventCalenderApi.Middlewares
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<ExceptionMiddleware> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public ExceptionMiddleware(RequestDelegate next,
-                                   ILogger<ExceptionMiddleware> logger)
+        public ExceptionMiddleware(
+            RequestDelegate next,
+            ILogger<ExceptionMiddleware> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _next = next;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -23,27 +29,47 @@ namespace EventCalenderApi.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);// used to store the log int the logger 
+                _logger.LogError(ex, ex.Message);
 
-                context.Response.ContentType = "application/json";// we are setting the response type 
+                int statusCode = ex is AppException appEx
+                    ? appEx.StatusCode
+                    : StatusCodes.Status500InternalServerError;
 
-                var statusCode = ex switch
+                // 🔥 SAVE ERROR TO DATABASE
+                using (var scope = _scopeFactory.CreateScope())
                 {
-                    BadRequestException => StatusCodes.Status400BadRequest,//400
-                    NotFoundException => StatusCodes.Status404NotFound,//404
-                    UnauthorizedException => StatusCodes.Status401Unauthorized,//401
-                    _ => StatusCodes.Status500InternalServerError
-                };
+                    var dbContext = scope.ServiceProvider
+                        .GetRequiredService<EventCalendarDbContext>();
 
+                    var log = new ErrorLog
+                    {
+                        Message = ex.Message,
+                        StackTrace = ex.StackTrace,
+                        Path = context.Request.Path,
+                        Method = context.Request.Method,
+                        StatusCode = statusCode,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    dbContext.ErrorLogs.Add(log);
+                    await dbContext.SaveChangesAsync();
+                }
+
+                context.Response.ContentType = "application/json";
                 context.Response.StatusCode = statusCode;
 
                 var response = new
                 {
-                    statusCode,
-                    message = ex.Message
+                    success = false,
+                    statusCode = statusCode,
+                    message = ex.Message,
+                    timestamp = DateTime.UtcNow
                 };
 
-                var json = JsonSerializer.Serialize(response);
+                var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
 
                 await context.Response.WriteAsync(json);
             }

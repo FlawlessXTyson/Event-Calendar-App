@@ -1,4 +1,6 @@
-﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
+﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
+using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +10,7 @@ namespace EventCalenderApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // All endpoints require login by default
+    [Authorize]
     public class EventController : ControllerBase
     {
         private readonly IEventService _service;
@@ -18,128 +20,126 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        //create event (Organizer and Admin only)
+        // ✅ CREATE EVENT
         [Authorize(Roles = "ORGANIZER,ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateEventRequestDTO dto)
         {
+            if (dto == null)
+                throw new BadRequestException("Request body cannot be null");
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            dto.CreatedByUserId = userId;
+            dto.Visibility = EventVisibility.PUBLIC;
+
             var result = await _service.CreateEventAsync(dto);
+
             return Ok(result);
         }
 
-        //get all events (public)
+        // ✅ GET ALL
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllAsync();
+
+            if (!result.Any())
+                throw new NotFoundException("No events available");
+
             return Ok(result);
         }
 
-        //get event by id (public)
+        // ✅ GET BY ID
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> Get(int id)
         {
-            var result = await _service.GetByIdAsync(id);
-
-            if (result == null)
-                return NotFound("Event not found");
-
-            return Ok(result);
+            return Ok(await _service.GetByIdAsync(id));
         }
 
-
-        //delete event (admin only)
+        // ✅ DELETE (ADMIN ONLY)
         [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _service.DeleteAsync(id);
-
-            if (result == null)
-                return NotFound("Event not found");
-
-            return Ok(result);
+            return Ok(await _service.DeleteAsync(id));
         }
 
-
-        //approve event (admin only)
+        // ✅ APPROVE
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> Approve(int id)
         {
             var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _service.ApproveAsync(id, adminId);
-
-            return Ok(result);
+            return Ok(await _service.ApproveAsync(id, adminId));
         }
 
-
-        //reject event (admin only)
+        // ✅ REJECT
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/reject")]
         public async Task<IActionResult> Reject(int id)
         {
             var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _service.RejectAsync(id, adminId);
-
-            return Ok(result);
+            return Ok(await _service.RejectAsync(id, adminId));
         }
 
-
-        //cancel event (admin only)
-        [Authorize(Roles = "ADMIN")]
+        // 🔥 CANCEL (ADMIN + ORGANIZER)
+        [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
         {
-            var result = await _service.CancelEventAsync(id);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            return Ok(result);
+            if (string.IsNullOrEmpty(role))
+                throw new UnauthorizedException("User role not found");
+
+            return Ok(await _service.CancelEventAsync(id, userId, role));
         }
 
-
-        //search events (public)
+        // ✅ SEARCH
         [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
         {
-            if (string.IsNullOrWhiteSpace(keyword))
-                return BadRequest("Keyword is required.");
-
             var result = await _service.SearchAsync(keyword);
 
+            if (!result.Any())
+                throw new NotFoundException("No events found");
+
             return Ok(result);
         }
 
-
-        //get events within date range
+        // ✅ DATE RANGE
         [HttpGet("range")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetByDateRange(DateTime start, DateTime end)
+        public async Task<IActionResult> GetByDateRange(string start, string end)
         {
-            if (start > end)
-                return BadRequest("Start date must be before end date.");
+            if (!DateTime.TryParse(start, out var startDate) ||
+                !DateTime.TryParse(end, out var endDate))
+            {
+                throw new BadRequestException("Use format yyyy-MM-dd");
+            }
 
-            var result = await _service.GetByDateRangeAsync(start, end);
+            if (startDate > endDate)
+                throw new BadRequestException("Start date must be before end date");
 
-            return Ok(result);
+            return Ok(await _service.GetByDateRangeAsync(startDate, endDate));
         }
 
-
-        //pagination
+        // ✅ PAGINATION
         [HttpGet("paged")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 5)
         {
-            var result = await _service.GetPagedAsync(pageNumber, pageSize);
-
-            return Ok(result);
+            return Ok(await _service.GetPagedAsync(pageNumber, pageSize));
         }
 
-        //get my created events (organizer)
+        // ✅ MY EVENTS (ORGANIZER)
         [Authorize(Roles = "ORGANIZER,ADMIN")]
         [HttpGet("my")]
         public async Task<IActionResult> GetMyEvents()
@@ -148,7 +148,27 @@ namespace EventCalenderApi.Controllers
 
             var result = await _service.GetMyEventsAsync(userId);
 
+            if (!result.Any())
+                throw new NotFoundException("No events created");
+
             return Ok(result);
+        }
+
+        // ✅ REGISTERED EVENTS (USER)
+        [Authorize(Roles = "USER")]
+        [HttpGet("registered")]
+        public async Task<IActionResult> GetRegisteredEvents()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            return Ok(await _service.GetRegisteredEventsAsync(userId));
+        }
+
+        [Authorize(Roles = "ADMIN,ORGANIZER")]
+        [HttpGet("{id}/refund-summary")]
+        public async Task<IActionResult> GetRefundSummary(int id)
+        {
+            return Ok(await _service.GetRefundSummaryAsync(id));
         }
     }
 }

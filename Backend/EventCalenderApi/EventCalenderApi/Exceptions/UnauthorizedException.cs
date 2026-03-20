@@ -1,9 +1,9 @@
 ﻿namespace EventCalenderApi.Exceptions
 {
-    public class UnauthorizedException : Exception
+    public class UnauthorizedException : AppException
     {
         public UnauthorizedException(string message)
-            : base(message)
+            : base(message, 401)
         {
         }
     }

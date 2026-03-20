@@ -1,4 +1,5 @@
-﻿using EventCalenderApi.Interfaces.ServiceInterfaces;
+﻿using EventCalenderApi.Exceptions;
+using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +7,7 @@ namespace EventCalenderApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AllowAnonymous] // Important: Login/Register must be public
+    [AllowAnonymous]
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
@@ -16,42 +17,26 @@ namespace EventCalenderApi.Controllers
             _authenticationService = authenticationService;
         }
 
-        //register
+        // register
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
+        public async Task<IActionResult> Register(RegisterRequestDTO request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                throw new BadRequestException("Invalid input data");
 
-            try
-            {
-                var result = await _authenticationService.RegisterAsync(request);
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _authenticationService.RegisterAsync(request);
+            return Ok(result);
         }
 
-        //login 
+        // login
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
+        public async Task<IActionResult> Login(LoginRequestDTO request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                throw new BadRequestException("Invalid email or password format");
 
-            try
-            {
-                var result = await _authenticationService.LoginAsync(request);
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
+            var result = await _authenticationService.LoginAsync(request);
+            return Ok(result);
         }
     }
 }

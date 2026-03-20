@@ -8,6 +8,6 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
 
         Task<IEnumerable<CreateTodoResponseDTO>> GetByUserAsync(int userId);
 
-        Task MarkCompletedAsync(int todoId);
+        Task MarkCompletedAsync(int todoId, int userId);
     }
 }

@@ -2,63 +2,72 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Note;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
+using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.EntityFrameworkCore;
 
-public class NoteService : INoteService
+namespace EventCalenderApi.Services
 {
-    private readonly IRepository<int, Note> _repo;
-
-    public NoteService(IRepository<int, Note> repo)
+    public class NoteService : INoteService
     {
-        _repo = repo;
-    }
+        private readonly IRepository<int, Note> _repo;
 
-    public async Task<CreateNoteResponseDTO> CreateAsync(CreateNoteRequestDTO dto)
-    {
-        var note = new Note
+        public NoteService(IRepository<int, Note> repo)
         {
-            UserId = dto.UserId,
-            Title = dto.Title,
-            Content = dto.Content,
-            CreatedAt = DateTime.UtcNow
-        };
+            _repo = repo;
+        }
 
-        var created = await _repo.AddAsync(note);
-
-        return new CreateNoteResponseDTO
+        public async Task<CreateNoteResponseDTO> CreateAsync(CreateNoteRequestDTO dto)
         {
-            NoteId = created.NoteId,
-            UserId = created.UserId,
-            Title = created.Title,
-            Content = created.Content,
-            CreatedAt = created.CreatedAt
-        };
-    }
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                throw new BadRequestException("Title is required");
 
-    public async Task<IEnumerable<CreateNoteResponseDTO>> GetByUserAsync(int userId)
-    {
-        var notes = await _repo
-            .GetQueryable()
-            .Where(n => n.UserId == userId)
-            .ToListAsync();
+            var note = new Note
+            {
+                UserId = dto.UserId,
+                Title = dto.Title,
+                Content = dto.Content,
+                CreatedAt = DateTime.UtcNow
+            };
 
-        return notes.Select(n => new CreateNoteResponseDTO
+            var created = await _repo.AddAsync(note);
+
+            return MapToDTO(created);
+        }
+
+        public async Task<IEnumerable<CreateNoteResponseDTO>> GetByUserAsync(int userId)
         {
-            NoteId = n.NoteId,
-            UserId = n.UserId,
-            Title = n.Title,
-            Content = n.Content,
-            CreatedAt = n.CreatedAt
-        });
-    }
+            var notes = await _repo
+                .GetQueryable()
+                .Where(n => n.UserId == userId)
+                .ToListAsync();
 
-    public async Task DeleteAsync(int noteId)
-    {
-        var note = await _repo.GetByIdAsync(noteId);
+            return notes.Select(MapToDTO);
+        }
 
-        if (note == null)
-            throw new NotFoundException("Note not found");
+        public async Task DeleteAsync(int noteId, int userId)
+        {
+            var note = await _repo.GetByIdAsync(noteId);
 
-        await _repo.DeleteAsync(noteId);
+            if (note == null)
+                throw new NotFoundException("Note not found");
+
+            if (note.UserId != userId)
+                throw new UnauthorizedException("You can delete only your own notes");
+
+            await _repo.DeleteAsync(noteId);
+        }
+
+        // mapping method (clean code)
+        private static CreateNoteResponseDTO MapToDTO(Note note)
+        {
+            return new CreateNoteResponseDTO
+            {
+                NoteId = note.NoteId,
+                UserId = note.UserId,
+                Title = note.Title,
+                Content = note.Content,
+                CreatedAt = note.CreatedAt
+            };
+        }
     }
 }

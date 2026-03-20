@@ -17,20 +17,22 @@ namespace EventCalenderApi.Services
             _context = context;
         }
 
-
-        //create payment
+        // ✅ CREATE PAYMENT
         public async Task<PaymentResponseDTO> CreatePaymentAsync(int userId, PaymentRequestDTO request)
         {
             var eventEntity = await _context.Events
-                .FirstOrDefaultAsync(e => e.EventId == request.EventId);
-
-            if (eventEntity == null)
-                throw new NotFoundException("Event not found.");
+                .FirstOrDefaultAsync(e => e.EventId == request.EventId)
+                ?? throw new NotFoundException("Event not found");
 
             if (!eventEntity.IsPaidEvent)
-                throw new BadRequestException("This event does not require payment.");
+                throw new BadRequestException("This event does not require payment");
 
-            //duplicate payment check
+            if (eventEntity.Status != EventStatus.ACTIVE)
+                throw new BadRequestException("Event is not active");
+
+            if (eventEntity.ApprovalStatus != ApprovalStatus.APPROVED)
+                throw new BadRequestException("Event is not approved");
+
             var alreadyPaid = await _context.Payments
                 .AnyAsync(p =>
                     p.UserId == userId &&
@@ -38,13 +40,10 @@ namespace EventCalenderApi.Services
                     p.Status == PaymentStatus.SUCCESS);
 
             if (alreadyPaid)
-                throw new BadRequestException("You already paid for this event.");
+                throw new BadRequestException("You already paid for this event");
 
             float price = eventEntity.TicketPrice;
-
-            //commission calculation
             float commission = price * eventEntity.CommissionPercentage / 100;
-
             float organizerAmount = price - commission;
 
             var payment = new Payment
@@ -59,93 +58,57 @@ namespace EventCalenderApi.Services
             };
 
             await _context.Payments.AddAsync(payment);
-
-            //create event registration automatically after payment
-            var registration = new EventRegistration
-            {
-                UserId = userId,
-                EventId = request.EventId,
-                RegisteredAt = DateTime.UtcNow,
-                Status = RegistrationStatus.REGISTERED
-            };
-
-            await _context.EventRegistrations.AddAsync(registration);
-
             await _context.SaveChangesAsync();
 
-            return new PaymentResponseDTO
-            {
-                PaymentId = payment.PaymentId,
-                EventId = payment.EventId,
-                AmountPaid = payment.AmountPaid,
-                Status = payment.Status,
-                PaymentDate = payment.PaymentDate
-            };
+            return MapToDTO(payment);
         }
 
-
-        //get payments by user
+        // ✅ GET USER PAYMENTS
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
-            return await _context.Payments
+            var payments = await _context.Payments
                 .Where(p => p.UserId == userId)
-                .Select(p => new PaymentResponseDTO
-                {
-                    PaymentId = p.PaymentId,
-                    EventId = p.EventId,
-                    AmountPaid = p.AmountPaid,
-                    Status = p.Status,
-                    PaymentDate = p.PaymentDate
-                })
                 .ToListAsync();
+
+            return payments.Select(MapToDTO);
         }
 
-
-        //get payments by event
+        // ✅ GET EVENT PAYMENTS
         public async Task<IEnumerable<PaymentResponseDTO>> GetByEventAsync(int eventId)
         {
-            return await _context.Payments
+            var payments = await _context.Payments
                 .Where(p => p.EventId == eventId)
-                .Select(p => new PaymentResponseDTO
-                {
-                    PaymentId = p.PaymentId,
-                    EventId = p.EventId,
-                    AmountPaid = p.AmountPaid,
-                    Status = p.Status,
-                    PaymentDate = p.PaymentDate
-                })
                 .ToListAsync();
+
+            return payments.Select(MapToDTO);
         }
 
-
-        //refund payment
-        public async Task<PaymentResponseDTO?> RefundAsync(int paymentId)
+        // 🔥 FINAL REFUND LOGIC
+        public async Task<PaymentResponseDTO> RefundAsync(int paymentId)
         {
             var payment = await _context.Payments
-                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-
-            if (payment == null)
-                throw new NotFoundException("Payment not found.");
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentId)
+                ?? throw new NotFoundException("Payment not found");
 
             if (payment.Status == PaymentStatus.REFUNDED)
-                throw new BadRequestException("Payment already refunded.");
+                throw new BadRequestException("Payment already refunded");
 
             payment.Status = PaymentStatus.REFUNDED;
 
+            // ✅ TRACK REFUND
+            payment.RefundedAmount = payment.AmountPaid;
+            payment.RefundedAt = DateTime.UtcNow;
+
+            // ✅ RESET BUSINESS VALUES
+            payment.CommissionAmount = 0;
+            payment.OrganizerAmount = 0;
+
             await _context.SaveChangesAsync();
 
-            return new PaymentResponseDTO
-            {
-                PaymentId = payment.PaymentId,
-                EventId = payment.EventId,
-                AmountPaid = payment.AmountPaid,
-                Status = payment.Status,
-                PaymentDate = payment.PaymentDate
-            };
+            return MapToDTO(payment);
         }
 
-
-        //commission summary
+        // ✅ ADMIN SUMMARY
         public async Task<CommissionSummaryDTO> GetCommissionSummaryAsync()
         {
             var successfulPayments = _context.Payments
@@ -156,6 +119,20 @@ namespace EventCalenderApi.Services
                 TotalCommission = await successfulPayments.SumAsync(p => p.CommissionAmount),
                 TotalOrganizerPayout = await successfulPayments.SumAsync(p => p.OrganizerAmount),
                 TotalPayments = await successfulPayments.CountAsync()
+            };
+        }
+
+        private static PaymentResponseDTO MapToDTO(Payment p)
+        {
+            return new PaymentResponseDTO
+            {
+                PaymentId = p.PaymentId,
+                EventId = p.EventId,
+                AmountPaid = p.AmountPaid,
+                RefundedAmount = p.RefundedAmount,
+                Status = p.Status,
+                PaymentDate = p.PaymentDate,
+                RefundedAt = p.RefundedAt
             };
         }
     }

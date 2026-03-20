@@ -6,8 +6,15 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment
     {
         public int PaymentId { get; set; }
         public int EventId { get; set; }
+
         public float AmountPaid { get; set; }
+
+        public float? RefundedAmount { get; set; }
+
         public PaymentStatus Status { get; set; }
+
         public DateTime PaymentDate { get; set; }
+
+        public DateTime? RefundedAt { get; set; }
     }
 }

@@ -16,6 +16,9 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public float CommissionAmount { get; set; }
         public float OrganizerAmount { get; set; }
 
+        public float? RefundedAmount { get; set; }
+        public DateTime? RefundedAt { get; set; }
+
         public PaymentStatus Status { get; set; } = PaymentStatus.PENDING;
 
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;

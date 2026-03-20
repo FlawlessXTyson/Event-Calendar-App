@@ -11,6 +11,7 @@ namespace EventCalenderApi.Services
     {
         private readonly IRepository<int, Todo> _repo;
 
+        //constructor injection
         public TodoService(IRepository<int, Todo> repo)
         {
             _repo = repo;
@@ -19,6 +20,15 @@ namespace EventCalenderApi.Services
         //create todo
         public async Task<CreateTodoResponseDTO> CreateAsync(CreateTodoRequestDTO dto)
         {
+            //validate title
+            if (string.IsNullOrWhiteSpace(dto.TaskTitle))
+                throw new BadRequestException("Task title is required");
+
+            //validate due date
+            if (dto.DueDate < DateTime.UtcNow.Date)
+                throw new BadRequestException("Due date cannot be in the past");
+
+            //create entity
             var todo = new Todo
             {
                 UserId = dto.UserId,
@@ -28,20 +38,14 @@ namespace EventCalenderApi.Services
                 CreatedAt = DateTime.UtcNow
             };
 
+            //save to database
             var created = await _repo.AddAsync(todo);
 
-            return new CreateTodoResponseDTO
-            {
-                TodoId = created.TodoId,
-                UserId = created.UserId,
-                TaskTitle = created.TaskTitle,
-                DueDate = created.DueDate,
-                Status = created.Status,
-                CreatedAt = created.CreatedAt
-            };
+            //map to dto
+            return MapToDTO(created);
         }
 
-        //get todos
+        //get todos for user
         public async Task<IEnumerable<CreateTodoResponseDTO>> GetByUserAsync(int userId)
         {
             var todos = await _repo
@@ -49,7 +53,35 @@ namespace EventCalenderApi.Services
                 .Where(t => t.UserId == userId)
                 .ToListAsync();
 
-            return todos.Select(t => new CreateTodoResponseDTO
+            //map list
+            return todos.Select(MapToDTO);
+        }
+
+        //mark todo as completed
+        public async Task MarkCompletedAsync(int todoId, int userId)
+        {
+            //fetch todo
+            var todo = await _repo.GetByIdAsync(todoId)
+                ?? throw new NotFoundException("Todo not found");
+
+            //ownership check
+            if (todo.UserId != userId)
+                throw new UnauthorizedException("You can update only your own todos");
+
+            //prevent duplicate completion
+            if (todo.Status == TodoStatus.COMPLETED)
+                throw new BadRequestException("Todo already completed");
+
+            //update status
+            todo.Status = TodoStatus.COMPLETED;
+
+            await _repo.UpdateAsync(todoId, todo);
+        }
+
+        //helper mapping method
+        private static CreateTodoResponseDTO MapToDTO(Todo t)
+        {
+            return new CreateTodoResponseDTO
             {
                 TodoId = t.TodoId,
                 UserId = t.UserId,
@@ -57,20 +89,7 @@ namespace EventCalenderApi.Services
                 DueDate = t.DueDate,
                 Status = t.Status,
                 CreatedAt = t.CreatedAt
-            });
-        }
-
-        //mark completed
-        public async Task MarkCompletedAsync(int todoId)
-        {
-            var todo = await _repo.GetByIdAsync(todoId);
-
-            if (todo == null)
-                throw new NotFoundException("Todo not found");
-
-            todo.Status = TodoStatus.COMPLETED;
-
-            await _repo.UpdateAsync(todoId, todo);
+            };
         }
     }
 }

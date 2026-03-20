@@ -18,33 +18,28 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        //create reminder
         [HttpPost]
         public async Task<IActionResult> Create(CreateReminderRequestDTO dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _service.CreateAsync(dto, userId);
-
-            return Ok(result);
+            return Ok(await _service.CreateAsync(dto, userId));
         }
 
-        //get my reminders
         [HttpGet("me")]
         public async Task<IActionResult> GetMyReminders()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _service.GetByUserAsync(userId);
-
-            return Ok(result);
+            return Ok(await _service.GetByUserAsync(userId));
         }
 
-        //delete reminder
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            await _service.DeleteAsync(id, userId);
 
             return NoContent();
         }

@@ -8,7 +8,7 @@ namespace EventCalenderApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // All endpoints require login
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -18,15 +18,13 @@ namespace EventCalenderApi.Controllers
             _userService = userService;
         }
 
-        //create user (admin nly)
+        //create user (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateUserRequestDTO request)
         {
-            var result = await _userService.CreateUserAsync(request);
-            return Ok(result);
+            return Ok(await _userService.CreateUserAsync(request));
         }
-
 
         //get my profile
         [HttpGet("me")]
@@ -34,12 +32,7 @@ namespace EventCalenderApi.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _userService.GetUserByIdAsync(userId);
-
-            if (result == null)
-                return NotFound();
-
-            return Ok(result);
+            return Ok(await _userService.GetUserByIdAsync(userId));
         }
 
         //get all users (admin only)
@@ -47,10 +40,8 @@ namespace EventCalenderApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _userService.GetAllUsersAsync();
-            return Ok(result);
+            return Ok(await _userService.GetAllUsersAsync());
         }
-
 
         //update my profile
         [HttpPut("me")]
@@ -58,26 +49,17 @@ namespace EventCalenderApi.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _userService.UpdateUserAsync(userId, request);
-
-            if (result == null)
-                return NotFound();
-
-            return Ok(result);
+            return Ok(await _userService.UpdateUserAsync(userId, request));
         }
-
 
         //delete user (admin only)
         [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var success = await _userService.DeleteUserAsync(id);
+            await _userService.DeleteUserAsync(id);
 
-            if (!success)
-                return NotFound();
-
-            return Ok("Deleted successfully");
+            return NoContent();
         }
     }
 }

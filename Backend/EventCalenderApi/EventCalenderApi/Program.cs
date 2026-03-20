@@ -5,6 +5,7 @@ using EventCalenderApi.Middlewares;
 using EventCalenderApi.Repositories;
 using EventCalenderApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -12,15 +13,16 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Controllers + validation
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.SuppressModelStateInvalidFilter = true;
+    });
 
-//add services
-
-builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-
-//swagger + jwt
-
+// Swagger + JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Event Calendar API", Version = "v1" });
@@ -51,21 +53,14 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
-//database
-
+// Database
 builder.Services.AddDbContext<EventCalendarDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-//repository
-
+// Repository
 builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
 
-
-//services
-
+// Services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IEventRegistrationService, EventRegistrationService>();
@@ -73,14 +68,13 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-//new services
+//ADD THIS LINE (THIS FIXES YOUR ERROR)
+builder.Services.AddScoped<IRoleRequestService, RoleRequestService>();
 
 builder.Services.AddScoped<IReminderService, ReminderService>();
 builder.Services.AddScoped<ITodoService, TodoService>();
 
-
-//  CORS 
-
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular",
@@ -92,9 +86,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-
-//jwt authentication
-
+// JWT Authentication
 var jwtSection = builder.Configuration.GetSection("Jwt");
 
 var jwtKey = jwtSection["Key"]
@@ -129,26 +121,23 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-
 var app = builder.Build();
 
 
-//swagger
 
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-
-//middleware pipeline
+// Exception middleware FIRST
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAngular"); // 
-
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseCors("AllowAngular");
 
 app.UseAuthentication();
 app.UseAuthorization();

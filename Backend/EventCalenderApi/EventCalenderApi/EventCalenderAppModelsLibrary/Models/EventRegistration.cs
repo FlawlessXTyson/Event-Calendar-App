@@ -5,7 +5,9 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
 {
     public class EventRegistration : IComparable<EventRegistration>, IEquatable<EventRegistration>
     {
+        [Key] //  explicitly tell EF this is primary key
         public int RegistrationId { get; set; }
+
         public int EventId { get; set; }
         public Event? Event { get; set; }
 
@@ -13,7 +15,8 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public User? User { get; set; }
 
         public RegistrationStatus Status { get; set; } = RegistrationStatus.REGISTERED;
-        public DateTime RegisteredAt { get; set; } = DateTime.Now;
+
+        public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
         public int CompareTo(EventRegistration? other)
         {

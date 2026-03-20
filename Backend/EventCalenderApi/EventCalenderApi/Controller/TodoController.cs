@@ -42,7 +42,9 @@ namespace EventCalenderApi.Controllers
         [HttpPut("{id}/complete")]
         public async Task<IActionResult> Complete(int id)
         {
-            await _service.MarkCompletedAsync(id);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            await _service.MarkCompletedAsync(id, userId);
 
             return NoContent();
         }

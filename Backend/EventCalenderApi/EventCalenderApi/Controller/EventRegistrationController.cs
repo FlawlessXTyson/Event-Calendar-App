@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.EventRegisration;
+using EventCalenderApi.Exceptions;
 
 namespace EventCalenderApi.Controllers
 {
@@ -18,22 +19,23 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        //register for event (only user can register for themselves)
+        // ✅ REGISTER (NO USERID FROM BODY)
         [Authorize(Roles = "USER")]
         [HttpPost]
         public async Task<IActionResult> Register(EventRegisterationRequestDTO dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            dto.UserId = userId; // Never trust client input
+            var result = await _service.RegisterAsync(dto, userId);
 
-            var result = await _service.RegisterAsync(dto);
-
-            return Ok(result);
+            return Ok(new
+            {
+                message = "Successfully registered for event",
+                data = result
+            });
         }
 
-
-        // cancel registrationn (only user can cancel their own registration r admin can cancel any registration)
+        // ✅ CANCEL (WITH REFUND)
         [Authorize(Roles = "USER,ADMIN")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
@@ -41,32 +43,36 @@ namespace EventCalenderApi.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var result = await _service.CancelAsync(id, userId, role!);
+            if (string.IsNullOrEmpty(role))
+                throw new UnauthorizedException("User role not found");
 
-            if (result == null)
-                return Forbid("Not allowed to cancel this registration.");
+            var result = await _service.CancelAsync(id, userId, role);
 
-            return Ok(result);
+            return Ok(new
+            {
+                message = "Registration cancelled successfully",
+                data = result
+            });
         }
 
-
-        //view registrations for an event (only organizer and admin can view all registrations for their events)
         [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpGet("event/{eventId}")]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
             return Ok(await _service.GetByEventAsync(eventId));
         }
-        //get my registered events
+
         [HttpGet("my")]
         public async Task<IActionResult> GetMyRegistrations()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var result = await _service.GetMyRegistrationsAsync(userId);
+            var data = await _service.GetMyRegistrationsAsync(userId);
 
-            return Ok(result);
+            if (!data.Any())
+                throw new NotFoundException("You have not registered for any events");
+
+            return Ok(data);
         }
     }
-
 }

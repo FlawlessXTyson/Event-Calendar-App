@@ -5,6 +5,6 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.EventRegisr
     public class EventRegisterationRequestDTO
     {
         public int EventId { get; set; }
-        public int UserId { get; set; }
+        //public int UserId { get; set; }
     }
 }

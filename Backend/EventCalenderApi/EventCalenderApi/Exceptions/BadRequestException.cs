@@ -1,9 +1,9 @@
 ﻿namespace EventCalenderApi.Exceptions
 {
-    public class BadRequestException : Exception
+    public class BadRequestException : AppException
     {
         public BadRequestException(string message)
-            : base(message)
+            : base(message, 400)
         {
         }
     }

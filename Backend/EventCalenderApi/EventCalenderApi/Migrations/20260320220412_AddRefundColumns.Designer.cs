@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCalenderApi.Migrations
 {
     [DbContext(typeof(EventCalendarDbContext))]
-    [Migration("20260317015154_initial")]
-    partial class initial
+    [Migration("20260320220412_AddRefundColumns")]
+    partial class AddRefundColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,38 @@ namespace EventCalenderApi.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.ErrorLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Method")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StackTrace")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ErrorLogs");
+                });
 
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Event", b =>
                 {
@@ -67,6 +99,12 @@ namespace EventCalenderApi.Migrations
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RegistrationDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SeatsLimit")
+                        .HasColumnType("int");
 
                     b.Property<TimeSpan?>("StartTime")
                         .HasColumnType("time");
@@ -174,6 +212,12 @@ namespace EventCalenderApi.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<float?>("RefundedAmount")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -222,6 +266,38 @@ namespace EventCalenderApi.Migrations
                     b.ToTable("Reminders");
                 });
 
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.RoleChangeRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RequestedRole")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReviewedByAdminId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("RoleChangeRequests");
+                });
+
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Todo", b =>
                 {
                     b.Property<int>("TodoId")
@@ -266,7 +342,7 @@ namespace EventCalenderApi.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -283,6 +359,9 @@ namespace EventCalenderApi.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("UserId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -367,6 +446,17 @@ namespace EventCalenderApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.RoleChangeRequest", b =>
+                {
+                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

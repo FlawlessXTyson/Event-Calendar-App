@@ -1,28 +1,30 @@
 ﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
 
-namespace EventCalenderApi.Interfaces.ServiceInterfaces
+public interface IEventService
 {
-    public interface IEventService
-    {
-        Task<EventResponseDTO> CreateEventAsync(CreateEventRequestDTO dto);
+    Task<EventResponseDTO> CreateEventAsync(CreateEventRequestDTO dto);
 
-        Task<IEnumerable<EventResponseDTO>> GetAllAsync();
+    Task<IEnumerable<EventResponseDTO>> GetAllAsync();
 
-        Task<EventResponseDTO?> GetByIdAsync(int id);
+    Task<EventResponseDTO> GetByIdAsync(int id);
 
-        Task<EventResponseDTO?> DeleteAsync(int id);
+    Task<EventResponseDTO> DeleteAsync(int id);
 
-        Task<EventResponseDTO?> ApproveAsync(int eventId, int adminId);
+    Task<EventResponseDTO> ApproveAsync(int eventId, int adminId);
 
-        Task<EventResponseDTO?> RejectAsync(int eventId, int adminId);
+    Task<EventResponseDTO> RejectAsync(int eventId, int adminId);
 
-        Task<EventResponseDTO?> CancelEventAsync(int eventId);
+    //  FIXED SIGNATURE
+    Task<EventResponseDTO> CancelEventAsync(int eventId, int userId, string role);
 
-        Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword);
+    Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword);
 
-        Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end);
+    Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end);
 
-        Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize);
-        Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId);
-    }
+    Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize);
+
+    Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId);
+
+    Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId);
+    Task<RefundSummaryDTO> GetRefundSummaryAsync(int eventId);
 }

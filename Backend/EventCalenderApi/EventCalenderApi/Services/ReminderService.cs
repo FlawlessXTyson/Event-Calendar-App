@@ -20,23 +20,38 @@ namespace EventCalenderApi.Services
             _eventRepo = eventRepo;
         }
 
-        //create reminder
+        //  CREATE REMINDER (FINAL FIXED)
         public async Task<CreateReminderResponseDTO> CreateAsync(CreateReminderRequestDTO dto, int userId)
         {
+            if (dto == null)
+                throw new BadRequestException("Request body cannot be null");
+
+            if (string.IsNullOrWhiteSpace(dto.ReminderTitle))
+                throw new BadRequestException("Reminder title is required");
+
+            //  FIX 1: DO NOT ALLOW BOTH
+            if (dto.ReminderDateTime != null && dto.MinutesBefore != null)
+                throw new BadRequestException("Provide either ReminderDateTime OR MinutesBefore, not both");
+
             DateTime finalReminderTime;
 
-            //manual reminder
+            // 🔹 CASE 1: Manual
             if (dto.ReminderDateTime != null)
             {
                 finalReminderTime = dto.ReminderDateTime.Value;
+
+                if (finalReminderTime <= DateTime.UtcNow)
+                    throw new BadRequestException("Reminder time must be in the future");
             }
-            //auto reminder (before event)
+
+            // 🔹 CASE 2: Event-based
             else if (dto.EventId != null && dto.MinutesBefore != null)
             {
-                var ev = await _eventRepo.GetByIdAsync(dto.EventId.Value);
+                if (dto.MinutesBefore <= 0)
+                    throw new BadRequestException("MinutesBefore must be greater than zero");
 
-                if (ev == null)
-                    throw new NotFoundException("Event not found");
+                var ev = await _eventRepo.GetByIdAsync(dto.EventId.Value)
+                    ?? throw new NotFoundException("Event not found");
 
                 if (ev.StartTime == null)
                     throw new BadRequestException("Event start time is missing");
@@ -44,11 +59,28 @@ namespace EventCalenderApi.Services
                 var eventDateTime = ev.EventDate.Date + ev.StartTime.Value;
 
                 finalReminderTime = eventDateTime.AddMinutes(-dto.MinutesBefore.Value);
+
+                if (finalReminderTime <= DateTime.UtcNow)
+                    throw new BadRequestException("Calculated reminder time is in the past");
             }
+
             else
             {
                 throw new BadRequestException("Provide either ReminderDateTime or MinutesBefore");
             }
+
+            //  FIX 2: SAFE DUPLICATE CHECK (NO MILLISECOND ISSUE)
+            var alreadyExists = await _repo
+                .GetQueryable()
+                .AnyAsync(r =>
+                    r.UserId == userId &&
+                    r.EventId == dto.EventId &&
+                    r.ReminderTitle.ToLower() == dto.ReminderTitle.ToLower() &&
+                    EF.Functions.DateDiffSecond(r.ReminderDateTime, finalReminderTime) == 0
+                );
+
+            if (alreadyExists)
+                throw new BadRequestException("Reminder already exists with same time");
 
             var reminder = new Reminder
             {
@@ -59,20 +91,19 @@ namespace EventCalenderApi.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            var created = await _repo.AddAsync(reminder);
-
-            return new CreateReminderResponseDTO
+            //  FIX 3: HANDLE DB UNIQUE ERROR
+            try
             {
-                ReminderId = created.ReminderId,
-                UserId = created.UserId,
-                EventId = created.EventId,
-                ReminderTitle = created.ReminderTitle,
-                ReminderDateTime = created.ReminderDateTime,
-                CreatedAt = created.CreatedAt
-            };
+                var created = await _repo.AddAsync(reminder);
+                return MapToDTO(created);
+            }
+            catch (DbUpdateException)
+            {
+                throw new BadRequestException("Duplicate reminder detected");
+            }
         }
 
-        //get reminders by user
+        // GET USER REMINDERS
         public async Task<IEnumerable<CreateReminderResponseDTO>> GetByUserAsync(int userId)
         {
             var reminders = await _repo
@@ -80,7 +111,24 @@ namespace EventCalenderApi.Services
                 .Where(r => r.UserId == userId)
                 .ToListAsync();
 
-            return reminders.Select(r => new CreateReminderResponseDTO
+            return reminders.Select(MapToDTO);
+        }
+
+        // DELETE
+        public async Task DeleteAsync(int reminderId, int userId)
+        {
+            var reminder = await _repo.GetByIdAsync(reminderId)
+                ?? throw new NotFoundException("Reminder not found");
+
+            if (reminder.UserId != userId)
+                throw new UnauthorizedException("You can delete only your own reminders");
+
+            await _repo.DeleteAsync(reminderId);
+        }
+
+        private static CreateReminderResponseDTO MapToDTO(Reminder r)
+        {
+            return new CreateReminderResponseDTO
             {
                 ReminderId = r.ReminderId,
                 UserId = r.UserId,
@@ -88,18 +136,7 @@ namespace EventCalenderApi.Services
                 ReminderTitle = r.ReminderTitle,
                 ReminderDateTime = r.ReminderDateTime,
                 CreatedAt = r.CreatedAt
-            });
-        }
-
-        //delete reminder
-        public async Task DeleteAsync(int reminderId)
-        {
-            var reminder = await _repo.GetByIdAsync(reminderId);
-
-            if (reminder == null)
-                throw new NotFoundException("Reminder not found");
-
-            await _repo.DeleteAsync(reminderId);
+            };
         }
     }
 }

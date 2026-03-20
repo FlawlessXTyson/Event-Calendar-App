@@ -23,18 +23,24 @@ namespace EventCalenderApi.Services
             _configuration = configuration;
         }
 
-        //register
+        // register
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-                throw new BadRequestException("Email already registered.");
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password))
+                throw new BadRequestException("Email and password are required");
+
+            var email = request.Email.Trim().ToLower();
+
+            if (await _context.Users.AnyAsync(u => u.Email == email))
+                throw new BadRequestException("Email already registered");
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User
             {
                 Name = request.UserName,
-                Email = request.Email,
+                Email = email,
                 PasswordHash = passwordHash,
                 Role = UserRole.USER,
                 Status = AccountStatus.ACTIVE,
@@ -47,31 +53,35 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(user);
         }
 
-        //login
+        // login
         public async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
         {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password))
+                throw new BadRequestException("Email and password are required");
+
+            var email = request.Email.Trim().ToLower();
+
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == request.Email);
+                .FirstOrDefaultAsync(u => u.Email == email);
 
-            if (user == null)
-                throw new UnauthorizedException("Invalid email or password.");
-
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                throw new UnauthorizedException("Invalid email or password.");
+            if (user == null ||
+                !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                throw new UnauthorizedException("Invalid email or password");
 
             if (user.Status != AccountStatus.ACTIVE)
-                throw new UnauthorizedException("Account is not active.");
+                throw new UnauthorizedException("Account is not active");
 
             return GenerateTokenResponse(user);
         }
 
-        //token generation
+        // token generation
         private LoginResponseDTO GenerateTokenResponse(User user)
         {
             var jwtSection = _configuration.GetSection("Jwt");
 
             var jwtKey = jwtSection["Key"]
-                ?? throw new Exception("JWT Key missing.");
+                ?? throw new BadRequestException("JWT configuration missing");
 
             var jwtIssuer = jwtSection["Issuer"];
             var jwtAudience = jwtSection["Audience"];
@@ -107,11 +117,6 @@ namespace EventCalenderApi.Services
             return new LoginResponseDTO
             {
                 Token = tokenString
-
-                //Expiration = expiry,
-                //UserName = user.Name,
-                //Email = user.Email,
-                //Role = user.Role.ToString()
             };
         }
     }

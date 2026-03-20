@@ -123,6 +123,22 @@
   },
   {
     "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetRefundSummary",
+    "RelativePath": "api/Event/{id}/refund-summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
     "Method": "Reject",
     "RelativePath": "api/Event/{id}/reject",
     "HttpMethod": "POST",
@@ -178,15 +194,25 @@
     "Parameters": [
       {
         "Name": "start",
-        "Type": "System.DateTime",
+        "Type": "System.String",
         "IsRequired": false
       },
       {
         "Name": "end",
-        "Type": "System.DateTime",
+        "Type": "System.String",
         "IsRequired": false
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetRegisteredEvents",
+    "RelativePath": "api/Event/registered",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -410,6 +436,58 @@
     "Method": "GetMyReminders",
     "RelativePath": "api/Reminder/me",
     "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "RoleRequestController",
+    "Method": "Approve",
+    "RelativePath": "api/RoleRequest/{id}/approve",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "RoleRequestController",
+    "Method": "Reject",
+    "RelativePath": "api/RoleRequest/{id}/reject",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "RoleRequestController",
+    "Method": "GetPending",
+    "RelativePath": "api/RoleRequest/pending",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "RoleRequestController",
+    "Method": "RequestOrganizer",
+    "RelativePath": "api/RoleRequest/request-organizer",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [],

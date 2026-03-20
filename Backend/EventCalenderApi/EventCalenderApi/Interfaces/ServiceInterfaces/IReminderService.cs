@@ -4,13 +4,13 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
 {
     public interface IReminderService
     {
-        //create reminder (userId comes from token)
+        //create reminder
         Task<CreateReminderResponseDTO> CreateAsync(CreateReminderRequestDTO dto, int userId);
 
-        //get reminders for logged-in user
+        //get reminder for loggedin users
         Task<IEnumerable<CreateReminderResponseDTO>> GetByUserAsync(int userId);
 
         //delete reminder
-        Task DeleteAsync(int reminderId);
+        Task DeleteAsync(int reminderId, int userId);
     }
 }

@@ -11,27 +11,38 @@ namespace EventCalenderApi.Services
     {
         private readonly IRepository<int, User> _userRepository;
 
+        //constructor injection
         public UserService(IRepository<int, User> userRepository)
         {
             _userRepository = userRepository;
         }
 
-        //create user manually
+        //create user manually (admin)
         public async Task<CreateUserResponseDTO> CreateUserAsync(CreateUserRequestDTO request)
         {
+            //validate input
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password))
+                throw new BadRequestException("Email and password are required");
+
+            var email = request.Email.Trim().ToLower();
+
+            //check duplicate email
             var exists = await _userRepository
                 .GetQueryable()
-                .AnyAsync(u => u.Email == request.Email);
+                .AnyAsync(u => u.Email == email);
 
             if (exists)
-                throw new BadRequestException("User with this email already exists.");
+                throw new BadRequestException("User with this email already exists");
 
+            //hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
+            //create user entity
             var user = new User
             {
                 Name = request.Name,
-                Email = request.Email,
+                Email = email,
                 PasswordHash = passwordHash,
                 Role = request.Role,
                 Status = AccountStatus.ACTIVE,
@@ -40,66 +51,72 @@ namespace EventCalenderApi.Services
 
             var createdUser = await _userRepository.AddAsync(user);
 
-            return MapToResponseDTO(createdUser);
+            return MapToDTO(createdUser);
         }
 
-
-        //get user by the id
+        //get user by id
         public async Task<CreateUserResponseDTO> GetUserByIdAsync(int userId)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
+            //fetch user
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException("User not found");
 
-            if (user == null)
-                throw new NotFoundException("User not found.");
-
-            return MapToResponseDTO(user);
+            return MapToDTO(user);
         }
 
-
-        // get all users
+        //get all users
         public async Task<IEnumerable<CreateUserResponseDTO>> GetAllUsersAsync()
         {
             var users = await _userRepository
                 .GetQueryable()
                 .ToListAsync();
 
-            return users.Select(u => MapToResponseDTO(u));
+            //map list to DTO
+            return users.Select(MapToDTO);
         }
 
-
-        //update user
+        //update user profile
         public async Task<CreateUserResponseDTO> UpdateUserAsync(int userId, UpdateUserRequestDTO request)
         {
-            var existingUser = await _userRepository.GetByIdAsync(userId);
+            //fetch user
+            var existingUser = await _userRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException("User not found");
 
-            if (existingUser == null)
-                throw new NotFoundException("User not found.");
+            //update email with duplicate check
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                var email = request.Email.Trim().ToLower();
 
+                var exists = await _userRepository
+                    .GetQueryable()
+                    .AnyAsync(u => u.Email == email && u.UserId != userId);
+
+                if (exists)
+                    throw new BadRequestException("Email already in use");
+
+                existingUser.Email = email;
+            }
+
+            //update other fields
             existingUser.Name = request.Name ?? existingUser.Name;
-            existingUser.Email = request.Email ?? existingUser.Email;
             existingUser.Role = request.Role ?? existingUser.Role;
             existingUser.Status = request.Status ?? existingUser.Status;
 
             var updatedUser = await _userRepository.UpdateAsync(userId, existingUser);
 
-            return MapToResponseDTO(updatedUser!);
+            return MapToDTO(updatedUser!);
         }
-
 
         //delete user
-        public async Task<bool> DeleteUserAsync(int userId)
+        public async Task DeleteUserAsync(int userId)
         {
-            var deletedUser = await _userRepository.DeleteAsync(userId);
-
-            if (deletedUser == null)
-                throw new NotFoundException("User not found.");
-
-            return true;
+            //delete user from database
+            var deletedUser = await _userRepository.DeleteAsync(userId)
+                ?? throw new NotFoundException("User not found");
         }
 
-
-        //entity to DTO mapping
-        private CreateUserResponseDTO MapToResponseDTO(User user)
+        //helper method for mapping entity → DTO
+        private static CreateUserResponseDTO MapToDTO(User user)
         {
             return new CreateUserResponseDTO
             {

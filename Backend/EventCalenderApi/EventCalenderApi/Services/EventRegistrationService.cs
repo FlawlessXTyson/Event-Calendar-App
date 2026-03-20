@@ -11,42 +11,48 @@ namespace EventCalenderApi.Services
     {
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Event> _eventRepo;
+        private readonly IRepository<int, Payment> _paymentRepo;
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
-            IRepository<int, Event> eventRepo)
+            IRepository<int, Event> eventRepo,
+            IRepository<int, Payment> paymentRepo)
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
+            _paymentRepo = paymentRepo;
         }
 
-        public async Task<EventRegistrationResponseDTO> RegisterAsync(EventRegisterationRequestDTO dto)
+        // ✅ REGISTER
+        public async Task<EventRegistrationResponseDTO> RegisterAsync(EventRegisterationRequestDTO dto, int userId)
         {
-            var ev = await _eventRepo.GetByIdAsync(dto.EventId);
-
-            if (ev == null)
-                throw new NotFoundException("Event not found.");
+            var ev = await _eventRepo.GetByIdAsync(dto.EventId)
+                ?? throw new NotFoundException("Event not found");
 
             if (ev.ApprovalStatus != ApprovalStatus.APPROVED)
-                throw new BadRequestException("Event is not approved.");
+                throw new BadRequestException("Event is not approved");
 
             if (ev.Status != EventStatus.ACTIVE)
-                throw new BadRequestException("Event is not active.");
+                throw new BadRequestException("Event is not active");
+
+            // 🔥 DEADLINE VALIDATION
+            if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < DateTime.UtcNow)
+                throw new BadRequestException("Registration deadline has passed");
 
             var exists = await _registrationRepo
                 .GetQueryable()
                 .AnyAsync(r =>
                     r.EventId == dto.EventId &&
-                    r.UserId == dto.UserId &&
-                    r.Status != RegistrationStatus.CANCELLED);
+                    r.UserId == userId &&
+                    r.Status == RegistrationStatus.REGISTERED);
 
             if (exists)
-                throw new BadRequestException("You are already registered.");
+                throw new BadRequestException("You already registered for this event");
 
             var registration = new EventRegistration
             {
                 EventId = dto.EventId,
-                UserId = dto.UserId,
+                UserId = userId,
                 RegisteredAt = DateTime.UtcNow,
                 Status = RegistrationStatus.REGISTERED
             };
@@ -56,15 +62,32 @@ namespace EventCalenderApi.Services
             return MapToDTO(created);
         }
 
-        public async Task<EventRegistrationResponseDTO?> CancelAsync(int registrationId, int userId, string role)
+        // ✅ CANCEL + PROPER REFUND
+        public async Task<EventRegistrationResponseDTO> CancelAsync(int registrationId, int userId, string role)
         {
-            var registration = await _registrationRepo.GetByIdAsync(registrationId);
+            var registration = await _registrationRepo.GetByIdAsync(registrationId)
+                ?? throw new NotFoundException("Registration not found");
 
-            if (registration == null)
-                throw new NotFoundException("Registration not found.");
+            if (registration.Status == RegistrationStatus.CANCELLED)
+                throw new BadRequestException("Already cancelled");
 
             if (role == "USER" && registration.UserId != userId)
-                throw new UnauthorizedException("You can cancel only your own registration.");
+                throw new UnauthorizedException("Not allowed");
+
+            // 🔥 DIRECT DB QUERY (BEST PRACTICE)
+            var payment = await _paymentRepo
+                .GetQueryable()
+                .FirstOrDefaultAsync(p =>
+                    p.UserId == registration.UserId &&
+                    p.EventId == registration.EventId &&
+                    p.Status == PaymentStatus.SUCCESS);
+
+            // 🔥 FULL REFUND
+            if (payment != null)
+            {
+                payment.Status = PaymentStatus.REFUNDED;
+                await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+            }
 
             registration.Status = RegistrationStatus.CANCELLED;
 
@@ -75,24 +98,25 @@ namespace EventCalenderApi.Services
 
         public async Task<IEnumerable<EventRegistrationResponseDTO>> GetByEventAsync(int eventId)
         {
-            var registrations = await _registrationRepo
+            var data = await _registrationRepo
                 .GetQueryable()
                 .Where(r => r.EventId == eventId)
                 .ToListAsync();
 
-            return registrations.Select(MapToDTO);
+            return data.Select(MapToDTO);
         }
-        //get my registrations
+
         public async Task<IEnumerable<EventRegistrationResponseDTO>> GetMyRegistrationsAsync(int userId)
         {
-            var registrations = await _registrationRepo
+            var data = await _registrationRepo
                 .GetQueryable()
                 .Where(r => r.UserId == userId && r.Status == RegistrationStatus.REGISTERED)
                 .ToListAsync();
 
-            return registrations.Select(MapToDTO);
+            return data.Select(MapToDTO);
         }
-        private EventRegistrationResponseDTO MapToDTO(EventRegistration r)
+
+        private static EventRegistrationResponseDTO MapToDTO(EventRegistration r)
         {
             return new EventRegistrationResponseDTO
             {

@@ -1,5 +1,7 @@
-﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+﻿using EventCalenderApi.EventCalenderAppDataLibrary;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
@@ -12,29 +14,44 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, User> _userRepo;
         private readonly IRepository<int, EventRegistration> _registrationRepo;
+        private readonly EventCalendarDbContext _context;
 
         public EventService(
             IRepository<int, Event> eventRepo,
             IRepository<int, User> userRepo,
-            IRepository<int, EventRegistration> registrationRepo)
+            IRepository<int, EventRegistration> registrationRepo,
+            EventCalendarDbContext context)
         {
             _eventRepo = eventRepo;
             _userRepo = userRepo;
             _registrationRepo = registrationRepo;
+            _context = context;
         }
 
+        // ✅ CREATE EVENT
         public async Task<EventResponseDTO> CreateEventAsync(CreateEventRequestDTO dto)
         {
-            var user = await _userRepo.GetByIdAsync(dto.CreatedByUserId);
+            if (dto == null)
+                throw new BadRequestException("Request body cannot be null");
 
-            if (user == null)
-                throw new NotFoundException("User not found");
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                throw new BadRequestException("Title is required");
 
-            if (dto.IsPaidEvent && dto.TicketPrice <= 0)
-                throw new BadRequestException("Paid event must have valid price");
+            if (dto.EventDate < DateTime.UtcNow.Date)
+                throw new BadRequestException("Event date cannot be in the past");
 
-            if (dto.StartTime != null && dto.EndTime != null && dto.StartTime >= dto.EndTime)
-                throw new BadRequestException("EndTime must be after StartTime");
+            var user = await _userRepo.GetByIdAsync(dto.CreatedByUserId)
+                ?? throw new NotFoundException("User not found");
+
+            var duplicateEvent = await _eventRepo.GetQueryable().AnyAsync(e =>
+                e.CreatedByUserId == dto.CreatedByUserId &&
+                e.Title.ToLower() == dto.Title.ToLower() &&
+                e.EventDate.Date == dto.EventDate.Date &&
+                e.StartTime == dto.StartTime
+            );
+
+            if (duplicateEvent)
+                throw new BadRequestException("You already created this event");
 
             var newEvent = new Event
             {
@@ -45,121 +62,163 @@ namespace EventCalenderApi.Services
                 EndTime = dto.EndTime,
                 Location = dto.Location,
                 Category = dto.Category,
-                Visibility = dto.Visibility,
+                Visibility = EventVisibility.PUBLIC,
                 CreatedByUserId = dto.CreatedByUserId,
                 IsPaidEvent = dto.IsPaidEvent,
                 TicketPrice = dto.TicketPrice,
                 CreatedAt = DateTime.UtcNow,
                 Status = EventStatus.ACTIVE,
-                ApprovalStatus = dto.Visibility == EventVisibility.PUBLIC
-                    ? ApprovalStatus.PENDING
-                    : ApprovalStatus.APPROVED
+                ApprovalStatus = ApprovalStatus.PENDING
             };
 
             var created = await _eventRepo.AddAsync(newEvent);
-
             return MapToDTO(created);
         }
 
+        // ✅ GET ALL
         public async Task<IEnumerable<EventResponseDTO>> GetAllAsync()
         {
-            var events = await _eventRepo
-                .GetQueryable()
-                .Where(e => e.Status == EventStatus.ACTIVE)
+            return await _eventRepo.GetQueryable()
+                .Where(e => e.Status == EventStatus.ACTIVE && e.ApprovalStatus == ApprovalStatus.APPROVED)
+                .Select(e => MapToDTO(e))
                 .ToListAsync();
-
-            return events.Select(MapToDTO);
         }
 
-        public async Task<EventResponseDTO?> GetByIdAsync(int id)
+        // ✅ GET BY ID
+        public async Task<EventResponseDTO> GetByIdAsync(int id)
         {
-            var ev = await _eventRepo.GetByIdAsync(id);
+            var ev = await _eventRepo.GetByIdAsync(id)
+                ?? throw new NotFoundException("Event not found");
 
-            if (ev == null)
+            if (ev.ApprovalStatus != ApprovalStatus.APPROVED)
                 throw new NotFoundException("Event not found");
 
             return MapToDTO(ev);
         }
 
-        public async Task<EventResponseDTO?> DeleteAsync(int id)
+        // ✅ DELETE
+        public async Task<EventResponseDTO> DeleteAsync(int id)
         {
             var hasRegistrations = await _registrationRepo
                 .GetQueryable()
-                .AnyAsync(r => r.EventId == id);
+                .AnyAsync(r => r.EventId == id && r.Status == RegistrationStatus.REGISTERED);
 
             if (hasRegistrations)
-                throw new BadRequestException("Cannot delete event because users already registered.");
+                throw new BadRequestException("Cannot delete event with registrations. Cancel instead.");
 
-            var deleted = await _eventRepo.DeleteAsync(id);
-
-            if (deleted == null)
-                throw new NotFoundException("Event not found");
+            var deleted = await _eventRepo.DeleteAsync(id)
+                ?? throw new NotFoundException("Event not found");
 
             return MapToDTO(deleted);
         }
 
-        public async Task<EventResponseDTO?> ApproveAsync(int eventId, int adminId)
+        // 🔥 CANCEL EVENT + REFUND ALL USERS
+        public async Task<EventResponseDTO> CancelEventAsync(int eventId, int userId, string role)
         {
-            var ev = await _eventRepo.GetByIdAsync(eventId);
+            var ev = await _eventRepo.GetByIdAsync(eventId)
+                ?? throw new NotFoundException("Event not found");
 
-            if (ev == null)
-                throw new NotFoundException("Event not found");
+            if (role == "ORGANIZER" && ev.CreatedByUserId != userId)
+                throw new UnauthorizedException("You can cancel only your own event");
+
+            if (ev.Status == EventStatus.CANCELLED)
+                throw new BadRequestException("Event already cancelled");
+
+            var payments = await _context.Payments
+                .Where(p => p.EventId == eventId && p.Status == PaymentStatus.SUCCESS)
+                .ToListAsync();
+
+            foreach (var payment in payments)
+            {
+                payment.Status = PaymentStatus.REFUNDED;
+                payment.RefundedAmount = payment.AmountPaid;
+                payment.RefundedAt = DateTime.UtcNow;
+
+                payment.CommissionAmount = 0;
+                payment.OrganizerAmount = 0;
+            }
+
+            ev.Status = EventStatus.CANCELLED;
+
+            await _context.SaveChangesAsync();
+
+            return MapToDTO(ev);
+        }
+
+        // ✅ REFUND SUMMARY (YOUR DTO VERSION)
+        public async Task<RefundSummaryDTO> GetRefundSummaryAsync(int eventId)
+        {
+            var refunds = await _context.Payments
+                .Where(p => p.EventId == eventId && p.Status == PaymentStatus.REFUNDED)
+                .ToListAsync();
+
+            return new RefundSummaryDTO
+            {
+                EventId = eventId,
+                TotalUsersRefunded = refunds.Count,
+                TotalRefundAmount = refunds.Sum(p => p.RefundedAmount ?? 0)
+            };
+        }
+
+        // ✅ APPROVE
+        public async Task<EventResponseDTO> ApproveAsync(int eventId, int adminId)
+        {
+            var ev = await _eventRepo.GetByIdAsync(eventId)
+                ?? throw new NotFoundException("Event not found");
 
             ev.ApprovalStatus = ApprovalStatus.APPROVED;
             ev.ApprovedByUserId = adminId;
 
             var updated = await _eventRepo.UpdateAsync(eventId, ev);
-
             return MapToDTO(updated!);
         }
 
-        public async Task<EventResponseDTO?> RejectAsync(int eventId, int adminId)
+        // ✅ REJECT
+        public async Task<EventResponseDTO> RejectAsync(int eventId, int adminId)
         {
-            var ev = await _eventRepo.GetByIdAsync(eventId);
-
-            if (ev == null)
-                throw new NotFoundException("Event not found");
+            var ev = await _eventRepo.GetByIdAsync(eventId)
+                ?? throw new NotFoundException("Event not found");
 
             ev.ApprovalStatus = ApprovalStatus.REJECTED;
             ev.ApprovedByUserId = adminId;
 
             var updated = await _eventRepo.UpdateAsync(eventId, ev);
-
             return MapToDTO(updated!);
         }
 
-        public async Task<EventResponseDTO?> CancelEventAsync(int eventId)
+        // ✅ REGISTERED EVENTS
+        public async Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId)
         {
-            var ev = await _eventRepo.GetByIdAsync(eventId);
-
-            if (ev == null)
-                throw new NotFoundException("Event not found");
-
-            ev.Status = EventStatus.CANCELLED;
-
-            var updated = await _eventRepo.UpdateAsync(eventId, ev);
-
-            return MapToDTO(updated!);
-        }
-
-        public async Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword)
-        {
-            var events = await _eventRepo
+            var events = await _registrationRepo
                 .GetQueryable()
-                .Where(e =>
-                    (e.Title.Contains(keyword) ||
-                     e.Description.Contains(keyword) ||
-                     e.Location.Contains(keyword))
-                    && e.Status == EventStatus.ACTIVE)
+                .Include(r => r.Event)
+                .Where(r => r.UserId == userId && r.Status == RegistrationStatus.REGISTERED)
+                .Select(r => r.Event!)
+                .Where(e => e.Status == EventStatus.ACTIVE && e.ApprovalStatus == ApprovalStatus.APPROVED)
                 .ToListAsync();
+
+            if (!events.Any())
+                throw new NotFoundException("No events found");
 
             return events.Select(MapToDTO);
         }
 
+        // ✅ SEARCH
+        public async Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword)
+        {
+            return await _eventRepo.GetQueryable()
+                .Where(e =>
+                    (e.Title.Contains(keyword) || e.Location.Contains(keyword)) &&
+                    e.Status == EventStatus.ACTIVE &&
+                    e.ApprovalStatus == ApprovalStatus.APPROVED)
+                .Select(e => MapToDTO(e))
+                .ToListAsync();
+        }
+
+        // ✅ DATE RANGE
         public async Task<IEnumerable<EventResponseDTO>> GetByDateRangeAsync(DateTime start, DateTime end)
         {
-            var events = await _eventRepo
-                .GetQueryable()
+            var events = await _eventRepo.GetQueryable()
                 .Where(e =>
                     e.EventDate >= start &&
                     e.EventDate <= end &&
@@ -167,42 +226,41 @@ namespace EventCalenderApi.Services
                     e.ApprovalStatus == ApprovalStatus.APPROVED)
                 .ToListAsync();
 
+            if (!events.Any())
+                throw new NotFoundException("No events found");
+
             return events.Select(MapToDTO);
         }
 
+        // ✅ PAGINATION
         public async Task<PagedResultDTO<EventResponseDTO>> GetPagedAsync(int pageNumber, int pageSize)
         {
-            var query = _eventRepo
-                .GetQueryable()
-                .Where(e => e.Status == EventStatus.ACTIVE);
+            var query = _eventRepo.GetQueryable()
+                .Where(e => e.Status == EventStatus.ACTIVE && e.ApprovalStatus == ApprovalStatus.APPROVED);
 
             var total = await query.CountAsync();
 
-            var events = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var data = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
 
             return new PagedResultDTO<EventResponseDTO>
             {
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalRecords = total,
-                Data = events.Select(MapToDTO)
+                Data = data.Select(MapToDTO)
             };
         }
-        //get events created by organizer
+
+        // ✅ MY EVENTS
         public async Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId)
         {
-            var events = await _eventRepo
-                .GetQueryable()
+            return await _eventRepo.GetQueryable()
                 .Where(e => e.CreatedByUserId == userId)
+                .Select(e => MapToDTO(e))
                 .ToListAsync();
-
-            return events.Select(MapToDTO);
         }
 
-        private EventResponseDTO MapToDTO(Event ev)
+        private static EventResponseDTO MapToDTO(Event ev)
         {
             return new EventResponseDTO
             {

@@ -252,16 +252,14 @@
             "name": "start",
             "in": "query",
             "schema": {
-              "type": "string",
-              "format": "date-time"
+              "type": "string"
             }
           },
           {
             "name": "end",
             "in": "query",
             "schema": {
-              "type": "string",
-              "format": "date-time"
+              "type": "string"
             }
           }
         ],
@@ -308,6 +306,41 @@
       "get": {
         "tags": [
           "Event"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Event/registered": {
+      "get": {
+        "tags": [
+          "Event"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Event/{id}/refund-summary": {
+      "get": {
+        "tags": [
+          "Event"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -638,6 +671,76 @@
         }
       }
     },
+    "/api/RoleRequest/request-organizer": {
+      "post": {
+        "tags": [
+          "RoleRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleRequest/pending": {
+      "get": {
+        "tags": [
+          "RoleRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleRequest/{id}/approve": {
+      "put": {
+        "tags": [
+          "RoleRequest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleRequest/{id}/reject": {
+      "put": {
+        "tags": [
+          "RoleRequest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Todo": {
       "post": {
         "tags": [
@@ -821,11 +924,16 @@
         "format": "int32"
       },
       "CreateEventRequestDTO": {
+        "required": [
+          "endTime",
+          "startTime",
+          "title"
+        ],
         "type": "object",
         "properties": {
           "title": {
-            "type": "string",
-            "nullable": true
+            "minLength": 1,
+            "type": "string"
           },
           "description": {
             "type": "string",
@@ -837,13 +945,11 @@
           },
           "startTime": {
             "type": "string",
-            "format": "date-span",
-            "nullable": true
+            "format": "date-span"
           },
           "endTime": {
             "type": "string",
-            "format": "date-span",
-            "nullable": true
+            "format": "date-span"
           },
           "location": {
             "type": "string",
@@ -851,13 +957,6 @@
           },
           "category": {
             "$ref": "#/components/schemas/EventCategory"
-          },
-          "visibility": {
-            "$ref": "#/components/schemas/EventVisibility"
-          },
-          "createdByUserId": {
-            "type": "integer",
-            "format": "int32"
           },
           "seatsLimit": {
             "type": "integer",
@@ -985,21 +1084,9 @@
           "eventId": {
             "type": "integer",
             "format": "int32"
-          },
-          "userId": {
-            "type": "integer",
-            "format": "int32"
           }
         },
         "additionalProperties": false
-      },
-      "EventVisibility": {
-        "enum": [
-          1,
-          2
-        ],
-        "type": "integer",
-        "format": "int32"
       },
       "LoginRequestDTO": {
         "required": [
