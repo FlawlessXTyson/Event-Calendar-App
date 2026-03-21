@@ -65,15 +65,14 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IEventRegistrationService, EventRegistrationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-//ADD THIS LINE (THIS FIXES YOUR ERROR)
 builder.Services.AddScoped<IRoleRequestService, RoleRequestService>();
 
 builder.Services.AddScoped<IReminderService, ReminderService>();
 builder.Services.AddScoped<ITodoService, TodoService>();
 
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 // CORS
 builder.Services.AddCors(options =>
 {

@@ -4,6 +4,7 @@ using EventCalenderApi.EventCalenderAppDataLibrary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCalenderApi.Migrations
 {
     [DbContext(typeof(EventCalendarDbContext))]
-    partial class EventCalendarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321064347_AddRefundFields")]
+    partial class AddRefundFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,40 +24,6 @@ namespace EventCalenderApi.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.AuditLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Entity")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("EntityId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AuditLogs");
-                });
 
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.ErrorLog", b =>
                 {
@@ -189,6 +158,35 @@ namespace EventCalenderApi.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("EventRegistrations");
+                });
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Note", b =>
+                {
+                    b.Property<int>("NoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NoteId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("NoteId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notes");
                 });
 
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Payment", b =>
@@ -405,6 +403,17 @@ namespace EventCalenderApi.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Note", b =>
+                {
+                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "User")
+                        .WithMany("Notes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Payment", b =>
                 {
                     b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Event", "Event")
@@ -475,6 +484,8 @@ namespace EventCalenderApi.Migrations
                     b.Navigation("EventsApproved");
 
                     b.Navigation("EventsCreated");
+
+                    b.Navigation("Notes");
 
                     b.Navigation("Registrations");
 

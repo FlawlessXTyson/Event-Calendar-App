@@ -21,7 +21,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public List<Event> EventsApproved { get; set; } = new();
         public List<EventRegistration> Registrations { get; set; } = new();
         public List<Reminder> Reminders { get; set; } = new();
-        public List<Note> Notes { get; set; } = new();
+        
         public List<Todo> Todos { get; set; } = new();
 
         public int CompareTo(User? other)

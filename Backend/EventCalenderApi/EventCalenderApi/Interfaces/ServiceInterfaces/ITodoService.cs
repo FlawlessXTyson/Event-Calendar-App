@@ -9,5 +9,9 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<IEnumerable<CreateTodoResponseDTO>> GetByUserAsync(int userId);
 
         Task MarkCompletedAsync(int todoId, int userId);
+
+        Task<CreateTodoResponseDTO> UpdateAsync(int todoId, int userId, UpdateTodoRequestDTO dto); // 
+
+        Task DeleteAsync(int todoId, int userId); // 
     }
 }

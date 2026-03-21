@@ -20,7 +20,7 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        // ✅ CREATE EVENT
+        // ================= CREATE EVENT =================
         [Authorize(Roles = "ORGANIZER,ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateEventRequestDTO dto)
@@ -38,7 +38,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ✅ GET ALL
+        // ================= GET ALL APPROVED =================
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll()
@@ -51,7 +51,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ✅ GET BY ID
+        // ================= GET BY ID =================
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> Get(int id)
@@ -59,7 +59,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByIdAsync(id));
         }
 
-        // ✅ DELETE (ADMIN ONLY)
+        // ================= DELETE =================
         [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -67,7 +67,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.DeleteAsync(id));
         }
 
-        // ✅ APPROVE
+        // ================= APPROVE =================
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> Approve(int id)
@@ -77,7 +77,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.ApproveAsync(id, adminId));
         }
 
-        // ✅ REJECT
+        // ================= REJECT =================
         [Authorize(Roles = "ADMIN")]
         [HttpPost("{id}/reject")]
         public async Task<IActionResult> Reject(int id)
@@ -87,7 +87,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.RejectAsync(id, adminId));
         }
 
-        // 🔥 CANCEL (ADMIN + ORGANIZER)
+        // ================= CANCEL EVENT =================
         [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
@@ -101,7 +101,15 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.CancelEventAsync(id, userId, role));
         }
 
-        // ✅ SEARCH
+        // ================= REFUND SUMMARY =================
+        [Authorize(Roles = "ADMIN,ORGANIZER")]
+        [HttpGet("{id}/refund-summary")]
+        public async Task<IActionResult> GetRefundSummary(int id)
+        {
+            return Ok(await _service.GetRefundSummaryAsync(id));
+        }
+
+        // ================= SEARCH =================
         [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
@@ -114,7 +122,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ✅ DATE RANGE
+        // ================= DATE RANGE =================
         [HttpGet("range")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByDateRange(string start, string end)
@@ -131,7 +139,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByDateRangeAsync(startDate, endDate));
         }
 
-        // ✅ PAGINATION
+        // ================= PAGINATION =================
         [HttpGet("paged")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPaged(int pageNumber = 1, int pageSize = 5)
@@ -139,7 +147,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetPagedAsync(pageNumber, pageSize));
         }
 
-        // ✅ MY EVENTS (ORGANIZER)
+        // ================= MY EVENTS =================
         [Authorize(Roles = "ORGANIZER,ADMIN")]
         [HttpGet("my")]
         public async Task<IActionResult> GetMyEvents()
@@ -154,7 +162,7 @@ namespace EventCalenderApi.Controllers
             return Ok(result);
         }
 
-        // ✅ REGISTERED EVENTS (USER)
+        // ================= USER REGISTERED EVENTS =================
         [Authorize(Roles = "USER")]
         [HttpGet("registered")]
         public async Task<IActionResult> GetRegisteredEvents()
@@ -164,11 +172,32 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetRegisteredEventsAsync(userId));
         }
 
-        [Authorize(Roles = "ADMIN,ORGANIZER")]
-        [HttpGet("{id}/refund-summary")]
-        public async Task<IActionResult> GetRefundSummary(int id)
+        // ================= ADMIN: PENDING EVENTS =================
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPendingEvents()
         {
-            return Ok(await _service.GetRefundSummaryAsync(id));
+            return Ok(await _service.GetPendingEventsAsync());
+        }
+
+        // ================= ADMIN: REJECTED EVENTS =================
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("rejected")]
+        public async Task<IActionResult> GetRejectedEvents()
+        {
+            return Ok(await _service.GetRejectedEventsAsync());
+        }
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("approved")]
+        public async Task<IActionResult> GetApprovedEvents()
+        {
+            var result = await _service.GetApprovedEventsAsync();
+
+            if (!result.Any())
+                throw new NotFoundException("No approved events found");
+
+            return Ok(result);
         }
     }
 }

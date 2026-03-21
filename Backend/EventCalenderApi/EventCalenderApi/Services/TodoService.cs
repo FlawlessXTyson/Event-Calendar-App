@@ -10,25 +10,25 @@ namespace EventCalenderApi.Services
     public class TodoService : ITodoService
     {
         private readonly IRepository<int, Todo> _repo;
+        private readonly IAuditLogRepository _auditRepo;
 
-        //constructor injection
-        public TodoService(IRepository<int, Todo> repo)
+        public TodoService(
+            IRepository<int, Todo> repo,
+            IAuditLogRepository auditRepo)
         {
             _repo = repo;
+            _auditRepo = auditRepo;
         }
 
-        //create todo
+        // ================= CREATE =================
         public async Task<CreateTodoResponseDTO> CreateAsync(CreateTodoRequestDTO dto)
         {
-            //validate title
             if (string.IsNullOrWhiteSpace(dto.TaskTitle))
                 throw new BadRequestException("Task title is required");
 
-            //validate due date
-            if (dto.DueDate < DateTime.UtcNow.Date)
+            if (dto.DueDate.HasValue && dto.DueDate.Value < DateTime.UtcNow.Date)
                 throw new BadRequestException("Due date cannot be in the past");
 
-            //create entity
             var todo = new Todo
             {
                 UserId = dto.UserId,
@@ -38,47 +38,112 @@ namespace EventCalenderApi.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            //save to database
             var created = await _repo.AddAsync(todo);
 
-            //map to dto
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = dto.UserId,
+                Role = "USER",
+                Action = "CREATE_TODO",
+                Entity = "Todo",
+                EntityId = created.TodoId
+            });
+
             return MapToDTO(created);
         }
 
-        //get todos for user
+        // ================= GET =================
         public async Task<IEnumerable<CreateTodoResponseDTO>> GetByUserAsync(int userId)
         {
             var todos = await _repo
                 .GetQueryable()
                 .Where(t => t.UserId == userId)
+                .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            //map list
             return todos.Select(MapToDTO);
         }
 
-        //mark todo as completed
+        // ================= COMPLETE =================
         public async Task MarkCompletedAsync(int todoId, int userId)
         {
-            //fetch todo
             var todo = await _repo.GetByIdAsync(todoId)
                 ?? throw new NotFoundException("Todo not found");
 
-            //ownership check
             if (todo.UserId != userId)
                 throw new UnauthorizedException("You can update only your own todos");
 
-            //prevent duplicate completion
             if (todo.Status == TodoStatus.COMPLETED)
                 throw new BadRequestException("Todo already completed");
 
-            //update status
             todo.Status = TodoStatus.COMPLETED;
 
             await _repo.UpdateAsync(todoId, todo);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = userId,
+                Role = "USER",
+                Action = "COMPLETE_TODO",
+                Entity = "Todo",
+                EntityId = todoId
+            });
         }
 
-        //helper mapping method
+        // ================= UPDATE =================
+        public async Task<CreateTodoResponseDTO> UpdateAsync(int todoId, int userId, UpdateTodoRequestDTO dto)
+        {
+            var todo = await _repo.GetByIdAsync(todoId)
+                ?? throw new NotFoundException("Todo not found");
+
+            if (todo.UserId != userId)
+                throw new UnauthorizedException("You can update only your own todos");
+
+            if (string.IsNullOrWhiteSpace(dto.TaskTitle))
+                throw new BadRequestException("Task title is required");
+
+            if (dto.DueDate.HasValue && dto.DueDate.Value < DateTime.UtcNow.Date)
+                throw new BadRequestException("Due date cannot be in the past");
+
+            todo.TaskTitle = dto.TaskTitle;
+            todo.DueDate = dto.DueDate;
+
+            var updated = await _repo.UpdateAsync(todoId, todo);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = userId,
+                Role = "USER",
+                Action = "UPDATE_TODO",
+                Entity = "Todo",
+                EntityId = todoId
+            });
+
+            return MapToDTO(updated!);
+        }
+
+        // ================= DELETE =================
+        public async Task DeleteAsync(int todoId, int userId)
+        {
+            var todo = await _repo.GetByIdAsync(todoId)
+                ?? throw new NotFoundException("Todo not found");
+
+            if (todo.UserId != userId)
+                throw new UnauthorizedException("You can delete only your own todos");
+
+            await _repo.DeleteAsync(todoId);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = userId,
+                Role = "USER",
+                Action = "DELETE_TODO",
+                Entity = "Todo",
+                EntityId = todoId
+            });
+        }
+
+        // ================= MAPPER =================
         private static CreateTodoResponseDTO MapToDTO(Todo t)
         {
             return new CreateTodoResponseDTO

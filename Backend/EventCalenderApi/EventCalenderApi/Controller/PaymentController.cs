@@ -18,6 +18,7 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
+        // ================= CREATE =================
         [HttpPost]
         public async Task<IActionResult> Create(PaymentRequestDTO request)
         {
@@ -25,6 +26,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.CreatePaymentAsync(userId, request));
         }
 
+        // ================= USER HISTORY =================
         [HttpGet("my-payments")]
         public async Task<IActionResult> GetMyPayments()
         {
@@ -32,6 +34,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByUserAsync(userId));
         }
 
+        // ================= EVENT PAYMENTS =================
         [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpGet("event/{eventId}")]
         public async Task<IActionResult> GetByEvent(int eventId)
@@ -39,7 +42,15 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByEventAsync(eventId));
         }
 
-        // 🔥 ONLY ADMIN CAN FORCE REFUND
+        // ================= ADMIN: ALL PAYMENTS =================
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllPayments()
+        {
+            return Ok(await _service.GetAllPaymentsAsync());
+        }
+
+        // ================= REFUND =================
         [Authorize(Roles = "ADMIN")]
         [HttpPut("{paymentId}/refund")]
         public async Task<IActionResult> Refund(int paymentId)
@@ -47,6 +58,7 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.RefundAsync(paymentId));
         }
 
+        // ================= COMMISSION =================
         [Authorize(Roles = "ADMIN")]
         [HttpGet("commission-summary")]
         public async Task<IActionResult> GetCommissionSummary()

@@ -27,4 +27,9 @@ public interface IEventService
 
     Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId);
     Task<RefundSummaryDTO> GetRefundSummaryAsync(int eventId);
+    Task<IEnumerable<EventResponseDTO>> GetPendingEventsAsync();
+
+    Task<IEnumerable<EventResponseDTO>> GetRejectedEventsAsync();
+
+    Task<IEnumerable<EventResponseDTO>> GetApprovedEventsAsync();
 }

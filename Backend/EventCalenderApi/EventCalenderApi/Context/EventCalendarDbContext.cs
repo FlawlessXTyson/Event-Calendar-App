@@ -16,11 +16,13 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
         public DbSet<Event> Events { get; set; }
         public DbSet<EventRegistration> EventRegistrations { get; set; }
         public DbSet<Payment> Payments { get; set; }
-        public DbSet<Note> Notes { get; set; }
+        
         public DbSet<Reminder> Reminders { get; set; }
         public DbSet<Todo> Todos { get; set; }
         public DbSet<RoleChangeRequest> RoleChangeRequests { get; set; }
         public DbSet<ErrorLog> ErrorLogs { get; set; }
+
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -101,13 +103,6 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(p => p.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            //================ NOTE =================
-
-            modelBuilder.Entity<Note>()
-                .HasOne(n => n.User)
-                .WithMany(u => u.Notes)
-                .HasForeignKey(n => n.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             //================ REMINDER =================
 

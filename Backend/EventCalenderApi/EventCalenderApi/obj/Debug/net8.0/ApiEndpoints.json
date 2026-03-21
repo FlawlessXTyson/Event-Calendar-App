@@ -155,6 +155,16 @@
   },
   {
     "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetApprovedEvents",
+    "RelativePath": "api/Event/approved",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
     "Method": "GetMyEvents",
     "RelativePath": "api/Event/my",
     "HttpMethod": "GET",
@@ -186,6 +196,16 @@
   },
   {
     "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetPendingEvents",
+    "RelativePath": "api/Event/pending",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
     "Method": "GetByDateRange",
     "RelativePath": "api/Event/range",
     "HttpMethod": "GET",
@@ -209,6 +229,16 @@
     "ContainingType": "EventCalenderApi.Controllers.EventController",
     "Method": "GetRegisteredEvents",
     "RelativePath": "api/Event/registered",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.EventController",
+    "Method": "GetRejectedEvents",
+    "RelativePath": "api/Event/rejected",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -290,48 +320,6 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "EventCalenderApi.Controllers.NoteController",
-    "Method": "Create",
-    "RelativePath": "api/Note",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "dto",
-        "Type": "EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Note.CreateNoteRequestDTO",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "EventCalenderApi.Controllers.NoteController",
-    "Method": "Delete",
-    "RelativePath": "api/Note/{noteId}",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "noteId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "EventCalenderApi.Controllers.NoteController",
-    "Method": "GetMyNotes",
-    "RelativePath": "api/Note/me",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
     "ContainingType": "EventCalenderApi.Controllers.PaymentController",
     "Method": "Create",
     "RelativePath": "api/Payment",
@@ -361,6 +349,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.PaymentController",
+    "Method": "GetAllPayments",
+    "RelativePath": "api/Payment/all",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -504,6 +502,43 @@
       {
         "Name": "dto",
         "Type": "EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Todo.CreateTodoRequestDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.TodoController",
+    "Method": "Update",
+    "RelativePath": "api/Todo/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Todo.UpdateTodoRequestDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.TodoController",
+    "Method": "Delete",
+    "RelativePath": "api/Todo/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
         "IsRequired": true
       }
     ],
