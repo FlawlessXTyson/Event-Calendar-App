@@ -10,10 +10,10 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
-        // 🔥 START DATE
+        //  START DATE
         public DateTime EventDate { get; set; }
 
-        // 🔥 NEW: END DATE (OPTIONAL → SAFE)
+        //  NEW: END DATE 
         public DateTime? EventEndDate { get; set; }
 
         public TimeSpan? StartTime { get; set; }
@@ -27,17 +27,17 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public EventStatus Status { get; set; } = EventStatus.ACTIVE;
 
         public int CreatedByUserId { get; set; }
-        public User? CreatedBy { get; set; }
+        public User? CreatedBy { get; set; }//navigationnnnn to user 
 
         public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.PENDING;
 
-        public int? ApprovedByUserId { get; set; }
+        public int? ApprovedByUserId { get; set; }// ? cos not not aprroved yet 
         public User? ApprovedBy { get; set; }
 
         public int? SeatsLimit { get; set; }
         public DateTime? RegistrationDeadline { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;// auto sets the datew
 
         public bool IsPaidEvent { get; set; } = false;
         public float TicketPrice { get; set; } = 0;

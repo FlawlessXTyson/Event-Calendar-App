@@ -3,8 +3,8 @@ using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
-using EventCalenderApi.Interfaces;
-using EventCalenderApi.Interfaces.ServiceInterfaces;
+using EventCalenderApi.Interfaces;// di irepo
+using EventCalenderApi.Interfaces.ServiceInterfaces; // di ieventservice
 using Microsoft.EntityFrameworkCore;
 
 namespace EventCalenderApi.Services

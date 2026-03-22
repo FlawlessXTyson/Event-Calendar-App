@@ -2,6 +2,9 @@
 {
     public interface IRepository<K, T> where T : class
     {
+
+        
+
         IQueryable<T> GetQueryable();
 
         Task<T?> GetByIdAsync(K key);
