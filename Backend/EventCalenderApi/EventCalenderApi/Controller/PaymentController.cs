@@ -65,5 +65,25 @@ namespace EventCalenderApi.Controllers
         {
             return Ok(await _service.GetCommissionSummaryAsync());
         }
+
+        // ================= ORGANIZER EARNINGS =================
+        [Authorize(Roles = "ORGANIZER")]
+        [HttpGet("organizer-earnings")]
+        public async Task<IActionResult> GetOrganizerEarnings()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            return Ok(await _service.GetOrganizerEarningsAsync(userId));
+        }
+
+        // ================= ORGANIZER EVENT-WISE EARNINGS =================
+        [Authorize(Roles = "ORGANIZER")]
+        [HttpGet("organizer-event-earnings")]
+        public async Task<IActionResult> GetEventWiseEarnings()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            return Ok(await _service.GetEventWiseEarningsAsync(userId));
+        }
     }
 }

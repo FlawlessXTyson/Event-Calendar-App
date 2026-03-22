@@ -398,6 +398,26 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "EventCalenderApi.Controllers.PaymentController",
+    "Method": "GetOrganizerEarnings",
+    "RelativePath": "api/Payment/organizer-earnings",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.PaymentController",
+    "Method": "GetEventWiseEarnings",
+    "RelativePath": "api/Payment/organizer-event-earnings",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EventCalenderApi.Controllers.ReminderController",
     "Method": "Create",
     "RelativePath": "api/Reminder",

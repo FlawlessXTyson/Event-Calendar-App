@@ -196,6 +196,55 @@ namespace EventCalenderApi.Services
             };
         }
 
+        public async Task<OrganizerEarningsDTO> GetOrganizerEarningsAsync(int organizerId)
+        {
+            // Get payments only for organizer's events
+            var payments = await _context.Payments
+                .Include(p => p.Event)
+                .Where(p =>
+                    p.Status == PaymentStatus.SUCCESS &&
+                    p.Event != null &&
+                    p.Event.CreatedByUserId == organizerId)
+                .ToListAsync();
+
+            return new OrganizerEarningsDTO
+            {
+                TotalRevenue = payments.Sum(p => p.AmountPaid),
+                TotalCommission = payments.Sum(p => p.CommissionAmount),
+                NetEarnings = payments.Sum(p => p.OrganizerAmount),
+                TotalTransactions = payments.Count
+            };
+        }
+
+        public async Task<IEnumerable<EventWiseEarningsDTO>> GetEventWiseEarningsAsync(int organizerId)
+        {
+            var payments = await _context.Payments
+                .Include(p => p.Event)
+                .Where(p =>
+                    p.Status == PaymentStatus.SUCCESS &&
+                    p.Event != null &&
+                    p.Event.CreatedByUserId == organizerId)
+                .ToListAsync();
+
+            var result = payments
+                .GroupBy(p => p.EventId)
+                .Select(group => new EventWiseEarningsDTO
+                {
+                    EventId = group.Key,
+                    EventTitle = group.First().Event!.Title,
+
+                    TotalRevenue = group.Sum(p => p.AmountPaid),
+                    TotalCommission = group.Sum(p => p.CommissionAmount),
+                    NetEarnings = group.Sum(p => p.OrganizerAmount),
+
+                    TotalTransactions = group.Count()
+                })
+                .OrderByDescending(e => e.TotalRevenue)
+                .ToList();
+
+            return result;
+        }
+
         private static PaymentResponseDTO MapToDTO(Payment p)
         {
             return new PaymentResponseDTO

@@ -16,5 +16,8 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<PaymentResponseDTO> RefundAsync(int paymentId);
 
         Task<CommissionSummaryDTO> GetCommissionSummaryAsync();
+
+        Task<OrganizerEarningsDTO> GetOrganizerEarningsAsync(int organizerId);
+        Task<IEnumerable<EventWiseEarningsDTO>> GetEventWiseEarningsAsync(int organizerId);
     }
 }
