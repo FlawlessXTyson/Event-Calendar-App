@@ -61,19 +61,18 @@ namespace EventCalenderApi.Services
                 // Multi-day allowed 
             }
 
-            // Registration deadline validation
+
+            // REGISTRATION DEADLINE VALIDATION 
+            
             if (dto.RegistrationDeadline != null)
             {
-                if (dto.RegistrationDeadline < DateTime.UtcNow)
-                    throw new BadRequestException("Registration deadline cannot be in the past");
+                //  EVENT START DATETIME
+                var eventStartDateTime = dto.EventDate.Add(dto.StartTime ?? TimeSpan.Zero);
 
-                //  compare with END DATE if exists, else START DATE
-                var maxDate = dto.EventEndDate ?? dto.EventDate;
-
-                if (dto.RegistrationDeadline > maxDate)
-                    throw new BadRequestException("Registration deadline cannot be after event end date");
+                //  MUST be BEFORE event starts
+                if (dto.RegistrationDeadline >= eventStartDateTime)
+                    throw new BadRequestException("Registration deadline must be before event start time");
             }
-
             //  Paid event validation
             if (dto.IsPaidEvent && dto.TicketPrice <= 0)
                 throw new BadRequestException("Invalid ticket price");

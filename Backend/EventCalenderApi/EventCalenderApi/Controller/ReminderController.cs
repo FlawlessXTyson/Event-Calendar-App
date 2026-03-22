@@ -43,5 +43,13 @@ namespace EventCalenderApi.Controllers
 
             return NoContent();
         }
+
+        [HttpGet("due")]
+        public async Task<IActionResult> GetDueReminders()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            return Ok(await _service.GetDueRemindersAsync(userId));
+        }
     }
 }

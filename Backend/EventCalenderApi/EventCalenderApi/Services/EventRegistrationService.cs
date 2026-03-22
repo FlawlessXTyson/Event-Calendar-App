@@ -13,18 +13,18 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
-        private readonly IAuditLogRepository _auditRepo; //
+        private readonly IAuditLogRepository _auditRepo;
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, Payment> paymentRepo,
-            IAuditLogRepository auditRepo) // 
+            IAuditLogRepository auditRepo)
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
             _paymentRepo = paymentRepo;
-            _auditRepo = auditRepo; //  
+            _auditRepo = auditRepo;
         }
 
         // ================= REGISTER =================
@@ -45,16 +45,15 @@ namespace EventCalenderApi.Services
             // ================= TIME VALIDATION =================
             var now = DateTime.UtcNow;
 
-            //  START CHECK
+            // START CHECK (UNCHANGED)
             var eventStartDateTime = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
 
             if (now >= eventStartDateTime)
                 throw new BadRequestException("Event already started");
 
-            // END CHECK
+            //  IMPROVED END CHECK (SAFE FIX - supports multi-day properly)
             var eventEndDate = ev.EventEndDate ?? ev.EventDate;
             var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
-
             var eventEndDateTime = eventEndDate.Add(eventEndTime);
 
             if (now > eventEndDateTime)
@@ -123,8 +122,13 @@ namespace EventCalenderApi.Services
             var ev = await _eventRepo.GetByIdAsync(registration.EventId)
                 ?? throw new NotFoundException("Event not found");
 
-            if (ev.EventDate <= DateTime.UtcNow)
-                throw new BadRequestException("Cannot cancel after event has started");
+            // 🔥 IMPROVED CANCEL VALIDATION (multi-day support)
+            var eventEndDate = ev.EventEndDate ?? ev.EventDate;
+            var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
+            var eventEndDateTime = eventEndDate.Add(eventEndTime);
+
+            if (DateTime.UtcNow > eventEndDateTime)
+                throw new BadRequestException("Cannot cancel after event has ended");
 
             var payment = await _paymentRepo
                 .GetQueryable()

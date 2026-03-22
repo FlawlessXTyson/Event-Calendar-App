@@ -126,6 +126,22 @@ namespace EventCalenderApi.Services
             await _repo.DeleteAsync(reminderId);
         }
 
+        // ================= DUE REMINDERS =================
+        public async Task<IEnumerable<CreateReminderResponseDTO>> GetDueRemindersAsync(int userId)
+        {
+            var now = DateTime.UtcNow;
+
+            var reminders = await _repo
+                .GetQueryable()
+                .Where(r =>
+                    r.UserId == userId &&
+                    r.ReminderDateTime <= now &&
+                    r.ReminderDateTime >= now.AddMinutes(-1)) // 🔥 last 1 min window
+                .ToListAsync();
+
+            return reminders.Select(MapToDTO);
+        }
+
         private static CreateReminderResponseDTO MapToDTO(Reminder r)
         {
             return new CreateReminderResponseDTO

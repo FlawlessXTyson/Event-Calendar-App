@@ -677,6 +677,18 @@
         }
       }
     },
+    "/api/Reminder/due": {
+      "get": {
+        "tags": [
+          "Reminder"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/RoleRequest/request-organizer": {
       "post": {
         "tags": [

@@ -12,5 +12,7 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
 
         //delete reminder
         Task DeleteAsync(int reminderId, int userId);
+
+        Task<IEnumerable<CreateReminderResponseDTO>> GetDueRemindersAsync(int userId);
     }
 }

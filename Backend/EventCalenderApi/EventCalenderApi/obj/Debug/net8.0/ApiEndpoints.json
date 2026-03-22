@@ -451,6 +451,16 @@
   },
   {
     "ContainingType": "EventCalenderApi.Controllers.ReminderController",
+    "Method": "GetDueReminders",
+    "RelativePath": "api/Reminder/due",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EventCalenderApi.Controllers.ReminderController",
     "Method": "GetMyReminders",
     "RelativePath": "api/Reminder/me",
     "HttpMethod": "GET",
