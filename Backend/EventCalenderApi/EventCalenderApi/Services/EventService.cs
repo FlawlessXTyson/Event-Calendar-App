@@ -32,23 +32,75 @@ namespace EventCalenderApi.Services
         }
 
         // ================= CREATE =================
+        //
+
         public async Task<EventResponseDTO> CreateEventAsync(CreateEventRequestDTO dto)
         {
+            var today = DateTime.UtcNow.Date;
+
+            //  Prevent past start date
+            if (dto.EventDate < today)
+                throw new BadRequestException("Cannot create event in the past");
+
+            //  Same day time validation
+            if (dto.EventDate == today && dto.StartTime <= DateTime.UtcNow.TimeOfDay)
+                throw new BadRequestException("Start time must be in the future");
+
+            // Time validation
+            if (dto.StartTime != null && dto.EndTime != null && dto.StartTime >= dto.EndTime)
+                throw new BadRequestException("EndTime must be after StartTime");
+
+            // MULTI-DAY VALIDATION
+            if (dto.EventEndDate != null)
+            {
+                // End date cannot be before start date
+                if (dto.EventEndDate < dto.EventDate)
+                    throw new BadRequestException("Event end date cannot be before start date");
+
+                // Same day is allowed 
+                // Multi-day allowed 
+            }
+
+            // Registration deadline validation
+            if (dto.RegistrationDeadline != null)
+            {
+                if (dto.RegistrationDeadline < DateTime.UtcNow)
+                    throw new BadRequestException("Registration deadline cannot be in the past");
+
+                //  compare with END DATE if exists, else START DATE
+                var maxDate = dto.EventEndDate ?? dto.EventDate;
+
+                if (dto.RegistrationDeadline > maxDate)
+                    throw new BadRequestException("Registration deadline cannot be after event end date");
+            }
+
+            //  Paid event validation
+            if (dto.IsPaidEvent && dto.TicketPrice <= 0)
+                throw new BadRequestException("Invalid ticket price");
+
+            //  CREATE EVENT 
             var ev = new Event
             {
                 Title = dto.Title,
                 Description = dto.Description,
+
                 EventDate = dto.EventDate,
+                EventEndDate = dto.EventEndDate, // 
+
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
                 Location = dto.Location,
-                Category = dto.Category,
+
+                Category = EventCategory.PUBLIC,
                 Visibility = EventVisibility.PUBLIC,
+
                 CreatedByUserId = dto.CreatedByUserId,
                 SeatsLimit = dto.SeatsLimit,
                 RegistrationDeadline = dto.RegistrationDeadline,
+
                 IsPaidEvent = dto.IsPaidEvent,
                 TicketPrice = dto.IsPaidEvent ? dto.TicketPrice : 0,
+
                 CreatedAt = DateTime.UtcNow,
                 Status = EventStatus.ACTIVE,
                 ApprovalStatus = ApprovalStatus.PENDING
@@ -56,6 +108,7 @@ namespace EventCalenderApi.Services
 
             var created = await _eventRepo.AddAsync(ev);
 
+            // 
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = dto.CreatedByUserId,

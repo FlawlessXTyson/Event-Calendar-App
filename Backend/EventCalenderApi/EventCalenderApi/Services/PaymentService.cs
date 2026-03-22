@@ -2,6 +2,7 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Commission;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
@@ -12,20 +13,29 @@ namespace EventCalenderApi.Services
     public class PaymentService : IPaymentService
     {
         private readonly EventCalendarDbContext _context;
-        private readonly IAuditLogRepository _auditRepo; // 
+        private readonly IAuditLogRepository _auditRepo;
 
         public PaymentService(EventCalendarDbContext context, IAuditLogRepository auditRepo)
         {
             _context = context;
-            _auditRepo = auditRepo; // 
+            _auditRepo = auditRepo;
         }
 
-        // CREATE PAYMENT 
         public async Task<PaymentResponseDTO> CreatePaymentAsync(int userId, PaymentRequestDTO request)
         {
             var eventEntity = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventId == request.EventId)
                 ?? throw new NotFoundException("Event not found");
+
+            // MUST REGISTER FIRST
+            var isRegistered = await _context.EventRegistrations
+                .AnyAsync(r =>
+                    r.UserId == userId &&
+                    r.EventId == request.EventId &&
+                    r.Status == RegistrationStatus.REGISTERED);
+
+            if (!isRegistered)
+                throw new BadRequestException("You must register before making payment");
 
             if (!eventEntity.IsPaidEvent)
                 throw new BadRequestException("This event does not require payment");
@@ -36,11 +46,25 @@ namespace EventCalenderApi.Services
             if (eventEntity.ApprovalStatus != ApprovalStatus.APPROVED)
                 throw new BadRequestException("Event is not approved");
 
-            //  EVENT DATE CHECK
-            if (eventEntity.EventDate < DateTime.UtcNow.Date)
-                throw new BadRequestException("Event already started or completed");
+            // ================= TIME VALIDATION =================
+            var now = DateTime.UtcNow;
 
-            //  SEAT CHECK (PAID EVENTS)
+            //  START CHECK
+            var eventStartDateTime = eventEntity.EventDate.Add(eventEntity.StartTime ?? TimeSpan.Zero);
+
+            if (now >= eventStartDateTime)
+                throw new BadRequestException("Event already started");
+
+            //  END CHECK
+            var eventEndDate = eventEntity.EventEndDate ?? eventEntity.EventDate;
+            var eventEndTime = eventEntity.EndTime ?? new TimeSpan(23, 59, 59);
+
+            var eventEndDateTime = eventEndDate.Add(eventEndTime);
+
+            if (now > eventEndDateTime)
+                throw new BadRequestException("Event already ended");
+
+            // ================= SEAT CHECK =================
             if (eventEntity.SeatsLimit != null)
             {
                 var totalPaid = await _context.Payments
@@ -52,7 +76,7 @@ namespace EventCalenderApi.Services
                     throw new BadRequestException("Event is fully booked");
             }
 
-            // DUPLICATE PAYMENT CHECK
+            // ================= DUPLICATE =================
             var alreadyPaid = await _context.Payments
                 .AnyAsync(p =>
                     p.UserId == userId &&
@@ -62,7 +86,7 @@ namespace EventCalenderApi.Services
             if (alreadyPaid)
                 throw new BadRequestException("You already paid for this event");
 
-            // CALCULATIONS =================
+            // ================= CALC =================
             float price = eventEntity.TicketPrice;
             float commission = price * eventEntity.CommissionPercentage / 100;
             float organizerAmount = price - commission;
@@ -81,7 +105,7 @@ namespace EventCalenderApi.Services
             await _context.Payments.AddAsync(payment);
             await _context.SaveChangesAsync();
 
-            //  AUDIT LOG
+            // ================= AUDIT =================
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = userId,
@@ -94,7 +118,6 @@ namespace EventCalenderApi.Services
             return MapToDTO(payment);
         }
 
-        //  USER PAYMENTS 
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
             var payments = await _context.Payments
@@ -105,7 +128,6 @@ namespace EventCalenderApi.Services
             return payments.Select(MapToDTO);
         }
 
-        //  EVENT PAYMENTS
         public async Task<IEnumerable<PaymentResponseDTO>> GetByEventAsync(int eventId)
         {
             var payments = await _context.Payments
@@ -116,7 +138,6 @@ namespace EventCalenderApi.Services
             return payments.Select(MapToDTO);
         }
 
-        //  ADMIN: ALL PAYMENTS 
         public async Task<IEnumerable<PaymentResponseDTO>> GetAllPaymentsAsync()
         {
             var payments = await _context.Payments
@@ -126,7 +147,6 @@ namespace EventCalenderApi.Services
             return payments.Select(MapToDTO);
         }
 
-        // REFUND 
         public async Task<PaymentResponseDTO> RefundAsync(int paymentId)
         {
             var payment = await _context.Payments
@@ -136,11 +156,10 @@ namespace EventCalenderApi.Services
             if (payment.Status == PaymentStatus.REFUNDED)
                 throw new BadRequestException("Payment already refunded");
 
-            //  CHECK EVENT DATE
             var eventEntity = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventId == payment.EventId);
 
-            if (eventEntity != null && eventEntity.EventDate < DateTime.UtcNow.Date)
+            if (eventEntity != null && eventEntity.EventDate < DateTime.UtcNow)
                 throw new BadRequestException("Cannot refund after event has started");
 
             payment.Status = PaymentStatus.REFUNDED;
@@ -152,7 +171,6 @@ namespace EventCalenderApi.Services
 
             await _context.SaveChangesAsync();
 
-            // 🔥 AUDIT LOG
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = payment.UserId,
@@ -165,7 +183,6 @@ namespace EventCalenderApi.Services
             return MapToDTO(payment);
         }
 
-        // ADMIN SUMMARY 
         public async Task<CommissionSummaryDTO> GetCommissionSummaryAsync()
         {
             var successfulPayments = _context.Payments
@@ -179,7 +196,6 @@ namespace EventCalenderApi.Services
             };
         }
 
-        // MAPPER 
         private static PaymentResponseDTO MapToDTO(Payment p)
         {
             return new PaymentResponseDTO

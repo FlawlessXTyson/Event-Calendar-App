@@ -10,7 +10,12 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
+        // 🔥 START DATE
         public DateTime EventDate { get; set; }
+
+        // 🔥 NEW: END DATE (OPTIONAL → SAFE)
+        public DateTime? EventEndDate { get; set; }
+
         public TimeSpan? StartTime { get; set; }
         public TimeSpan? EndTime { get; set; }
 
@@ -19,35 +24,27 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public EventCategory Category { get; set; } = EventCategory.PUBLIC;
         public EventVisibility Visibility { get; set; } = EventVisibility.PUBLIC;
 
-        // EVENT STATUS 
         public EventStatus Status { get; set; } = EventStatus.ACTIVE;
 
-        // Creator (Organizer/Admin/User)
         public int CreatedByUserId { get; set; }
         public User? CreatedBy { get; set; }
 
-        // Admin approval
         public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.PENDING;
 
         public int? ApprovedByUserId { get; set; }
         public User? ApprovedBy { get; set; }
 
-        // Optional controls
         public int? SeatsLimit { get; set; }
         public DateTime? RegistrationDeadline { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Payment related
         public bool IsPaidEvent { get; set; } = false;
         public float TicketPrice { get; set; } = 0;
-        public float CommissionPercentage { get; set; } = 10; // default 10%
+        public float CommissionPercentage { get; set; } = 10;
 
-        // 
-
-        // Navigation
         public List<EventRegistration> Registrations { get; set; } = new();
-        public List <Payment> Payments { get; set; } = new();
+        public List<Payment> Payments { get; set; } = new();
 
         public int CompareTo(Event? other)
         {
@@ -61,7 +58,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
 
         public override string ToString()
         {
-            return $"EventId: {EventId}, Title: {Title}, Date: {EventDate:yyyy-MM-dd}, Category: {Category}, Approval: {ApprovalStatus}";
+            return $"EventId: {EventId}, Title: {Title}, Date: {EventDate:yyyy-MM-dd}, Approval: {ApprovalStatus}";
         }
     }
 }

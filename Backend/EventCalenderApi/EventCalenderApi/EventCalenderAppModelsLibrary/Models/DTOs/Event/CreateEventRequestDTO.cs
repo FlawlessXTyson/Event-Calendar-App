@@ -14,6 +14,9 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
 
         public DateTime EventDate { get; set; }
 
+        // 
+        public DateTime? EventEndDate { get; set; }
+
         [Required]
         public TimeSpan? StartTime { get; set; }
 
@@ -22,13 +25,9 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
 
         public string Location { get; set; } = string.Empty;
 
-        public EventCategory Category { get; set; }
-
-        //  HIDE FROM SWAGGER + IGNORE INPUT
         [JsonIgnore]
         public EventVisibility Visibility { get; set; }
 
-        //  HIDE FROM SWAGGER + IGNORE INPUT
         [JsonIgnore]
         public int CreatedByUserId { get; set; }
 

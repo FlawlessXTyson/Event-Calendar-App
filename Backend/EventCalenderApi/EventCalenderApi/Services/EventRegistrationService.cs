@@ -13,18 +13,18 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
-        private readonly IAuditLogRepository _auditRepo; // ✅ NEW
+        private readonly IAuditLogRepository _auditRepo; //
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, Payment> paymentRepo,
-            IAuditLogRepository auditRepo) // ✅ NEW
+            IAuditLogRepository auditRepo) // 
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
             _paymentRepo = paymentRepo;
-            _auditRepo = auditRepo; // ✅ NEW
+            _auditRepo = auditRepo; //  
         }
 
         // ================= REGISTER =================
@@ -42,9 +42,25 @@ namespace EventCalenderApi.Services
             if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < DateTime.UtcNow)
                 throw new BadRequestException("Registration deadline has passed");
 
-            if (ev.EventDate < DateTime.UtcNow.Date)
+            // ================= TIME VALIDATION =================
+            var now = DateTime.UtcNow;
+
+            //  START CHECK
+            var eventStartDateTime = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
+
+            if (now >= eventStartDateTime)
                 throw new BadRequestException("Event already started");
 
+            // END CHECK
+            var eventEndDate = ev.EventEndDate ?? ev.EventDate;
+            var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
+
+            var eventEndDateTime = eventEndDate.Add(eventEndTime);
+
+            if (now > eventEndDateTime)
+                throw new BadRequestException("Event has already ended");
+
+            // ================= SEAT LOGIC =================
             if (!ev.IsPaidEvent && ev.SeatsLimit != null)
             {
                 var totalRegistered = await _registrationRepo
@@ -57,6 +73,7 @@ namespace EventCalenderApi.Services
                     throw new BadRequestException("No seats available");
             }
 
+            // ================= DUPLICATE CHECK =================
             var exists = await _registrationRepo
                 .GetQueryable()
                 .AnyAsync(r =>
@@ -67,6 +84,7 @@ namespace EventCalenderApi.Services
             if (exists)
                 throw new BadRequestException("You have already registered for this event");
 
+            // ================= CREATE =================
             var registration = new EventRegistration
             {
                 EventId = dto.EventId,
@@ -77,7 +95,7 @@ namespace EventCalenderApi.Services
 
             var created = await _registrationRepo.AddAsync(registration);
 
-            // ✅ AUDIT LOG
+            // ================= AUDIT LOG =================
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = userId,
@@ -131,7 +149,7 @@ namespace EventCalenderApi.Services
 
             var updated = await _registrationRepo.UpdateAsync(registrationId, registration);
 
-            // ✅ AUDIT LOG
+            // AUDIT LOG
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = userId,
