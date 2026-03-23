@@ -1,13 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+using System.Security.Claims;
 
 namespace EventCalenderApi.EventCalenderAppDataLibrary
 {
     public class EventCalendarDbContext : DbContext
     {
-        public EventCalendarDbContext(DbContextOptions<EventCalendarDbContext> options)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public EventCalendarDbContext(
+            DbContextOptions<EventCalendarDbContext> options,
+            IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
+            _httpContextAccessor = httpContextAccessor;
         }
 
         //================ TABLES =================
@@ -24,45 +30,66 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
 
         public DbSet<AuditLog> AuditLogs { get; set; }
 
+        //  AUTO AUDIT LOG (ADDED ONLY THIS)
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var auditLogs = new List<AuditLog>();
+
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var roleClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
+
+            int userId = userIdClaim != null ? int.Parse(userIdClaim) : 0;
+            string role = roleClaim ?? "SYSTEM";
+
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.Entity is AuditLog || entry.State == EntityState.Detached)
+                    continue;
+
+                if (entry.State == EntityState.Added ||
+                    entry.State == EntityState.Modified ||
+                    entry.State == EntityState.Deleted)
+                {
+                    auditLogs.Add(new AuditLog
+                    {
+                        UserId = userId,
+                        Role = role,
+                        Action = entry.State.ToString().ToUpper(), // ADDED / MODIFIED / DELETED
+                        Entity = entry.Entity.GetType().Name,
+                        EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue as int? ?? 0,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            if (auditLogs.Any())
+            {
+                AuditLogs.AddRange(auditLogs);
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             //================ USER =================
-
-            //unique email constraint
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
-            //================ PRIMARY KEYS (ADDED FIX) =================
-
+            //================ PRIMARY KEYS =================
             modelBuilder.Entity<EventRegistration>()
                 .HasKey(r => r.RegistrationId);
 
             modelBuilder.Entity<RoleChangeRequest>()
                 .HasKey(r => r.RequestId);
 
-            //================ ADMIN SEED =================
-
-            //modelBuilder.Entity<User>().HasData(
-            //    new User
-            //    {
-            //        UserId = 1,
-            //        Name = "Admin",
-            //        Email = "admin@gmail.com",
-
-            //        // IMPORTANT: Replace with YOUR GENERATED HASH
-            //        PasswordHash = "$2a$11$REPLACE_WITH_CORRECT_HASH",
-
-            //        Role = UserRole.ADMIN,
-            //        Status = AccountStatus.ACTIVE,
-            //        CreatedAt = new DateTime(2024, 1, 1)
-            //    }
-            //);
-
             //================ EVENT =================
-
             modelBuilder.Entity<Event>()
                 .HasOne(e => e.CreatedBy)
                 .WithMany(u => u.EventsCreated)
@@ -76,7 +103,6 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .OnDelete(DeleteBehavior.Restrict);
 
             //================ EVENT REGISTRATION =================
-
             modelBuilder.Entity<EventRegistration>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Registrations)
@@ -90,7 +116,6 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .OnDelete(DeleteBehavior.Cascade);
 
             //================ PAYMENT =================
-
             modelBuilder.Entity<Payment>()
                 .HasOne(p => p.User)
                 .WithMany()
@@ -103,9 +128,7 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(p => p.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
             //================ REMINDER =================
-
             modelBuilder.Entity<Reminder>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Reminders)
@@ -113,7 +136,6 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .OnDelete(DeleteBehavior.Cascade);
 
             //================ TODO =================
-
             modelBuilder.Entity<Todo>()
                 .HasOne(t => t.User)
                 .WithMany(u => u.Todos)
@@ -121,17 +143,15 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .OnDelete(DeleteBehavior.Cascade);
 
             //================ ROLE CHANGE REQUEST =================
-
             modelBuilder.Entity<RoleChangeRequest>()
                 .HasOne(r => r.User)
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // PREVENT DUPLICATE PENDING REQUESTS (DB LEVEL)
             modelBuilder.Entity<RoleChangeRequest>()
                 .HasIndex(r => r.UserId)
-                .HasFilter("[Status] = 1") // 1 = Pending
+                .HasFilter("[Status] = 1")
                 .IsUnique();
         }
     }

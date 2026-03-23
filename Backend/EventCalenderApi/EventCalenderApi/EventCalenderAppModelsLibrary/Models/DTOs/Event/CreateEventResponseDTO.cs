@@ -18,5 +18,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
 
         public bool IsPaidEvent { get; set; }
         public float TicketPrice { get; set; }
+
+        public int SeatsLeft { get; set; }
     }
 }

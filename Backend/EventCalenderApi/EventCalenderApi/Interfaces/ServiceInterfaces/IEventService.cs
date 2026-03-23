@@ -14,7 +14,7 @@ public interface IEventService
 
     Task<EventResponseDTO> RejectAsync(int eventId, int adminId);
 
-    //  FIXED SIGNATURE
+    
     Task<EventResponseDTO> CancelEventAsync(int eventId, int userId, string role);
 
     Task<IEnumerable<EventResponseDTO>> SearchAsync(string keyword);

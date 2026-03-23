@@ -1,8 +1,8 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using EventCalenderApi.EventCalenderAppDataLibrary;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using EventCalenderApi.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -12,18 +12,21 @@ namespace EventCalenderApi.Services
 {
     public class AuthenticationService : IAuthenticationService
     {
-        private readonly EventCalendarDbContext _context;
+        private readonly IRepository<int, User> _userRepo;
         private readonly IConfiguration _configuration;
+        private readonly IAuditLogRepository _auditRepo;
 
         public AuthenticationService(
-            EventCalendarDbContext context,
-            IConfiguration configuration)
+            IRepository<int, User> userRepo,
+            IConfiguration configuration,
+            IAuditLogRepository auditRepo)
         {
-            _context = context;
+            _userRepo = userRepo;
             _configuration = configuration;
+            _auditRepo = auditRepo;
         }
 
-        // register
+        // ================= REGISTER =================
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
@@ -32,7 +35,10 @@ namespace EventCalenderApi.Services
 
             var email = request.Email.Trim().ToLower();
 
-            if (await _context.Users.AnyAsync(u => u.Email == email))
+            var exists = await _userRepo.GetQueryable()
+                .AnyAsync(u => u.Email == email);
+
+            if (exists)
                 throw new BadRequestException("Email already registered");
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -47,13 +53,22 @@ namespace EventCalenderApi.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            var created = await _userRepo.AddAsync(user);
 
-            return GenerateTokenResponse(user);
+            //  AUDIT LOG
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = created.UserId,
+                Role = "USER",
+                Action = "REGISTER",
+                Entity = "User",
+                EntityId = created.UserId
+            });
+
+            return GenerateTokenResponse(created);
         }
 
-        // login
+        // ================= LOGIN =================
         public async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
@@ -62,7 +77,7 @@ namespace EventCalenderApi.Services
 
             var email = request.Email.Trim().ToLower();
 
-            var user = await _context.Users
+            var user = await _userRepo.GetQueryable()
                 .FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null ||
@@ -72,10 +87,20 @@ namespace EventCalenderApi.Services
             if (user.Status != AccountStatus.ACTIVE)
                 throw new UnauthorizedException("Account is not active");
 
+            //  AUDIT LOG
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId = user.UserId,
+                Role = user.Role.ToString(),
+                Action = "LOGIN",
+                Entity = "User",
+                EntityId = user.UserId
+            });
+
             return GenerateTokenResponse(user);
         }
 
-        // token generation
+        // ================= TOKEN =================
         private LoginResponseDTO GenerateTokenResponse(User user)
         {
             var jwtSection = _configuration.GetSection("Jwt");

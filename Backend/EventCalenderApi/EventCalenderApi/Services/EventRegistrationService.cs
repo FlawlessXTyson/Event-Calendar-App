@@ -60,7 +60,7 @@ namespace EventCalenderApi.Services
                 throw new BadRequestException("Event has already ended");
 
             // ================= SEAT LOGIC =================
-            if (!ev.IsPaidEvent && ev.SeatsLimit != null)
+            if (ev.SeatsLimit != null)
             {
                 var totalRegistered = await _registrationRepo
                     .GetQueryable()
@@ -122,7 +122,7 @@ namespace EventCalenderApi.Services
             var ev = await _eventRepo.GetByIdAsync(registration.EventId)
                 ?? throw new NotFoundException("Event not found");
 
-            // 🔥 IMPROVED CANCEL VALIDATION (multi-day support)
+            //  IMPROVED CANCEL VALIDATION (multi-day support)
             var eventEndDate = ev.EventEndDate ?? ev.EventDate;
             var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
             var eventEndDateTime = eventEndDate.Add(eventEndTime);

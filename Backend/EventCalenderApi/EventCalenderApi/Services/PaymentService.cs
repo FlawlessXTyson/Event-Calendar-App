@@ -1,5 +1,4 @@
-﻿using EventCalenderApi.EventCalenderAppDataLibrary;
-using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Commission;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
@@ -12,23 +11,30 @@ namespace EventCalenderApi.Services
 {
     public class PaymentService : IPaymentService
     {
-        private readonly EventCalendarDbContext _context;
+        private readonly IRepository<int, Event> _eventRepo;
+        private readonly IRepository<int, EventRegistration> _registrationRepo;
+        private readonly IRepository<int, Payment> _paymentRepo;
         private readonly IAuditLogRepository _auditRepo;
 
-        public PaymentService(EventCalendarDbContext context, IAuditLogRepository auditRepo)
+        public PaymentService(
+            IRepository<int, Event> eventRepo,
+            IRepository<int, EventRegistration> registrationRepo,
+            IRepository<int, Payment> paymentRepo,
+            IAuditLogRepository auditRepo)
         {
-            _context = context;
+            _eventRepo = eventRepo;
+            _registrationRepo = registrationRepo;
+            _paymentRepo = paymentRepo;
             _auditRepo = auditRepo;
         }
 
+        // ================= CREATE PAYMENT =================
         public async Task<PaymentResponseDTO> CreatePaymentAsync(int userId, PaymentRequestDTO request)
         {
-            var eventEntity = await _context.Events
-                .FirstOrDefaultAsync(e => e.EventId == request.EventId)
+            var eventEntity = await _eventRepo.GetByIdAsync(request.EventId)
                 ?? throw new NotFoundException("Event not found");
 
-            // MUST REGISTER FIRST
-            var isRegistered = await _context.EventRegistrations
+            var isRegistered = await _registrationRepo.GetQueryable()
                 .AnyAsync(r =>
                     r.UserId == userId &&
                     r.EventId == request.EventId &&
@@ -49,16 +55,13 @@ namespace EventCalenderApi.Services
             // ================= TIME VALIDATION =================
             var now = DateTime.UtcNow;
 
-            //  START CHECK
             var eventStartDateTime = eventEntity.EventDate.Add(eventEntity.StartTime ?? TimeSpan.Zero);
 
             if (now >= eventStartDateTime)
                 throw new BadRequestException("Event already started");
 
-            //  END CHECK
             var eventEndDate = eventEntity.EventEndDate ?? eventEntity.EventDate;
             var eventEndTime = eventEntity.EndTime ?? new TimeSpan(23, 59, 59);
-
             var eventEndDateTime = eventEndDate.Add(eventEndTime);
 
             if (now > eventEndDateTime)
@@ -67,7 +70,7 @@ namespace EventCalenderApi.Services
             // ================= SEAT CHECK =================
             if (eventEntity.SeatsLimit != null)
             {
-                var totalPaid = await _context.Payments
+                var totalPaid = await _paymentRepo.GetQueryable()
                     .CountAsync(p =>
                         p.EventId == request.EventId &&
                         p.Status == PaymentStatus.SUCCESS);
@@ -77,7 +80,7 @@ namespace EventCalenderApi.Services
             }
 
             // ================= DUPLICATE =================
-            var alreadyPaid = await _context.Payments
+            var alreadyPaid = await _paymentRepo.GetQueryable()
                 .AnyAsync(p =>
                     p.UserId == userId &&
                     p.EventId == request.EventId &&
@@ -102,8 +105,7 @@ namespace EventCalenderApi.Services
                 PaymentDate = DateTime.UtcNow
             };
 
-            await _context.Payments.AddAsync(payment);
-            await _context.SaveChangesAsync();
+            var created = await _paymentRepo.AddAsync(payment);
 
             // ================= AUDIT =================
             await _auditRepo.AddAsync(new AuditLog
@@ -112,15 +114,16 @@ namespace EventCalenderApi.Services
                 Role = "USER",
                 Action = "PAYMENT_SUCCESS",
                 Entity = "Payment",
-                EntityId = payment.PaymentId
+                EntityId = created.PaymentId
             });
 
-            return MapToDTO(payment);
+            return MapToDTO(created);
         }
 
+        // ================= USER PAYMENTS =================
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
-            var payments = await _context.Payments
+            var payments = await _paymentRepo.GetQueryable()
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
@@ -128,9 +131,10 @@ namespace EventCalenderApi.Services
             return payments.Select(MapToDTO);
         }
 
+        // ================= EVENT PAYMENTS =================
         public async Task<IEnumerable<PaymentResponseDTO>> GetByEventAsync(int eventId)
         {
-            var payments = await _context.Payments
+            var payments = await _paymentRepo.GetQueryable()
                 .Where(p => p.EventId == eventId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
@@ -138,38 +142,45 @@ namespace EventCalenderApi.Services
             return payments.Select(MapToDTO);
         }
 
+        // ================= ADMIN =================
         public async Task<IEnumerable<PaymentResponseDTO>> GetAllPaymentsAsync()
         {
-            var payments = await _context.Payments
+            var payments = await _paymentRepo.GetQueryable()
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
 
             return payments.Select(MapToDTO);
         }
 
+        // ================= REFUND =================
         public async Task<PaymentResponseDTO> RefundAsync(int paymentId)
         {
-            var payment = await _context.Payments
-                .FirstOrDefaultAsync(p => p.PaymentId == paymentId)
+            var payment = await _paymentRepo.GetByIdAsync(paymentId)
                 ?? throw new NotFoundException("Payment not found");
 
             if (payment.Status == PaymentStatus.REFUNDED)
                 throw new BadRequestException("Payment already refunded");
 
-            var eventEntity = await _context.Events
-                .FirstOrDefaultAsync(e => e.EventId == payment.EventId);
+            //var eventEntity = await _eventRepo.GetByIdAsync(payment.EventId);
+            var eventEntity = await _eventRepo.GetByIdAsync(payment.EventId)
+                ?? throw new NotFoundException("Event not found");
 
-            if (eventEntity != null && eventEntity.EventDate < DateTime.UtcNow)
-                throw new BadRequestException("Cannot refund after event has started");
+            //if (eventEntity != null && eventEntity.EventDate < DateTime.UtcNow)
+            //    throw new BadRequestException("Cannot refund after event has started");
+            var eventEndDate = eventEntity.EventEndDate ?? eventEntity.EventDate;
+            var eventEndTime = eventEntity.EndTime ?? new TimeSpan(23, 59, 59);
+            var eventEndDateTime = eventEndDate.Add(eventEndTime);
+
+            if (DateTime.UtcNow > eventEndDateTime)
+                throw new BadRequestException("Cannot refund after event has ended");
 
             payment.Status = PaymentStatus.REFUNDED;
             payment.RefundedAmount = payment.AmountPaid;
             payment.RefundedAt = DateTime.UtcNow;
-
             payment.CommissionAmount = 0;
             payment.OrganizerAmount = 0;
 
-            await _context.SaveChangesAsync();
+            var updated = await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
 
             await _auditRepo.AddAsync(new AuditLog
             {
@@ -180,12 +191,13 @@ namespace EventCalenderApi.Services
                 EntityId = payment.PaymentId
             });
 
-            return MapToDTO(payment);
+            return MapToDTO(updated!);
         }
 
+        // ================= COMMISSION =================
         public async Task<CommissionSummaryDTO> GetCommissionSummaryAsync()
         {
-            var successfulPayments = _context.Payments
+            var successfulPayments = _paymentRepo.GetQueryable()
                 .Where(p => p.Status == PaymentStatus.SUCCESS);
 
             return new CommissionSummaryDTO
@@ -196,10 +208,10 @@ namespace EventCalenderApi.Services
             };
         }
 
+        // ================= ORGANIZER TOTAL =================
         public async Task<OrganizerEarningsDTO> GetOrganizerEarningsAsync(int organizerId)
         {
-            // Get payments only for organizer's events
-            var payments = await _context.Payments
+            var payments = await _paymentRepo.GetQueryable()
                 .Include(p => p.Event)
                 .Where(p =>
                     p.Status == PaymentStatus.SUCCESS &&
@@ -216,9 +228,10 @@ namespace EventCalenderApi.Services
             };
         }
 
+        // ================= EVENT WISE =================
         public async Task<IEnumerable<EventWiseEarningsDTO>> GetEventWiseEarningsAsync(int organizerId)
         {
-            var payments = await _context.Payments
+            var payments = await _paymentRepo.GetQueryable()
                 .Include(p => p.Event)
                 .Where(p =>
                     p.Status == PaymentStatus.SUCCESS &&
@@ -226,23 +239,19 @@ namespace EventCalenderApi.Services
                     p.Event.CreatedByUserId == organizerId)
                 .ToListAsync();
 
-            var result = payments
+            return payments
                 .GroupBy(p => p.EventId)
                 .Select(group => new EventWiseEarningsDTO
                 {
                     EventId = group.Key,
                     EventTitle = group.First().Event!.Title,
-
                     TotalRevenue = group.Sum(p => p.AmountPaid),
                     TotalCommission = group.Sum(p => p.CommissionAmount),
                     NetEarnings = group.Sum(p => p.OrganizerAmount),
-
                     TotalTransactions = group.Count()
                 })
                 .OrderByDescending(e => e.TotalRevenue)
                 .ToList();
-
-            return result;
         }
 
         private static PaymentResponseDTO MapToDTO(Payment p)
