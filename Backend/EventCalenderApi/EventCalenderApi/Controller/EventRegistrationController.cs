@@ -19,7 +19,15 @@ namespace EventCalenderApi.Controllers
             _service = service;
         }
 
-        // ✅ REGISTER (NO USERID FROM BODY)
+
+        /// <summary>
+        /// Registers the authenticated user for an event using the provided registration details.
+        /// </summary>
+        /// <remarks>This action requires the user to be authenticated and in the 'USER' role. The user ID
+        /// is determined from the current authentication context and is not supplied in the request body.</remarks>
+        /// <param name="dto">An object containing the event registration information. Must not be null.</param>
+        /// <returns>An IActionResult containing a success message and the registration result data.</returns>
+        // REGISTER (NO USERID FROM BODY)
         [Authorize(Roles = "USER")]
         [HttpPost]
         public async Task<IActionResult> Register(EventRegisterationRequestDTO dto)
@@ -35,7 +43,14 @@ namespace EventCalenderApi.Controllers
             });
         }
 
-        // ✅ CANCEL (WITH REFUND)
+
+        /// <summary>
+        /// Cancels the specified registration and processes a refund if applicable.
+        /// </summary>
+        /// <param name="id">The unique identifier of the registration to cancel.</param>
+        /// <returns>An IActionResult containing a success message and the details of the cancelled registration.</returns>
+        /// <exception cref="UnauthorizedException">Thrown if the user's role cannot be determined from the current context.</exception>
+        // CANCEL (WITH REFUND)
         [Authorize(Roles = "USER,ADMIN")]
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id)
@@ -55,6 +70,12 @@ namespace EventCalenderApi.Controllers
             });
         }
 
+
+        /// <summary>
+        /// Retrieves all items associated with the specified event.
+        /// </summary>
+        /// <param name="eventId">The unique identifier of the event for which to retrieve items.</param>
+        /// <returns>An IActionResult containing the collection of items related to the specified event.</returns>
         [Authorize(Roles = "ADMIN,ORGANIZER")]
         [HttpGet("event/{eventId}")]
         public async Task<IActionResult> GetByEvent(int eventId)

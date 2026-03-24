@@ -26,7 +26,19 @@ namespace EventCalenderApi.Services
             _auditRepo = auditRepo;
         }
 
-        // ================= REGISTER =================
+        /// <summary>
+        /// Registers a new user account using the specified registration details and returns a login response
+        /// containing authentication information.
+        /// </summary>
+        /// <remarks>The method normalizes the email address by trimming whitespace and converting it to
+        /// lowercase before checking for duplicates. Upon successful registration, an audit log entry is created for
+        /// the registration action.</remarks>
+        /// <param name="request">The registration details for the new user, including email, password, and user name. The email and password
+        /// fields are required and cannot be null or whitespace.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a login response with
+        /// authentication information for the newly registered user.</returns>
+        /// <exception cref="BadRequestException">Thrown if the email or password is missing, or if the email is already registered.</exception>
+        // REGISTER 
         public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
@@ -68,7 +80,19 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(created);
         }
 
-        // ================= LOGIN =================
+
+        /// <summary>
+        /// Authenticates a user based on the provided login credentials and returns a token response if successful.
+        /// </summary>
+        /// <remarks>An audit log entry is created for each successful login. The method does not reveal
+        /// whether the email or password was incorrect to prevent information disclosure.</remarks>
+        /// <param name="request">An object containing the user's email and password used for authentication. Both fields are required and
+        /// must not be null or whitespace.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a token response with
+        /// authentication details if the login is successful.</returns>
+        /// <exception cref="BadRequestException">Thrown if the email or password in the request is null, empty, or consists only of whitespace.</exception>
+        /// <exception cref="UnauthorizedException">Thrown if the credentials are invalid or the user's account is not active.</exception>
+        //  LOGIN 
         public async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
@@ -100,7 +124,16 @@ namespace EventCalenderApi.Services
             return GenerateTokenResponse(user);
         }
 
-        // ================= TOKEN =================
+
+        /// <summary>
+        /// Generates a login response containing a JWT access token for the specified user.
+        /// </summary>
+        /// <remarks>The generated token includes claims for the user's identifier, name, email, and role.
+        /// The token's expiration and other parameters are determined by the application's JWT configuration.</remarks>
+        /// <param name="user">The user for whom the JWT access token is generated. Must not be null.</param>
+        /// <returns>A LoginResponseDTO containing the generated JWT access token for the user.</returns>
+        /// <exception cref="BadRequestException">Thrown if the required JWT configuration is missing from the application settings.</exception>
+        //  TOKEN 
         private LoginResponseDTO GenerateTokenResponse(User user)
         {
             var jwtSection = _configuration.GetSection("Jwt");

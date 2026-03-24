@@ -27,7 +27,17 @@ namespace EventCalenderApi.Services
             _auditRepo = auditRepo;
         }
 
-        // ================= REGISTER =================
+
+        /// <summary>
+        /// Registers the specified user for an event if all registration conditions are met.
+        /// </summary>
+        /// <param name="dto">An object containing the event registration request details, including the event identifier.</param>
+        /// <param name="userId">The unique identifier of the user attempting to register for the event.</param>
+        /// <returns>An object containing the details of the successful event registration.</returns>
+        /// <exception cref="NotFoundException">Thrown if the event specified in <paramref name="dto"/> does not exist.</exception>
+        /// <exception cref="BadRequestException">Thrown if the event is not approved, not active, the registration deadline has passed, the event has already
+        /// started or ended, no seats are available, or the user has already registered for the event.</exception>
+        // REGISTER 
         public async Task<EventRegistrationResponseDTO> RegisterAsync(EventRegisterationRequestDTO dto, int userId)
         {
             var ev = await _eventRepo.GetByIdAsync(dto.EventId)
@@ -42,7 +52,10 @@ namespace EventCalenderApi.Services
             if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < DateTime.UtcNow)
                 throw new BadRequestException("Registration deadline has passed");
 
+
+            
             // ================= TIME VALIDATION =================
+            
             var now = DateTime.UtcNow;
 
             // START CHECK (UNCHANGED)
@@ -59,6 +72,8 @@ namespace EventCalenderApi.Services
             if (now > eventEndDateTime)
                 throw new BadRequestException("Event has already ended");
 
+
+            
             // ================= SEAT LOGIC =================
             if (ev.SeatsLimit != null)
             {
