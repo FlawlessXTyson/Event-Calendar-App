@@ -119,6 +119,9 @@ namespace EventCalenderApi.Services
         // disable user (soft delete — sets status to BLOCKED)
         public async Task<CreateUserResponseDTO> DisableUserAsync(int userId, int adminId)
         {
+            if (userId == adminId)
+                throw new BadRequestException("You cannot disable your own account");
+
             var user = await _userRepository.GetByIdAsync(userId)
                 ?? throw new NotFoundException("User not found");
 

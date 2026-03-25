@@ -20,5 +20,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
         public float TicketPrice { get; set; }
 
         public int SeatsLeft { get; set; }
+
+        public string OrganizerName { get; set; } = string.Empty;
     }
 }

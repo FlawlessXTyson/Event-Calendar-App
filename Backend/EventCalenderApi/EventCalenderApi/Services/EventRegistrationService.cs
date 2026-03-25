@@ -186,6 +186,7 @@ namespace EventCalenderApi.Services
         {
             var data = await _registrationRepo
                 .GetQueryable()
+                .Include(r => r.User)
                 .Where(r => r.EventId == eventId)
                 .ToListAsync();
 
@@ -213,6 +214,8 @@ namespace EventCalenderApi.Services
                 RegistrationId = r.RegistrationId,
                 EventId = r.EventId,
                 UserId = r.UserId,
+                UserName  = r.User?.Name  ?? string.Empty,
+                UserEmail = r.User?.Email ?? string.Empty,
                 RegisteredAt = r.RegisteredAt,
                 Status = r.Status
             };

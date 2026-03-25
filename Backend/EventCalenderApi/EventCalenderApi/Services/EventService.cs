@@ -117,6 +117,7 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<EventResponseDTO>> GetAllAsync()
         {
             var data = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
                 .Where(e => e.Status == EventStatus.ACTIVE &&
                             e.ApprovalStatus == ApprovalStatus.APPROVED)
                 .ToListAsync();
@@ -314,7 +315,9 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<EventResponseDTO>> GetPendingEventsAsync()
         {
             var data = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING)
+                .OrderBy(e => e.EventDate)
                 .ToListAsync();
 
             return data.Select(e => MapToDTO(e, 0));
@@ -323,6 +326,7 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<EventResponseDTO>> GetRejectedEventsAsync()
         {
             var data = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.REJECTED)
                 .ToListAsync();
 
@@ -332,6 +336,7 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<EventResponseDTO>> GetApprovedEventsAsync()
         {
             var data = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.APPROVED)
                 .ToListAsync();
 
@@ -357,7 +362,8 @@ namespace EventCalenderApi.Services
                 ApprovalStatus = ev.ApprovalStatus,
                 IsPaidEvent = ev.IsPaidEvent,
                 TicketPrice = ev.TicketPrice,
-                SeatsLeft = seatsLeft
+                SeatsLeft = seatsLeft,
+                OrganizerName = ev.CreatedBy?.Name ?? string.Empty
             };
         }
     }
