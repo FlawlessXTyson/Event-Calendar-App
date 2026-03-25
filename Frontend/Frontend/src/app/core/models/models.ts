@@ -131,6 +131,8 @@ export interface EventResponse {
   startTime?: string;       // TimeSpan → "HH:mm:ss"
   endTime?: string;
   seatsLimit?: number;
+  seatsLeft?: number;           // remaining seats — calculated by backend (SeatsLimit - booked)
+  organizerName?: string;       // name of the organizer who created the event
   registrationDeadline?: string;
   status?: EventStatus;
   createdByUserId?: number;
@@ -196,6 +198,8 @@ export interface EventRegistrationResponse {
   registrationId: number;
   eventId: number;
   userId: number;
+  userName?: string;
+  userEmail?: string;
   status: RegistrationStatus;
   registeredAt: string;
 }

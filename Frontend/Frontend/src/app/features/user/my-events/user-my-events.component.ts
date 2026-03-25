@@ -29,7 +29,11 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
           <span class="material-icons-round" style="font-size:16px;vertical-align:middle;">explore</span> Browse Events
         </button>
         <button type="button" class="tab-btn" [class.active]="tab() === 'registered'" (click)="switchTab('registered')">
-          <span class="material-icons-round" style="font-size:16px;vertical-align:middle;">how_to_reg</span> My Registrations
+          <span class="material-icons-round" style="font-size:16px;vertical-align:middle;">how_to_reg</span>
+          My Registrations
+          @if (activeRegCount() > 0) {
+            <span style="margin-left:6px;background:var(--primary);color:#fff;font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:var(--r-full);vertical-align:middle;">{{ activeRegCount() }}</span>
+          }
         </button>
       </div>
 
@@ -59,7 +63,7 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
                 <div class="event-card-body">
                   <p>{{ ev.description }}</p>
                   <!-- Seats display -->
-                  @if (ev.seatsLimit) {
+                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
                     <div style="margin-top:8px;">
                       <span [class]="seatBadgeClass(ev)" style="font-size:.78rem;">{{ seatsDisplay(ev) }}</span>
                     </div>
@@ -125,7 +129,7 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
                     <td style="font-weight:600;">{{ getEventTitle(reg.eventId) }}</td>
                     <td>{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</td>
                     <td>
-                      @if (getEvent(reg.eventId)?.seatsLimit) {
+                      @if (getEvent(reg.eventId)?.seatsLeft !== undefined && getEvent(reg.eventId)!.seatsLeft! >= 0) {
                         <span [class]="seatBadgeClass(getEvent(reg.eventId)!)" style="font-size:.75rem;">
                           {{ seatsDisplay(getEvent(reg.eventId)!) }}
                         </span>
@@ -191,6 +195,10 @@ export class UserMyEventsComponent implements OnInit {
     return this.allEvents().filter(ev => !s || ev.title.toLowerCase().includes(s) || (ev.location??'').toLowerCase().includes(s));
   });
 
+  activeRegCount = computed(() =>
+    this.myRegs().filter(r => r.status === RegistrationStatus.REGISTERED).length
+  );
+
   ngOnInit() {
     const today = new Date(); today.setHours(0,0,0,0);
     this.eventSvc.getAll().subscribe({
@@ -227,16 +235,18 @@ export class UserMyEventsComponent implements OnInit {
   isEventPaid(eid: number)  { return this.allEvents().find(e => e.eventId === eid)?.isPaidEvent ?? false; }
 
   seatsDisplay(ev: EventResponse): string {
-    if (!ev.seatsLimit) return '';
-    if (ev.seatsLimit === 0) return 'Event Full';
-    if (ev.seatsLimit <= 5) return `\uD83D\uDD25 Only ${ev.seatsLimit} left`;
-    return `Seats: ${ev.seatsLimit}`;
+    const left = ev.seatsLeft;
+    if (left === undefined || left < 0) return '';
+    if (left === 0) return '🚫 Event Full';
+    if (left <= 5)  return `🔥 Only ${left} left!`;
+    return `${left} seats left`;
   }
 
   seatBadgeClass(ev: EventResponse): string {
-    if (!ev.seatsLimit) return 'badge badge-gray';
-    if (ev.seatsLimit === 0) return 'badge badge-danger';
-    if (ev.seatsLimit <= 5) return 'badge badge-warning';
+    const left = ev.seatsLeft;
+    if (left === undefined || left < 0) return 'badge badge-gray';
+    if (left === 0) return 'badge badge-danger';
+    if (left <= 5)  return 'badge badge-warning';
     return 'badge badge-success';
   }
 
@@ -283,6 +293,11 @@ export class UserMyEventsComponent implements OnInit {
     this.regSvc.cancel(regId).subscribe({
       next: res => {
         this.myRegs.update(rs => rs.map(r => r.registrationId === regId ? {...r, status: RegistrationStatus.CANCELLED} : r));
+        // Mark any successful payment for this event as refunded so Pay button shows on re-register
+        this.myPayments.update(ps => ps.map(p => p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS
+          ? { ...p, status: PaymentStatus.REFUNDED }
+          : p
+        ));
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
         this.cancelling.set(null);
@@ -297,6 +312,11 @@ export class UserMyEventsComponent implements OnInit {
     this.regSvc.cancel(reg.registrationId).subscribe({
       next: res => {
         this.myRegs.update(rs => rs.map(r => r.registrationId === reg.registrationId ? {...r, status: RegistrationStatus.CANCELLED} : r));
+        // Mark any successful payment for this event as refunded so Pay button shows on re-register
+        this.myPayments.update(ps => ps.map(p => p.eventId === reg.eventId && p.status === PaymentStatus.SUCCESS
+          ? { ...p, status: PaymentStatus.REFUNDED }
+          : p
+        ));
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
         this.cancelling.set(null);

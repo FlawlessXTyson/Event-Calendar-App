@@ -80,6 +80,12 @@ import { EventResponse, EventCategory } from '../../../core/models/models';
                       {{ ev.location }}
                     </div>
                   }
+                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
+                    <div class="event-detail-row" style="margin-top:6px;">
+                      <span class="material-icons-round">event_seat</span>
+                      <span [class]="seatBadge(ev.seatsLeft)" style="font-size:.72rem;">{{ seatLabel(ev.seatsLeft) }}</span>
+                    </div>
+                  }
                 </div>
                 <span class="btn btn-primary btn-sm">View Details</span>
               </div>
@@ -102,8 +108,12 @@ export class EventsComponent implements OnInit {
     this.loading.set(true);
     this.svc.getAll().subscribe({
       next: evs => {
-        const today = new Date(); today.setHours(0,0,0,0);
-        this.events.set(evs.filter(e => new Date(e.eventDate) >= today));
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        this.events.set(
+          evs
+            .filter(e => new Date(e.eventDate) >= today)
+            .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+        );
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
@@ -114,7 +124,15 @@ export class EventsComponent implements OnInit {
     if (!this.keyword.trim()) { this.load(); return; }
     this.loading.set(true);
     this.svc.search(this.keyword.trim()).subscribe({
-      next: evs => { this.events.set(evs); this.loading.set(false); },
+      next: evs => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        this.events.set(
+          evs
+            .filter(e => new Date(e.eventDate) >= today)
+            .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+        );
+        this.loading.set(false);
+      },
       error: () => { this.events.set([]); this.loading.set(false); }
     });
   }
@@ -128,5 +146,16 @@ export class EventsComponent implements OnInit {
   categoryBadge(c: EventCategory): string {
     const m: Record<number,string> = { 1:'badge-warning', 2:'badge-info', 3:'badge-primary', 4:'badge-orange' };
     return m[c] ?? 'badge-gray';
+  }
+
+  seatLabel(left: number): string {
+    if (left === 0) return '🚫 Event Full';
+    if (left <= 5)  return `🔥 Only ${left} seats left!`;
+    return `${left} seats left`;
+  }
+  seatBadge(left: number): string {
+    if (left === 0) return 'badge badge-danger';
+    if (left <= 5)  return 'badge badge-warning';
+    return 'badge badge-success';
   }
 }

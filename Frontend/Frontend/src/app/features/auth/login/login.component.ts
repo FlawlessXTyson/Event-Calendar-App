@@ -25,7 +25,7 @@ import { strictEmail } from '../../../core/validators/custom.validators';
             <span style="font-family:var(--font-display);font-weight:800;font-size:1.1rem;">EventCalenderApp</span>
           </a>
           <h2 style="font-size:2rem;margin-bottom:16px;line-height:1.3;">Welcome Back!</h2>
-          <p style="opacity:.8;font-size:1rem;line-height:1.7;margin-bottom:36px;">
+          <p style="color:rgba(255,255,255,.92);font-size:1rem;line-height:1.7;margin-bottom:36px;">
             Manage events, track registrations,<br>and never miss a moment.
           </p>
           <div style="display:flex;flex-direction:column;gap:14px;">
@@ -150,8 +150,13 @@ export class LoginComponent {
       error: (err) => {
         this.loading.set(false);
         const status: number = err?.status;
+        const msg: string = (err?.error?.message ?? '').toLowerCase();
         if (status === 401 || status === 400) {
-          this.toast.error('Invalid email or password. Please try again.', 'Sign In Failed');
+          if (msg.includes('disabled') || msg.includes('not active')) {
+            this.toast.error('Your account has been disabled. Please contact support.', 'Account Disabled');
+          } else {
+            this.toast.error('Invalid email or password. Please try again.', 'Sign In Failed');
+          }
         }
       }
     });

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { UserDto, UserRole, AccountStatus } from '../../../core/models/models';
 import { strictEmail, minPassword } from '../../../core/validators/custom.validators';
 
@@ -89,20 +90,27 @@ import { strictEmail, minPassword } from '../../../core/validators/custom.valida
                   <td><span class="badge" [class]="u.status === AccountStatus.ACTIVE ? 'badge-success' : 'badge-danger'">{{ u.status === AccountStatus.ACTIVE ? 'Active' : 'Disabled' }}</span></td>
                   <td style="color:var(--text-muted);">{{ u.createdAt | date:'MMM d, y' }}</td>
                   <td>
-                    <!-- Enable / Disable toggle -->
-                    <button type="button" class="btn btn-sm btn-icon"
-                      [class]="u.status === AccountStatus.ACTIVE ? 'btn-warning' : 'btn-success'"
-                      [disabled]="toggling() === u.userId || deleting() === u.userId"
-                      (click)="toggleStatus(u)"
-                      [title]="u.status === AccountStatus.ACTIVE ? 'Disable user' : 'Enable user'"
-                      style="margin-right:4px;">
-                      @if (toggling() === u.userId) { <div class="spinner spinner-sm"></div> }
-                      @else {
-                        <span class="material-icons-round" style="font-size:18px;">
-                          {{ u.status === AccountStatus.ACTIVE ? 'block' : 'check_circle' }}
-                        </span>
-                      }
-                    </button>
+                    <!-- Enable / Disable toggle — hidden for the logged-in admin's own row -->
+                    @if (u.userId !== auth.userId()) {
+                      <button type="button" class="btn btn-sm btn-icon"
+                        [class]="u.status === AccountStatus.ACTIVE ? 'btn-warning' : 'btn-success'"
+                        [disabled]="toggling() === u.userId || deleting() === u.userId"
+                        (click)="toggleStatus(u)"
+                        [title]="u.status === AccountStatus.ACTIVE ? 'Disable user' : 'Enable user'"
+                        style="margin-right:4px;">
+                        @if (toggling() === u.userId) { <div class="spinner spinner-sm"></div> }
+                        @else {
+                          <span class="material-icons-round" style="font-size:18px;">
+                            {{ u.status === AccountStatus.ACTIVE ? 'block' : 'check_circle' }}
+                          </span>
+                        }
+                      </button>
+                    } @else {
+                      <!-- Placeholder so layout doesn't shift -->
+                      <span style="display:inline-block;width:34px;margin-right:4px;" title="Cannot disable your own account">
+                        <span class="material-icons-round" style="font-size:18px;color:var(--text-muted);opacity:.4;vertical-align:middle;">lock</span>
+                      </span>
+                    }
                     <!-- Delete -->
                     <button type="button" class="btn btn-ghost btn-sm btn-icon" [disabled]="deleting() === u.userId || toggling() === u.userId" (click)="deleteUser(u)" title="Delete user permanently">
                       @if (deleting() === u.userId) { <div class="spinner spinner-sm"></div> }
@@ -124,6 +132,7 @@ import { strictEmail, minPassword } from '../../../core/validators/custom.valida
 export class AdminUsersComponent implements OnInit {
   private userSvc = inject(UserService);
   private toast   = inject(ToastService);
+  auth            = inject(AuthService);
   private fb      = inject(FormBuilder);
   UserRole       = UserRole;
   AccountStatus  = AccountStatus;
@@ -186,6 +195,10 @@ export class AdminUsersComponent implements OnInit {
   }
 
   toggleStatus(u: UserDto) {
+    if (u.userId === this.auth.userId()) {
+      this.toast.error('You cannot disable your own account.', 'Not Allowed');
+      return;
+    }
     const isActive = u.status === AccountStatus.ACTIVE;
     const action   = isActive ? 'disable' : 'enable';
     if (!confirm(`${isActive ? 'Disable' : 'Enable'} user "${u.name}"?`)) return;

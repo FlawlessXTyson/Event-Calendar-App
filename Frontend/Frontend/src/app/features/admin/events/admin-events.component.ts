@@ -36,7 +36,13 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
                 <tr>
                   <td><div style="font-weight:600;max-width:200px;" class="truncate">{{ ev.title }}</div><div style="font-size:.78rem;color:var(--text-muted);">{{ ev.location }}</div></td>
                   <td style="white-space:nowrap;color:var(--text-muted);">{{ ev.eventDate | date:'MMM d, y' }}</td>
-                  <td style="color:var(--text-muted);">ID #{{ ev.createdByUserId }}</td>
+                  <td style="color:var(--text-muted);">
+                    @if (ev.organizerName) {
+                      <div style="font-weight:600;font-size:.85rem;">{{ ev.organizerName }}</div>
+                    } @else {
+                      <span style="color:var(--text-muted);">ID #{{ ev.createdByUserId }}</span>
+                    }
+                  </td>
                   <td>@if (ev.isPaidEvent) { <span class="badge badge-warning">₹{{ ev.ticketPrice | number:'1.0-0' }}</span> } @else { <span class="badge badge-success">Free</span> }</td>
                   <td><span class="badge" [class]="approvalBadge(ev.approvalStatus)">{{ approvalLabel(ev.approvalStatus) }}</span></td>
                   <td>

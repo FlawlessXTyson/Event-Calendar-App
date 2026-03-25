@@ -18,13 +18,16 @@ import { EventResponse, ApprovalStatus } from '../../../core/models/models';
           <div class="hero-badge"><span class="material-icons-round" style="font-size:16px;">bolt</span> Instant Registration</div>
         </div>
         <h1>Discover &amp; Manage<br>Events Effortlessly</h1>
-        <p>Browse upcoming events, register in seconds, pay securely, and get smart reminders — all in one place.</p>
+        <p>Every great moment starts with a single registration. Find your next experience, connect with your community, and make memories that last.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <a routerLink="/events" class="btn btn-lg" style="background:#fff;color:var(--primary);box-shadow:0 4px 16px rgba(0,0,0,.15);">
             <span class="material-icons-round">explore</span> Browse Events
           </a>
           @if (!auth.isLoggedIn()) {
-            <a routerLink="/auth/register" class="btn btn-lg" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);">
+            <a routerLink="/auth/register" class="btn btn-lg"
+              style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.5);transition:background .2s,color .2s;"
+              onmouseover="this.style.background='#fff';this.style.color='var(--primary-dark)'"
+              onmouseout="this.style.background='rgba(255,255,255,.15)';this.style.color='#fff'">
               <span class="material-icons-round">person_add</span> Get Started Free
             </a>
           } @else {
@@ -117,6 +120,12 @@ import { EventResponse, ApprovalStatus } from '../../../core/models/models';
                       {{ ev.location }}
                     </div>
                   }
+                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
+                    <div class="event-detail-row" style="margin-top:2px;">
+                      <span class="material-icons-round">event_seat</span>
+                      <span [class]="seatBadge(ev.seatsLeft)" style="font-size:.72rem;">{{ seatLabel(ev.seatsLeft) }}</span>
+                    </div>
+                  }
                 </div>
               </div>
               <div class="event-card-footer">
@@ -157,15 +166,22 @@ export class HomeComponent implements OnInit {
   ];
 
   featureCards = [
-    { icon: 'event_available', title: 'Easy Registration', desc: 'Register for events with a single click after creating your free account.' },
-    { icon: 'payment',         title: 'Secure Payments',  desc: 'Pay for paid events safely. Automatic refunds when events are cancelled.' },
-    { icon: 'notifications',   title: 'Smart Reminders',  desc: 'Set custom reminders and get notified before events start.' },
-    { icon: 'checklist',       title: 'To-Do Lists',      desc: 'Organise your event tasks with a built-in personal task manager.' },
+    { icon: 'event_available', title: 'Easy Registration',  desc: 'Register for events with a single click. Your seat is confirmed instantly.' },
+    { icon: 'payment',         title: 'Secure Payments',    desc: 'Pay safely for paid events. Automatic refunds when events are cancelled.' },
+    { icon: 'notifications',   title: 'Smart Reminders',    desc: 'Never miss a moment — set custom reminders and get notified before events start.' },
+    { icon: 'checklist',       title: 'Personal To-Do',     desc: 'Stay organised with a built-in task manager for all your event prep.' },
   ];
 
   ngOnInit(): void {
     this.eventSvc.getAll().subscribe({
-      next: evs => { this.events.set(evs); this.loading.set(false); },
+      next: evs => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const filtered = evs
+          .filter(e => new Date(e.eventDate) >= today)
+          .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+        this.events.set(filtered);
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false)
     });
   }
@@ -175,5 +191,16 @@ export class HomeComponent implements OnInit {
   }
   approvalBadge(ev: EventResponse) {
     return ev.approvalStatus === ApprovalStatus.APPROVED ? 'badge-success' : 'badge-warning';
+  }
+
+  seatLabel(left: number): string {
+    if (left === 0) return '🚫 Event Full';
+    if (left <= 5)  return `🔥 Only ${left} seats left!`;
+    return `${left} seats left`;
+  }
+  seatBadge(left: number): string {
+    if (left === 0) return 'badge badge-danger';
+    if (left <= 5)  return 'badge badge-warning';
+    return 'badge badge-success';
   }
 }

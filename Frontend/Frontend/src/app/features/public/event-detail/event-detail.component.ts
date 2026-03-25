@@ -78,9 +78,9 @@ import {
                   <div style="font-weight:600;">{{ event()!.location }}</div>
                 </div>
               }
-              @if (event()!.seatsLimit) {
+              @if (event()!.seatsLeft !== undefined && event()!.seatsLeft! >= 0) {
                 <div [style]="seatCardStyle()" style="border-radius:var(--r-sm);padding:12px;">
-                  <div style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;" [style.color]="seatColor()">Seats</div>
+                  <div style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;" [style.color]="seatColor()">Seats Left</div>
                   <div style="font-weight:700;font-size:1rem;" [style.color]="seatColor()">{{ seatsDisplay() }}</div>
                 </div>
               }
@@ -176,7 +176,7 @@ import {
                       <div style="font-size:1.1rem;font-weight:700;color:var(--success);">Free Entry</div>
                       <div style="font-size:.875rem;color:var(--text-muted);">No payment required</div>
                     }
-                    @if (event()!.seatsLimit) {
+                    @if (event()!.seatsLeft !== undefined && event()!.seatsLeft! >= 0) {
                       <div style="margin-top:6px;">
                         <span [class]="seatBadgeClass()" style="font-size:.8rem;">{{ seatsDisplay() }}</span>
                       </div>
@@ -259,34 +259,34 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   seatsDisplay(): string {
     const ev = this.event();
-    if (!ev?.seatsLimit) return '';
-    const limit = ev.seatsLimit;
-    if (limit === 0) return 'Event Full';
-    if (limit <= 5) return `\uD83D\uDD25 Only ${limit} seats left`;
-    return `Seats Left: ${limit}`;
+    const left = ev?.seatsLeft;
+    if (left === undefined || left < 0) return '';
+    if (left === 0) return 'Event Full';
+    if (left <= 5) return `🔥 Only ${left} seats left!`;
+    return `${left} seats left`;
   }
 
   seatCardStyle(): string {
-    const ev = this.event();
-    if (!ev?.seatsLimit) return 'background:var(--surface-2);';
-    if (ev.seatsLimit === 0) return 'background:#FEE2E2;border:1px solid #FCA5A5;';
-    if (ev.seatsLimit <= 5) return 'background:#FEF3C7;border:1px solid #FCD34D;';
+    const left = this.event()?.seatsLeft;
+    if (left === undefined || left < 0) return 'background:var(--surface-2);';
+    if (left === 0) return 'background:#FEE2E2;border:1px solid #FCA5A5;';
+    if (left <= 5) return 'background:#FEF3C7;border:1px solid #FCD34D;';
     return 'background:var(--success-light);border:1px solid #A7F3D0;';
   }
 
   seatColor(): string {
-    const ev = this.event();
-    if (!ev?.seatsLimit) return 'var(--text-muted)';
-    if (ev.seatsLimit === 0) return '#991B1B';
-    if (ev.seatsLimit <= 5) return '#92400E';
+    const left = this.event()?.seatsLeft;
+    if (left === undefined || left < 0) return 'var(--text-muted)';
+    if (left === 0) return '#991B1B';
+    if (left <= 5) return '#92400E';
     return '#065F46';
   }
 
   seatBadgeClass(): string {
-    const ev = this.event();
-    if (!ev?.seatsLimit) return 'badge badge-gray';
-    if (ev.seatsLimit === 0) return 'badge badge-danger';
-    if (ev.seatsLimit <= 5) return 'badge badge-warning';
+    const left = this.event()?.seatsLeft;
+    if (left === undefined || left < 0) return 'badge badge-gray';
+    if (left === 0) return 'badge badge-danger';
+    if (left <= 5) return 'badge badge-warning';
     return 'badge badge-success';
   }
 

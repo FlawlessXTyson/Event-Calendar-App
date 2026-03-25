@@ -2,13 +2,13 @@
    EventCalenderApp — Global Design System
    ═══════════════════════════════════════════════════════ */
 :root {
-  /* Brand Palette */
-  --primary:        #4F46E5;
-  --primary-dark:   #3730A3;
-  --primary-light:  #EEF2FF;
-  --primary-mid:    #6366F1;
-  --secondary:      #0EA5E9;
-  --secondary-light:#E0F2FE;
+  /* Brand Palette — Deep Teal + Amber Gold */
+  --primary:        #0D9488;
+  --primary-dark:   #0F766E;
+  --primary-light:  #CCFBF1;
+  --primary-mid:    #14B8A6;
+  --secondary:      #F59E0B;
+  --secondary-light:#FEF3C7;
 
   /* Semantic Colours */
   --success:        #10B981;
@@ -17,27 +17,27 @@
   --warning-light:  #FEF3C7;
   --danger:         #EF4444;
   --danger-light:   #FEE2E2;
-  --info:           #3B82F6;
-  --info-light:     #DBEAFE;
+  --info:           #0EA5E9;
+  --info-light:     #E0F2FE;
 
   /* Surfaces */
-  --bg:             #F8FAFC;
+  --bg:             #F0FDFA;
   --surface:        #FFFFFF;
-  --surface-2:      #F1F5F9;
-  --surface-3:      #E2E8F0;
+  --surface-2:      #F0FDFA;
+  --surface-3:      #CCFBF1;
 
   /* Text */
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  --text-primary:   #134E4A;
+  --text-secondary: #4B5563;
+  --text-muted:     #9CA3AF;
   --text-inverted:  #FFFFFF;
 
   /* Borders */
-  --border:         #E2E8F0;
-  --border-focus:   #4F46E5;
+  --border:         #99F6E4;
+  --border-focus:   #0D9488;
 
   /* Sidebar */
-  --sidebar-bg:     #1E1B4B;
+  --sidebar-bg:     #042F2E;
   --sidebar-w:      260px;
 
   /* Radius */
@@ -61,8 +61,8 @@
   --t-slow:   400ms ease;
 
   /* Typography */
-  --font:         'Inter', system-ui, sans-serif;
-  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font:         'DM Sans', system-ui, sans-serif;
+  --font-display: 'Sora', system-ui, sans-serif;
 
   /* Header */
   --header-h: 64px;
@@ -129,8 +129,8 @@ p  { color: var(--text-secondary); }
 .btn-icon { padding: 8px; border-radius: var(--r-sm); }
 .btn-w-full { width: 100%; }
 
-.btn-primary   { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.25); }
-.btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: 0 4px 16px rgba(79,70,229,.35); }
+.btn-primary   { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(13,148,136,.28); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: 0 4px 16px rgba(13,148,136,.4); }
 
 .btn-secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border); }
 .btn-secondary:hover:not(:disabled) { background: var(--surface-2); }
@@ -207,7 +207,7 @@ p  { color: var(--text-secondary); }
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
   appearance: none;
 }
-.form-control:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+.form-control:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(13,148,136,.15); }
 .form-control.is-invalid { border-color: var(--danger); }
 .form-control.is-invalid:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
 .form-control::placeholder { color: var(--text-muted); }
@@ -546,7 +546,7 @@ tbody tr:hover { background: var(--surface-2); }
 
 /* ── Hero ───────────────────────────────────────────── */
 .hero {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-mid) 100%);
+  background: linear-gradient(135deg, #042F2E 0%, #0F766E 45%, #0D9488 75%, #F59E0B 100%);
   color: #fff;
   padding: 72px max(5%, 24px) 80px;
   position: relative;
