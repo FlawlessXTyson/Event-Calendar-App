@@ -16,12 +16,30 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
       <div style="margin-bottom:24px;"><h1 style="font-size:1.5rem;">Event Management</h1><p>Review, approve, reject, and manage all events</p></div>
 
       <div class="tabs">
-        @for (t of tabs; track t.key) {
-          <button type="button" class="tab-btn" [class.active]="activeTab() === t.key" (click)="setTab(t.key)">
-            {{ t.label }}
-            @if (t.key === 'pending' && pendingCount() > 0) { <span class="badge badge-warning" style="margin-left:6px;">{{ pendingCount() }}</span> }
-          </button>
-        }
+        <button type="button" class="tab-btn" [class.active]="activeTab() === 'pending'" (click)="setTab('pending')">
+          Pending
+          @if (pendingCount() > 0) {
+            <span class="badge badge-warning" style="margin-left:6px;">{{ pendingCount() }}</span>
+          }
+        </button>
+        <button type="button" class="tab-btn" [class.active]="activeTab() === 'approved'" (click)="setTab('approved')">
+          Approved
+          @if (approvedCount() > 0) {
+            <span class="badge badge-success" style="margin-left:6px;">{{ approvedCount() }}</span>
+          }
+        </button>
+        <button type="button" class="tab-btn" [class.active]="activeTab() === 'rejected'" (click)="setTab('rejected')">
+          Rejected
+          @if (rejectedCount() > 0) {
+            <span class="badge badge-danger" style="margin-left:6px;">{{ rejectedCount() }}</span>
+          }
+        </button>
+        <button type="button" class="tab-btn" [class.active]="activeTab() === 'all'" (click)="setTab('all')">
+          All
+          @if (allCount() > 0) {
+            <span class="badge badge-gray" style="margin-left:6px;">{{ allCount() }}</span>
+          }
+        </button>
       </div>
 
       @if (loading()) { <div class="loading-center"><div class="spinner"></div></div> }
@@ -96,7 +114,10 @@ export class AdminEventsComponent implements OnInit {
     { key: 'all'      as FilterTab, label: 'All' },
   ];
 
-  pendingCount = () => this.events().filter(e => e.approvalStatus === ApprovalStatus.PENDING).length;
+  pendingCount  = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.PENDING).length);
+  approvedCount = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.APPROVED).length);
+  rejectedCount = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.REJECTED).length);
+  allCount      = computed(() => this.events().length);
 
   filtered = computed(() => {
     const t = this.activeTab();
