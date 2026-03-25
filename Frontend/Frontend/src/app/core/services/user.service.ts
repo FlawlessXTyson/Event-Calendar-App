@@ -32,4 +32,14 @@ export class UserService {
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+
+  /** PUT /api/User/{id}/disable — ADMIN only */
+  disable(id: number) {
+    return this.http.put<UserDto>(`${this.base}/${id}/disable`, {});
+  }
+
+  /** PUT /api/User/{id}/enable — ADMIN only */
+  enable(id: number) {
+    return this.http.put<UserDto>(`${this.base}/${id}/enable`, {});
+  }
 }

@@ -13,5 +13,9 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<CreateUserResponseDTO> UpdateUserAsync(int userId, UpdateUserRequestDTO request);
 
         Task DeleteUserAsync(int userId);
+
+        Task<CreateUserResponseDTO> DisableUserAsync(int userId, int adminId);
+
+        Task<CreateUserResponseDTO> EnableUserAsync(int userId, int adminId);
     }
 }

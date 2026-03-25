@@ -305,6 +305,18 @@ export interface RoleChangeRequest {
   user?: { name?: string; email?: string };
 }
 
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
+
+export interface AuditLog {
+  id: number;
+  userId: number;
+  role: string;
+  action: string;   // ADDED | MODIFIED | DELETED | LOGIN | REGISTER
+  entity: string;
+  entityId: number;
+  createdAt: string;
+}
+
 // ─── API ERROR ────────────────────────────────────────────────────────────────
 
 /** Shape returned by ExceptionMiddleware */

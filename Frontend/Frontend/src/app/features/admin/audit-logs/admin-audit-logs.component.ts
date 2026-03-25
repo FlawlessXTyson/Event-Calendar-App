@@ -1,0 +1,231 @@
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { AuditLogService } from '../../../core/services/audit-log.service';
+import { AuditLog } from '../../../core/models/models';
+
+const ACTION_STYLES: Record<string, { bg: string; color: string }> = {
+  ADDED:    { bg: '#D1FAE5', color: '#065F46' },
+  MODIFIED: { bg: '#DBEAFE', color: '#1E40AF' },
+  DELETED:  { bg: '#FEE2E2', color: '#991B1B' },
+  LOGIN:    { bg: '#EDE9FE', color: '#5B21B6' },
+  REGISTER: { bg: '#FEF3C7', color: '#92400E' },
+};
+
+@Component({
+  selector: 'app-admin-audit-logs',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div>
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:1.5rem;">Audit Logs</h1>
+        <p>Full activity trail — every create, update, delete and auth event on the platform</p>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+            <label class="form-label">Search user ID / entity</label>
+            <input type="text" class="form-control" [(ngModel)]="search" placeholder="e.g. 5 or Event" />
+          </div>
+          <div class="form-group" style="margin:0;min-width:140px;">
+            <label class="form-label">Action</label>
+            <select class="form-control" [(ngModel)]="filterAction">
+              <option value="">All actions</option>
+              @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;min-width:140px;">
+            <label class="form-label">Entity</label>
+            <select class="form-control" [(ngModel)]="filterEntity">
+              <option value="">All entities</option>
+              @for (e of entities(); track e) { <option [value]="e">{{ e }}</option> }
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;min-width:120px;">
+            <label class="form-label">Role</label>
+            <select class="form-control" [(ngModel)]="filterRole">
+              <option value="">All roles</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="ORGANIZER">ORGANIZER</option>
+              <option value="USER">USER</option>
+              <option value="SYSTEM">SYSTEM</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()" style="margin-bottom:1px;">
+            <span class="material-icons-round" style="font-size:16px;">clear</span> Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-grid" style="margin-bottom:20px;">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#EDE9FE;"><span class="material-icons-round" style="color:#7C3AED;">receipt_long</span></div>
+          <div class="stat-value">{{ logs().length }}</div>
+          <div class="stat-label">Total Logs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#D1FAE5;"><span class="material-icons-round" style="color:#059669;">add_circle</span></div>
+          <div class="stat-value">{{ countAction('ADDED') }}</div>
+          <div class="stat-label">Creates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#DBEAFE;"><span class="material-icons-round" style="color:#2563EB;">edit</span></div>
+          <div class="stat-value">{{ countAction('MODIFIED') }}</div>
+          <div class="stat-label">Updates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#FEE2E2;"><span class="material-icons-round" style="color:#DC2626;">delete</span></div>
+          <div class="stat-value">{{ countAction('DELETED') }}</div>
+          <div class="stat-label">Deletes</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <h3>Activity Log <span style="font-size:.85rem;font-weight:400;color:var(--text-muted);">({{ filtered().length }} records)</span></h3>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          @if (loading()) {
+            <div style="padding:40px;text-align:center;"><div class="spinner"></div></div>
+          } @else if (filtered().length === 0) {
+            <div class="empty-state" style="padding:40px;">
+              <span class="material-icons-round" style="font-size:48px;color:var(--text-muted);">receipt_long</span>
+              <p>No audit logs found.</p>
+            </div>
+          } @else {
+            <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+              <thead>
+                <tr style="background:var(--surface-2);border-bottom:2px solid var(--border);">
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">ID</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Timestamp</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">User ID</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Role</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Action</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Entity</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Entity ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (log of paginated(); track log.id) {
+                  <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                    <td style="padding:10px 16px;color:var(--text-muted);">#{{ log.id }}</td>
+                    <td style="padding:10px 16px;white-space:nowrap;">{{ log.createdAt | date:'MMM d, y, HH:mm:ss' }}</td>
+                    <td style="padding:10px 16px;">
+                      <span style="font-weight:600;">{{ log.userId || '—' }}</span>
+                    </td>
+                    <td style="padding:10px 16px;">
+                      <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;"
+                        [style.background]="roleStyle(log.role).bg"
+                        [style.color]="roleStyle(log.role).color">
+                        {{ log.role }}
+                      </span>
+                    </td>
+                    <td style="padding:10px 16px;">
+                      <span style="font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:4px;"
+                        [style.background]="actionStyle(log.action).bg"
+                        [style.color]="actionStyle(log.action).color">
+                        {{ log.action }}
+                      </span>
+                    </td>
+                    <td style="padding:10px 16px;">{{ log.entity }}</td>
+                    <td style="padding:10px 16px;color:var(--text-muted);">{{ log.entityId || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            @if (totalPages() > 1) {
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);">
+                <span style="font-size:.82rem;color:var(--text-muted);">
+                  Page {{ page() }} of {{ totalPages() }} &nbsp;·&nbsp; {{ filtered().length }} records
+                </span>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="btn btn-ghost btn-sm" [disabled]="page() === 1" (click)="page.set(page() - 1)">
+                    <span class="material-icons-round" style="font-size:16px;">chevron_left</span>
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm" [disabled]="page() === totalPages()" (click)="page.set(page() + 1)">
+                    <span class="material-icons-round" style="font-size:16px;">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  `
+})
+export class AdminAuditLogsComponent implements OnInit {
+  private svc = inject(AuditLogService);
+
+  logs    = signal<AuditLog[]>([]);
+  loading = signal(true);
+  page    = signal(1);
+  readonly pageSize = 50;
+
+  search       = '';
+  filterAction = '';
+  filterEntity = '';
+  filterRole   = '';
+
+  actions = ['ADDED', 'MODIFIED', 'DELETED', 'LOGIN', 'REGISTER'];
+
+  entities = computed(() => [...new Set(this.logs().map(l => l.entity))].sort());
+
+  filtered = computed(() => {
+    const s = this.search.toLowerCase();
+    return this.logs().filter(l => {
+      const matchSearch = !s || l.userId.toString().includes(s) || l.entity.toLowerCase().includes(s);
+      const matchAction = !this.filterAction || l.action === this.filterAction;
+      const matchEntity = !this.filterEntity || l.entity === this.filterEntity;
+      const matchRole   = !this.filterRole   || l.role === this.filterRole;
+      return matchSearch && matchAction && matchEntity && matchRole;
+    });
+  });
+
+  totalPages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
+
+  paginated = computed(() => {
+    const start = (this.page() - 1) * this.pageSize;
+    return this.filtered().slice(start, start + this.pageSize);
+  });
+
+  ngOnInit() {
+    this.svc.getAll().subscribe({
+      next: logs => { this.logs.set(logs); this.loading.set(false); },
+      error: () => this.loading.set(false)
+    });
+  }
+
+  clearFilters() {
+    this.search = '';
+    this.filterAction = '';
+    this.filterEntity = '';
+    this.filterRole = '';
+    this.page.set(1);
+  }
+
+  countAction(action: string) {
+    return this.logs().filter(l => l.action === action).length;
+  }
+
+  actionStyle(action: string) {
+    return ACTION_STYLES[action] ?? { bg: '#F1F5F9', color: '#475569' };
+  }
+
+  roleStyle(role: string) {
+    const map: Record<string, { bg: string; color: string }> = {
+      ADMIN:     { bg: '#FEE2E2', color: '#991B1B' },
+      ORGANIZER: { bg: '#FEF3C7', color: '#92400E' },
+      USER:      { bg: '#DBEAFE', color: '#1E40AF' },
+      SYSTEM:    { bg: '#F1F5F9', color: '#475569' },
+    };
+    return map[role] ?? { bg: '#F1F5F9', color: '#475569' };
+  }
+}

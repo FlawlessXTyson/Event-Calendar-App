@@ -21,6 +21,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           toast.error(message, 'Validation Error');
           break;
         case 401:
+          // Login endpoint — wrong credentials, not a session expiry
+          if (req.url.includes('/Authentication/login') || req.url.includes('/Authentication/register')) {
+            break; // let the component handle it
+          }
           toast.error('Your session has expired. Please sign in again.', 'Session Expired');
           auth.logout();
           break;

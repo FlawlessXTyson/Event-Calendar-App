@@ -10,11 +10,12 @@ namespace EventCalenderApi.Services
     public class UserService : IUserService
     {
         private readonly IRepository<int, User> _userRepository;
+        private readonly IAuditLogRepository _auditRepo;
 
-        //constructor injection
-        public UserService(IRepository<int, User> userRepository)
+        public UserService(IRepository<int, User> userRepository, IAuditLogRepository auditRepo)
         {
             _userRepository = userRepository;
+            _auditRepo = auditRepo;
         }
 
         //create user manually (admin)
@@ -113,6 +114,54 @@ namespace EventCalenderApi.Services
             //delete user from database
             var deletedUser = await _userRepository.DeleteAsync(userId)
                 ?? throw new NotFoundException("User not found");
+        }
+
+        // disable user (soft delete — sets status to BLOCKED)
+        public async Task<CreateUserResponseDTO> DisableUserAsync(int userId, int adminId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException("User not found");
+
+            if (user.Status == AccountStatus.BLOCKED)
+                throw new BadRequestException("User is already disabled");
+
+            user.Status = AccountStatus.BLOCKED;
+            var updated = await _userRepository.UpdateAsync(userId, user);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId   = adminId,
+                Role     = "ADMIN",
+                Action   = "DISABLE_USER",
+                Entity   = "User",
+                EntityId = userId
+            });
+
+            return MapToDTO(updated!);
+        }
+
+        // enable user (reverses disable — sets status back to ACTIVE)
+        public async Task<CreateUserResponseDTO> EnableUserAsync(int userId, int adminId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException("User not found");
+
+            if (user.Status == AccountStatus.ACTIVE)
+                throw new BadRequestException("User is already active");
+
+            user.Status = AccountStatus.ACTIVE;
+            var updated = await _userRepository.UpdateAsync(userId, user);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                UserId   = adminId,
+                Role     = "ADMIN",
+                Action   = "ENABLE_USER",
+                Entity   = "User",
+                EntityId = userId
+            });
+
+            return MapToDTO(updated!);
         }
 
         //helper method for mapping entity → DTO

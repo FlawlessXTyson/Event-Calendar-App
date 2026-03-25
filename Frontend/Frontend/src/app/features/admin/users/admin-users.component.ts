@@ -86,10 +86,25 @@ import { strictEmail, minPassword } from '../../../core/validators/custom.valida
                   <td style="font-weight:600;">{{ u.name }}</td>
                   <td style="color:var(--text-muted);">{{ u.email }}</td>
                   <td><span class="badge" [class]="roleBadge(u.role)">{{ roleLabel(u.role) }}</span></td>
-                  <td><span class="badge" [class]="u.status === AccountStatus.ACTIVE ? 'badge-success' : 'badge-danger'">{{ u.status === AccountStatus.ACTIVE ? 'Active' : 'Blocked' }}</span></td>
+                  <td><span class="badge" [class]="u.status === AccountStatus.ACTIVE ? 'badge-success' : 'badge-danger'">{{ u.status === AccountStatus.ACTIVE ? 'Active' : 'Disabled' }}</span></td>
                   <td style="color:var(--text-muted);">{{ u.createdAt | date:'MMM d, y' }}</td>
                   <td>
-                    <button type="button" class="btn btn-ghost btn-sm btn-icon" [disabled]="deleting() === u.userId" (click)="deleteUser(u)" title="Delete user">
+                    <!-- Enable / Disable toggle -->
+                    <button type="button" class="btn btn-sm btn-icon"
+                      [class]="u.status === AccountStatus.ACTIVE ? 'btn-warning' : 'btn-success'"
+                      [disabled]="toggling() === u.userId || deleting() === u.userId"
+                      (click)="toggleStatus(u)"
+                      [title]="u.status === AccountStatus.ACTIVE ? 'Disable user' : 'Enable user'"
+                      style="margin-right:4px;">
+                      @if (toggling() === u.userId) { <div class="spinner spinner-sm"></div> }
+                      @else {
+                        <span class="material-icons-round" style="font-size:18px;">
+                          {{ u.status === AccountStatus.ACTIVE ? 'block' : 'check_circle' }}
+                        </span>
+                      }
+                    </button>
+                    <!-- Delete -->
+                    <button type="button" class="btn btn-ghost btn-sm btn-icon" [disabled]="deleting() === u.userId || toggling() === u.userId" (click)="deleteUser(u)" title="Delete user permanently">
                       @if (deleting() === u.userId) { <div class="spinner spinner-sm"></div> }
                       @else { <span class="material-icons-round" style="color:var(--danger);font-size:18px;">delete</span> }
                     </button>
@@ -118,6 +133,7 @@ export class AdminUsersComponent implements OnInit {
   showCreate  = signal(false);
   creatingUser= signal(false);
   deleting    = signal<number | null>(null);
+  toggling    = signal<number | null>(null);
   search      = signal('');
   filterRole  = signal<'' | UserRole>('');
 
@@ -166,6 +182,22 @@ export class AdminUsersComponent implements OnInit {
     this.userSvc.delete(u.userId).subscribe({
       next: () => { this.users.update(us => us.filter(x => x.userId !== u.userId)); this.toast.success(`User "${u.name}" deleted.`, 'User Deleted'); this.deleting.set(null); },
       error: () => this.deleting.set(null)
+    });
+  }
+
+  toggleStatus(u: UserDto) {
+    const isActive = u.status === AccountStatus.ACTIVE;
+    const action   = isActive ? 'disable' : 'enable';
+    if (!confirm(`${isActive ? 'Disable' : 'Enable'} user "${u.name}"?`)) return;
+    this.toggling.set(u.userId);
+    const call = isActive ? this.userSvc.disable(u.userId) : this.userSvc.enable(u.userId);
+    call.subscribe({
+      next: updated => {
+        this.users.update(us => us.map(x => x.userId === updated.userId ? updated : x));
+        this.toast.success(`User "${updated.name}" has been ${action}d.`, isActive ? 'User Disabled' : 'User Enabled');
+        this.toggling.set(null);
+      },
+      error: () => this.toggling.set(null)
     });
   }
 

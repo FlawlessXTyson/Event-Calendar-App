@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { EventResponse } from '../../../core/models/models';
+import { SpecialDay, getSpecialDaysForYear } from '../.././../features/public/calendar/special-days';
 
 interface CalendarDay {
   key: string;
@@ -10,44 +11,10 @@ interface CalendarDay {
   isToday: boolean;
   isOther: boolean;
   events: EventResponse[];
-  holidays: { name: string; type: 'holiday' | 'awareness' }[];
+  holidays: SpecialDay[];
+  cultural: SpecialDay[];
+  awareness: SpecialDay[];
 }
-
-// Static public holidays (India) and awareness days
-const PUBLIC_HOLIDAYS: { month: number; day: number; name: string }[] = [
-  { month: 1,  day: 1,  name: "New Year's Day" },
-  { month: 1,  day: 26, name: 'Republic Day' },
-  { month: 3,  day: 25, name: 'Holi' },
-  { month: 4,  day: 14, name: 'Dr. Ambedkar Jayanti' },
-  { month: 5,  day: 1,  name: 'Labour Day' },
-  { month: 8,  day: 15, name: 'Independence Day' },
-  { month: 10, day: 2,  name: 'Gandhi Jayanti' },
-  { month: 10, day: 24, name: 'Dussehra' },
-  { month: 11, day: 1,  name: "Diwali" },
-  { month: 12, day: 25, name: 'Christmas Day' },
-];
-
-const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
-  { month: 1,  day: 27, name: 'Holocaust Remembrance Day' },
-  { month: 2,  day: 4,  name: 'World Cancer Day' },
-  { month: 3,  day: 8,  name: "International Women's Day" },
-  { month: 3,  day: 22, name: 'World Water Day' },
-  { month: 4,  day: 7,  name: 'World Health Day' },
-  { month: 4,  day: 22, name: 'Earth Day' },
-  { month: 5,  day: 4,  name: 'Star Wars Day' },
-  { month: 5,  day: 15, name: "International Day of Families" },
-  { month: 6,  day: 5,  name: 'World Environment Day' },
-  { month: 6,  day: 21, name: 'International Yoga Day' },
-  { month: 7,  day: 11, name: 'World Population Day' },
-  { month: 8,  day: 12, name: 'International Youth Day' },
-  { month: 9,  day: 8,  name: 'International Literacy Day' },
-  { month: 9,  day: 21, name: 'International Day of Peace' },
-  { month: 10, day: 10, name: 'World Mental Health Day' },
-  { month: 10, day: 16, name: 'World Food Day' },
-  { month: 11, day: 14, name: "World Diabetes Day" },
-  { month: 12, day: 1,  name: 'World AIDS Day' },
-  { month: 12, day: 10, name: 'Human Rights Day' },
-];
 
 @Component({
   selector: 'app-dashboard-calendar',
@@ -57,10 +24,9 @@ const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
     <div>
       <div style="margin-bottom:24px;">
         <h1 style="font-size:1.5rem;">Calendar</h1>
-        <p>Events, public holidays & awareness days</p>
+        <p>Events, public holidays, cultural celebrations & awareness days</p>
       </div>
 
-      <!-- Month navigation -->
       <div class="card">
         <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
           <button type="button" class="btn btn-ghost btn-icon" (click)="prevMonth()">
@@ -76,36 +42,45 @@ const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
         </div>
 
         <div class="card-body" style="padding:0;">
-          <!-- Day headers -->
           <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);">
             @for (d of days; track d) {
               <div style="padding:10px 0;text-align:center;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">{{ d }}</div>
             }
           </div>
 
-          <!-- Calendar cells -->
           <div style="display:grid;grid-template-columns:repeat(7,1fr);">
             @for (cell of cells(); track cell.key) {
               <div [style]="cellStyle(cell)"
-                style="min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative;">
+                style="min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;overflow:hidden;">
                 @if (cell.day) {
                   <div [style]="dayNumStyle(cell)"
                     style="font-size:.8rem;font-weight:600;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">
                     {{ cell.day }}
                   </div>
 
-                  <!-- Holidays -->
-                  @for (h of cell.holidays.slice(0,1); track h.name) {
-                    <div style="font-size:.65rem;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
-                      [style.background]="h.type === 'holiday' ? '#FEE2E2' : '#D1FAE5'"
-                      [style.color]="h.type === 'holiday' ? '#991B1B' : '#065F46'">
-                      {{ h.type === 'holiday' ? '🎉' : '💚' }} {{ h.name }}
+                  @for (h of cell.holidays.slice(0,1); track h.label) {
+                    <div [title]="h.label"
+                      style="font-size:.65rem;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#FEE2E2;color:#991B1B;font-weight:600;">
+                      🏛 {{ h.label }}
                     </div>
                   }
 
-                  <!-- Events -->
+                  @for (c of cell.cultural.slice(0,1); track c.label) {
+                    <div [title]="c.label"
+                      style="font-size:.65rem;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#FEF3C7;color:#92400E;font-weight:600;">
+                      🎉 {{ c.label }}
+                    </div>
+                  }
+
+                  @for (a of cell.awareness.slice(0,1); track a.label) {
+                    <div [title]="a.label"
+                      style="font-size:.65rem;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#D1FAE5;color:#065F46;font-weight:600;">
+                      🌍 {{ a.label }}
+                    </div>
+                  }
+
                   @for (ev of cell.events.slice(0,2); track ev.eventId) {
-                    <a [routerLink]="eventLink(ev)"
+                    <a [routerLink]="eventLink(ev)" [title]="ev.title"
                       style="display:block;font-size:.65rem;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:none;"
                       [style.background]="evColor(ev.category).bg"
                       [style.color]="evColor(ev.category).text">
@@ -113,10 +88,9 @@ const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
                     </a>
                   }
 
-                  <!-- Overflow -->
-                  @if ((cell.events.length + cell.holidays.length) > 3) {
+                  @if ((cell.events.length + cell.holidays.length + cell.cultural.length + cell.awareness.length) > 4) {
                     <div style="font-size:.62rem;color:var(--text-muted);padding:1px 3px;">
-                      +{{ (cell.events.length + cell.holidays.length) - 3 }} more
+                      +{{ (cell.events.length + cell.holidays.length + cell.cultural.length + cell.awareness.length) - 4 }} more
                     </div>
                   }
                 }
@@ -136,8 +110,8 @@ const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
         }
       </div>
 
-      <!-- Month event list -->
-      @if (monthEvents().length > 0 || monthHolidays().length > 0) {
+      <!-- Month list -->
+      @if (monthItems().length > 0) {
         <div class="card" style="margin-top:20px;">
           <div class="card-header"><h3 style="font-size:1rem;">{{ viewDate() | date:'MMMM yyyy' }} — All Days</h3></div>
           <div class="card-body" style="padding:0;">
@@ -171,90 +145,96 @@ const AWARENESS_DAYS: { month: number; day: number; name: string }[] = [
   `
 })
 export class DashboardCalendarComponent implements OnInit {
-  @Input() eventRoutePrefix = '/events'; // '/events' for public, '/user/my-events' etc
+  @Input() eventRoutePrefix = '/events';
 
   private eventSvc = inject(EventService);
   events   = signal<EventResponse[]>([]);
   loading  = signal(true);
   viewDate = signal(new Date());
 
+  private specialDaysCache = new Map<number, SpecialDay[]>();
+
   days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   legend = [
-    { label:'Public Holiday', bg:'#FEE2E2' },
-    { label:'Awareness Day',  bg:'#D1FAE5' },
-    { label:'Holiday Event',  bg:'#FEF3C7' },
-    { label:'Org Event',      bg:'#DBEAFE' },
-    { label:'Personal Event', bg:'#EDE9FE' },
+    { label: 'Public Holiday',       bg: '#FEE2E2' },
+    { label: 'Cultural / Religious', bg: '#FEF3C7' },
+    { label: 'Awareness Day',        bg: '#D1FAE5' },
+    { label: 'Organizer Event',      bg: '#DBEAFE' },
   ];
 
+  private getSpecial(year: number): SpecialDay[] {
+    if (!this.specialDaysCache.has(year)) {
+      this.specialDaysCache.set(year, getSpecialDaysForYear(year));
+    }
+    return this.specialDaysCache.get(year)!;
+  }
+
   cells = computed(() => {
-    const d  = this.viewDate();
-    const yr = d.getFullYear();
-    const mo = d.getMonth(); // 0-based
-    const first = new Date(yr, mo, 1).getDay();
+    const d   = this.viewDate();
+    const yr  = d.getFullYear();
+    const mo  = d.getMonth();
+    const mo1 = mo + 1;
+    const first       = new Date(yr, mo, 1).getDay();
     const daysInMonth = new Date(yr, mo + 1, 0).getDate();
-    const today = new Date();
+    const today       = new Date();
+    const special     = this.getSpecial(yr);
     const result: CalendarDay[] = [];
 
-    for (let i = 0; i < first; i++) result.push({ key:`p${i}`, day:null, isToday:false, isOther:true, events:[], holidays:[] });
+    for (let i = 0; i < first; i++)
+      result.push({ key:`p${i}`, day:null, isToday:false, isOther:true, events:[], holidays:[], cultural:[], awareness:[] });
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const evs = this.events().filter(ev => {
+      const evs      = this.events().filter(ev => {
         const ed = new Date(ev.eventDate);
-        return ed.getFullYear() === yr && ed.getMonth() === mo && ed.getDate() === day;
+        return ed.getFullYear()===yr && ed.getMonth()===mo && ed.getDate()===day;
       });
-      const hols = [
-        ...PUBLIC_HOLIDAYS.filter(h => h.month === mo+1 && h.day === day).map(h => ({ name: h.name, type: 'holiday' as const })),
-        ...AWARENESS_DAYS.filter(h => h.month === mo+1 && h.day === day).map(h => ({ name: h.name, type: 'awareness' as const })),
-      ];
-      const isToday = today.getFullYear()===yr && today.getMonth()===mo && today.getDate()===day;
-      result.push({ key:`${yr}-${mo}-${day}`, day, isToday, isOther:false, events:evs, holidays:hols });
+      const daySpecial = special.filter(s => s.month===mo1 && s.day===day);
+      const isToday    = today.getFullYear()===yr && today.getMonth()===mo && today.getDate()===day;
+      result.push({
+        key: `${yr}-${mo}-${day}`, day, isToday, isOther: false, events: evs,
+        holidays:  daySpecial.filter(s => s.type==='holiday'),
+        cultural:  daySpecial.filter(s => s.type==='cultural'),
+        awareness: daySpecial.filter(s => s.type==='awareness'),
+      });
     }
+
     const rem = result.length % 7;
-    if (rem > 0) for (let i = 0; i < 7-rem; i++) result.push({ key:`n${i}`, day:null, isToday:false, isOther:true, events:[], holidays:[] });
+    if (rem > 0)
+      for (let i = 0; i < 7-rem; i++)
+        result.push({ key:`n${i}`, day:null, isToday:false, isOther:true, events:[], holidays:[], cultural:[], awareness:[] });
+
     return result;
   });
 
-  monthEvents = computed(() => {
-    const d  = this.viewDate();
-    return this.events().filter(ev => {
-      const ed = new Date(ev.eventDate);
-      return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth();
-    });
-  });
-
-  monthHolidays = computed(() => {
-    const mo = this.viewDate().getMonth() + 1;
-    return [
-      ...PUBLIC_HOLIDAYS.filter(h => h.month === mo),
-      ...AWARENESS_DAYS.filter(h => h.month === mo),
-    ];
-  });
-
   monthItems = computed(() => {
-    const d  = this.viewDate();
-    const yr = d.getFullYear();
-    const mo = d.getMonth();
+    const d   = this.viewDate();
+    const yr  = d.getFullYear();
+    const mo  = d.getMonth();
+    const mo1 = mo + 1;
     const daysInMonth = new Date(yr, mo + 1, 0).getDate();
-    const items: any[] = [];
+    const special     = this.getSpecial(yr);
     const weekDayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const items: any[] = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(yr, mo, day);
-      const weekday = weekDayNames[date.getDay()];
+      const weekday    = weekDayNames[new Date(yr, mo, day).getDay()];
+      const daySpecial = special.filter(s => s.month===mo1 && s.day===day);
 
-      PUBLIC_HOLIDAYS.filter(h => h.month === mo+1 && h.day === day).forEach(h => {
-        items.push({ key:`h-${day}-${h.name}`, day, weekday, label:h.name, type:'Public Holiday', bg:'#FEE2E2', color:'#991B1B', subtitle:'', link:null });
-      });
-      AWARENESS_DAYS.filter(h => h.month === mo+1 && h.day === day).forEach(h => {
-        items.push({ key:`a-${day}-${h.name}`, day, weekday, label:h.name, type:'Awareness Day', bg:'#D1FAE5', color:'#065F46', subtitle:'', link:null });
-      });
+      daySpecial.filter(s => s.type==='holiday').forEach(h =>
+        items.push({ key:`h-${day}-${h.label}`, day, weekday, label:h.label, type:'Public Holiday', bg:'#FEE2E2', color:'#991B1B', subtitle:'', link:null })
+      );
+      daySpecial.filter(s => s.type==='cultural').forEach(c =>
+        items.push({ key:`c-${day}-${c.label}`, day, weekday, label:c.label, type:'Cultural', bg:'#FEF3C7', color:'#92400E', subtitle:'', link:null })
+      );
+      daySpecial.filter(s => s.type==='awareness').forEach(a =>
+        items.push({ key:`a-${day}-${a.label}`, day, weekday, label:a.label, type:'Awareness Day', bg:'#D1FAE5', color:'#065F46', subtitle:'', link:null })
+      );
       this.events().filter(ev => {
         const ed = new Date(ev.eventDate);
-        return ed.getFullYear() === yr && ed.getMonth() === mo && ed.getDate() === day;
-      }).forEach(ev => {
-        items.push({ key:`e-${ev.eventId}`, day, weekday, label:ev.title, type:'Event', bg:this.evColor(ev.category).bg, color:this.evColor(ev.category).text, subtitle:ev.location || '', link:[this.eventRoutePrefix, ev.eventId] });
-      });
+        return ed.getFullYear()===yr && ed.getMonth()===mo && ed.getDate()===day;
+      }).forEach(ev =>
+        items.push({ key:`e-${ev.eventId}`, day, weekday, label:ev.title, type:'Event', bg:this.evColor(ev.category).bg, color:this.evColor(ev.category).text, subtitle:ev.location||'', link:[this.eventRoutePrefix, ev.eventId] })
+      );
     }
     return items.sort((a, b) => a.day - b.day);
   });

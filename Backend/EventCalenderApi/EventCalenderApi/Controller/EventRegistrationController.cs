@@ -7,6 +7,15 @@ using EventCalenderApi.Exceptions;
 
 namespace EventCalenderApi.Controllers
 {
+
+    /// <summary>
+    /// Provides API endpoints for managing event registrations, including registering for events, cancelling
+    /// registrations, retrieving event-related items, and listing the authenticated user's registrations.  
+    /// </summary>
+    /// <remarks>All actions require authentication. Role-based authorization is enforced for specific
+    /// endpoints: only users with the 'USER' role can register for events, 'USER' or 'ADMIN' roles can cancel
+    /// registrations, and 'ADMIN' or 'ORGANIZER' roles can retrieve event items. The controller relies on the current
+    /// authentication context to determine the user identity and role for each request.</remarks>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]

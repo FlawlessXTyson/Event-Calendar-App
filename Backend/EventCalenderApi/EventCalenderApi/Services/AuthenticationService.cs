@@ -47,10 +47,10 @@ namespace EventCalenderApi.Services
 
             var email = request.Email.Trim().ToLower();
 
-            var exists = await _userRepo.GetQueryable()
-                .AnyAsync(u => u.Email == email);
+            var existingUser = await _userRepo.GetQueryable()
+                .FirstOrDefaultAsync(u => u.Email == email);
 
-            if (exists)
+            if (existingUser != null)
                 throw new BadRequestException("Email already registered");
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -109,7 +109,7 @@ namespace EventCalenderApi.Services
                 throw new UnauthorizedException("Invalid email or password");
 
             if (user.Status != AccountStatus.ACTIVE)
-                throw new UnauthorizedException("Account is not active");
+                throw new UnauthorizedException("Your account has been disabled. Please contact support.");
 
             //  AUDIT LOG
             await _auditRepo.AddAsync(new AuditLog

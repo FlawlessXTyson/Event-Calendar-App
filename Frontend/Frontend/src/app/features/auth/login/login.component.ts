@@ -147,7 +147,13 @@ export class LoginComponent {
         this.reminder.start();
         this.auth.redirectByRole();
       },
-      error: () => this.loading.set(false)
+      error: (err) => {
+        this.loading.set(false);
+        const status: number = err?.status;
+        if (status === 401 || status === 400) {
+          this.toast.error('Invalid email or password. Please try again.', 'Sign In Failed');
+        }
+      }
     });
   }
 }

@@ -11,16 +11,16 @@
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\eventcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\eventcalender app\\backend\\eventcalenderapi\\eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\eventcalender app\\backend\\eventcalenderapi\\eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\eventregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\eventcalender app\\backend\\eventcalenderapi\\eventcalenderapi\\services\\authenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\services\\authenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\eventcalender app\\backend\\eventcalenderapi\\eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|solutionrelative:eventcalenderapi\\controller\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5012FFF7-2B27-2DEC-7C3A-DB5C18B3D48A}|EventCalenderApi\\EventCalenderApi.csproj|c:\\eventcalender app\\backend\\eventcalenderapi\\eventcalenderapi\\interfaces\\irepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -441,7 +441,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "AuthenticationService.cs",
               "DocumentMoniker": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\Services\\AuthenticationService.cs",
               "RelativeDocumentMoniker": "EventCalenderApi\\Services\\AuthenticationService.cs",
@@ -449,12 +449,11 @@
               "RelativeToolTip": "EventCalenderApi\\Services\\AuthenticationService.cs",
               "ViewState": "AgIAALQAAAAAAAAAAAAAAIcAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-16T14:33:55.101Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-16T14:33:55.101Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "EventRegistrationService.cs",
               "DocumentMoniker": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\Services\\EventRegistrationService.cs",
               "RelativeDocumentMoniker": "EventCalenderApi\\Services\\EventRegistrationService.cs",
@@ -462,8 +461,7 @@
               "RelativeToolTip": "EventCalenderApi\\Services\\EventRegistrationService.cs",
               "ViewState": "AgIAAE0AAAAAAAAAAAAcwEsAAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-16T14:34:07.958Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-16T14:34:07.958Z"
             },
             {
               "$type": "Document",
@@ -475,12 +473,11 @@
               "RelativeToolTip": "EventCalenderApi\\Interfaces\\IRepository.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-16T14:31:46.267Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-16T14:31:46.267Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "AuthenticationController.cs",
               "DocumentMoniker": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\Controller\\AuthenticationController.cs",
               "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\AuthenticationController.cs",
@@ -499,7 +496,7 @@
               "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\EventController.cs",
               "ToolTip": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\Controller\\EventController.cs",
               "RelativeToolTip": "EventCalenderApi\\Controller\\EventController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8BAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAANwAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-16T14:51:51.401Z",
               "EditorCaption": ""
@@ -512,7 +509,7 @@
               "RelativeDocumentMoniker": "EventCalenderApi\\Controller\\EventRegistrationController.cs",
               "ToolTip": "C:\\EventCalender App\\Backend\\EventCalenderApi\\EventCalenderApi\\Controller\\EventRegistrationController.cs",
               "RelativeToolTip": "EventCalenderApi\\Controller\\EventRegistrationController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEkAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAABQAAAAAAAAAAAAuwCkAAABFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-16T14:55:36.642Z",
               "EditorCaption": ""
@@ -527,8 +524,7 @@
               "RelativeToolTip": "EventCalenderApi\\Migrations\\20260323171741_SeatsUpdated.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T17:17:41.767Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-23T17:17:41.767Z"
             },
             {
               "$type": "Document",

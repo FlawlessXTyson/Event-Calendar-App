@@ -61,5 +61,23 @@ namespace EventCalenderApi.Controllers
 
             return NoContent();
         }
+
+        // disable user (admin only) — soft delete, sets status to BLOCKED
+        [Authorize(Roles = "ADMIN")]
+        [HttpPut("{id}/disable")]
+        public async Task<IActionResult> Disable(int id)
+        {
+            var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await _userService.DisableUserAsync(id, adminId));
+        }
+
+        // enable user (admin only) — reverses disable, sets status to ACTIVE
+        [Authorize(Roles = "ADMIN")]
+        [HttpPut("{id}/enable")]
+        public async Task<IActionResult> Enable(int id)
+        {
+            var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await _userService.EnableUserAsync(id, adminId));
+        }
     }
 }
