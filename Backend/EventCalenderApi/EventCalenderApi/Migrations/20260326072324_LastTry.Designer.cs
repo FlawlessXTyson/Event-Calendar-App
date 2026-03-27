@@ -4,6 +4,7 @@ using EventCalenderApi.EventCalenderAppDataLibrary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,13 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCalenderApi.Migrations
 {
     [DbContext(typeof(EventCalendarDbContext))]
-    partial class EventCalendarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326072324_LastTry")]
+    partial class LastTry
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "8.0.24")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -244,49 +247,6 @@ namespace EventCalenderApi.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.RefundRequest", b =>
-                {
-                    b.Property<int>("RefundRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefundRequestId"));
-
-                    b.Property<float?>("ApprovedPercentage")
-                        .HasColumnType("real");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PaymentId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ReviewedByAdminId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("RefundRequestId");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("PaymentId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefundRequests");
-                });
-
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Reminder", b =>
                 {
                     b.Property<int>("ReminderId")
@@ -506,33 +466,6 @@ namespace EventCalenderApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.RefundRequest", b =>
-                {
-                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Event", "Event")
-                        .WithMany()
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Payment", "Payment")
-                        .WithMany()
-                        .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-
-                    b.Navigation("Payment");
 
                     b.Navigation("User");
                 });

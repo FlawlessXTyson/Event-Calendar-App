@@ -87,6 +87,7 @@ export interface UserDto {
   role: UserRole;
   status: AccountStatus;
   createdAt: string;
+  profileImageUrl?: string;
 }
 
 /** POST /api/User (ADMIN only) */
@@ -133,7 +134,10 @@ export interface EventResponse {
   seatsLimit?: number;
   seatsLeft?: number;           // remaining seats — calculated by backend (SeatsLimit - booked)
   organizerName?: string;       // name of the organizer who created the event
+  refundCutoffDays?: number;
+  earlyRefundPercentage?: number;
   registrationDeadline?: string;
+  isRegistrationOpen?: boolean;    // computed server-side — use this instead of local time math
   status?: EventStatus;
   createdByUserId?: number;
   createdAt?: string;
@@ -309,13 +313,52 @@ export interface RoleChangeRequest {
   user?: { name?: string; email?: string };
 }
 
+// ─── REFUND REQUEST ───────────────────────────────────────────────────────────
+
+export enum RefundRequestStatus { PENDING = 1, APPROVED = 2, REJECTED = 3 }
+
+export interface RefundRequestResponse {
+  refundRequestId: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  eventId: number;
+  eventTitle: string;
+  paymentId: number;
+  amountPaid: number;
+  requestedAt: string;
+  status: RefundRequestStatus;
+  approvedPercentage?: number;
+  reviewedAt?: string;
+}
+
+// ─── TICKET ───────────────────────────────────────────────────────────────────
+
+export interface TicketResponse {
+  ticketId: number;
+  userId: number;
+  userName: string;
+  eventId: number;
+  eventTitle: string;
+  eventDescription: string;
+  eventLocation: string;
+  eventDate: string;
+  startTime?: string;
+  endTime?: string;
+  paymentId?: number;
+  amountPaid: number;
+  isPaidEvent: boolean;
+  generatedAt: string;
+}
+
 // ─── AUDIT LOG ────────────────────────────────────────────────────────────────
 
 export interface AuditLog {
   id: number;
   userId: number;
+  userName?: string;
   role: string;
-  action: string;   // ADDED | MODIFIED | DELETED | LOGIN | REGISTER
+  action: string;
   entity: string;
   entityId: number;
   createdAt: string;

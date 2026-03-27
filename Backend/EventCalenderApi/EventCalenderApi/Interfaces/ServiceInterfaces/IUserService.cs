@@ -17,5 +17,7 @@ namespace EventCalenderApi.Interfaces.ServiceInterfaces
         Task<CreateUserResponseDTO> DisableUserAsync(int userId, int adminId);
 
         Task<CreateUserResponseDTO> EnableUserAsync(int userId, int adminId);
+
+        Task<CreateUserResponseDTO> UploadProfileImageAsync(int userId, IFormFile file);
     }
 }

@@ -14,6 +14,8 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public UserRole Role { get; set; } = UserRole.USER;
         public AccountStatus Status { get; set; } = AccountStatus.ACTIVE;
 
+        public string? ProfileImageUrl { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         // Navigation

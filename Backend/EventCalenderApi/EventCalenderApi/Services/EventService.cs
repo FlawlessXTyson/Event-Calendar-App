@@ -343,6 +343,31 @@ namespace EventCalenderApi.Services
             return data.Select(e => MapToDTO(e, 0));
         }
 
+        // ================= EXPIRED EVENTS =================
+        // Events whose date has passed (EventEndDate or EventDate < today)
+        public async Task<IEnumerable<EventResponseDTO>> GetExpiredEventsAsync()
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var data = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e =>
+                    (e.EventEndDate != null ? e.EventEndDate.Value.Date : e.EventDate.Date) < today)
+                .OrderByDescending(e => e.EventDate)
+                .ToListAsync();
+
+            var result = new List<EventResponseDTO>();
+            foreach (var ev in data)
+            {
+                int bookedCount = ev.IsPaidEvent
+                    ? await _paymentRepo.GetQueryable().CountAsync(p => p.EventId == ev.EventId && p.Status == PaymentStatus.SUCCESS)
+                    : await _registrationRepo.GetQueryable().CountAsync(r => r.EventId == ev.EventId && r.Status == RegistrationStatus.REGISTERED);
+
+                result.Add(MapToDTO(ev, bookedCount));
+            }
+            return result;
+        }
+
         // ================= MAPPER =================
         private static EventResponseDTO MapToDTO(Event ev, int bookedCount)
         {
@@ -363,8 +388,46 @@ namespace EventCalenderApi.Services
                 IsPaidEvent = ev.IsPaidEvent,
                 TicketPrice = ev.TicketPrice,
                 SeatsLeft = seatsLeft,
-                OrganizerName = ev.CreatedBy?.Name ?? string.Empty
+                OrganizerName = ev.CreatedBy?.Name ?? string.Empty,
+                RefundCutoffDays = ev.RefundCutoffDays,
+                EarlyRefundPercentage = ev.EarlyRefundPercentage,
+                RegistrationDeadline = ev.RegistrationDeadline,
+                StartTime = ev.StartTime.HasValue
+                    ? $"{(int)ev.StartTime.Value.TotalHours:D2}:{ev.StartTime.Value.Minutes:D2}"
+                    : null,
+                EndTime = ev.EndTime.HasValue
+                    ? $"{(int)ev.EndTime.Value.TotalHours:D2}:{ev.EndTime.Value.Minutes:D2}"
+                    : null,
+                IsRegistrationOpen = ComputeIsRegistrationOpen(ev)
             };
+        }
+
+        /// <summary>
+        /// Mirrors the exact validation logic in EventRegistrationService.RegisterAsync
+        /// so the frontend can show "Registration Closed" before the user even tries.
+        /// All comparisons use UTC — same as the registration validator.
+        /// </summary>
+        private static bool ComputeIsRegistrationOpen(Event ev)
+        {
+            var now = DateTime.UtcNow;
+
+            // Explicit registration deadline
+            if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < now)
+                return false;
+
+            // Event already started
+            var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
+            if (now >= eventStart)
+                return false;
+
+            // Event already ended
+            var eventEndDate = ev.EventEndDate ?? ev.EventDate;
+            var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
+            var eventEnd = eventEndDate.Add(eventEndTime);
+            if (now > eventEnd)
+                return false;
+
+            return true;
         }
     }
 }

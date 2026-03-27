@@ -39,7 +39,8 @@ export class AdminLayoutComponent {
     { label: 'Calendar',      icon: 'calendar_month',     route: '/admin/calendar' },
     { label: 'Payments',      icon: 'account_balance',    route: '/admin/payments' },
     { label: 'Role Requests', icon: 'upgrade',            route: '/admin/role-requests' },
-    { label: 'Audit Logs',   icon: 'receipt_long',        route: '/admin/audit-logs' },
-    { label: 'Profile',      icon: 'manage_accounts',     route: '/admin/profile' },
+    { label: 'Audit Logs',      icon: 'receipt_long',        route: '/admin/audit-logs' },
+    { label: 'Refund Requests', icon: 'currency_rupee',       route: '/admin/refund-requests' },
+    { label: 'Profile',         icon: 'manage_accounts',      route: '/admin/profile' },
   ];
 }

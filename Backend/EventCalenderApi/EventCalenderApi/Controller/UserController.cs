@@ -62,7 +62,13 @@ namespace EventCalenderApi.Controllers
             return NoContent();
         }
 
-        // disable user (admin only) — soft delete, sets status to BLOCKED
+        // upload profile image (any authenticated user for their own profile)
+        [HttpPost("me/profile-image")]
+        public async Task<IActionResult> UploadProfileImage(IFormFile file)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await _userService.UploadProfileImageAsync(userId, file));
+        }
         [Authorize(Roles = "ADMIN")]
         [HttpPut("{id}/disable")]
         public async Task<IActionResult> Disable(int id)

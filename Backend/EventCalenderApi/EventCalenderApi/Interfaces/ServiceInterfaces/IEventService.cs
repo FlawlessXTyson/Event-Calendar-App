@@ -32,4 +32,6 @@ public interface IEventService
     Task<IEnumerable<EventResponseDTO>> GetRejectedEventsAsync();
 
     Task<IEnumerable<EventResponseDTO>> GetApprovedEventsAsync();
+
+    Task<IEnumerable<EventResponseDTO>> GetExpiredEventsAsync();
 }

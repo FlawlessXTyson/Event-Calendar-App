@@ -5,7 +5,7 @@ import { EventService } from '../../../core/services/event.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { EventResponse, ApprovalStatus, EventStatus } from '../../../core/models/models';
 
-type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
+type FilterTab = 'pending' | 'approved' | 'rejected' | 'all' | 'expired';
 
 @Component({
   selector: 'app-admin-events',
@@ -40,7 +40,21 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
             <span class="badge badge-gray" style="margin-left:6px;">{{ allCount() }}</span>
           }
         </button>
+        <button type="button" class="tab-btn" [class.active]="activeTab() === 'expired'" (click)="setTab('expired')">
+          ⏰ Expired
+          @if (expiredCount() > 0) {
+            <span class="badge badge-gray" style="margin-left:6px;">{{ expiredCount() }}</span>
+          }
+        </button>
       </div>
+
+      <!-- Search bar — only shown on All tab -->
+      @if (activeTab() === 'all') {
+        <div style="margin-bottom:16px;position:relative;max-width:360px;">
+          <span class="material-icons-round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:20px;">search</span>
+          <input [(ngModel)]="allSearch" type="search" class="form-control" placeholder="Search events by name…" style="padding-left:38px;" />
+        </div>
+      }
 
       @if (loading()) { <div class="loading-center"><div class="spinner"></div></div> }
       @else if (filtered().length === 0) {
@@ -48,7 +62,13 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
       } @else {
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>Title</th><th>Date</th><th>Organizer</th><th>Type</th><th>Approval</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Title</th><th>Date</th><th>Organizer</th><th>Type</th><th>Approval</th>
+                @if (activeTab() === 'expired') { <th>Registrations</th><th>Revenue</th> }
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               @for (ev of filtered(); track ev.eventId) {
                 <tr>
@@ -63,9 +83,13 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
                   </td>
                   <td>@if (ev.isPaidEvent) { <span class="badge badge-warning">₹{{ ev.ticketPrice | number:'1.0-0' }}</span> } @else { <span class="badge badge-success">Free</span> }</td>
                   <td><span class="badge" [class]="approvalBadge(ev.approvalStatus)">{{ approvalLabel(ev.approvalStatus) }}</span></td>
+                  @if (activeTab() === 'expired') {
+                    <td style="color:var(--text-muted);">{{ ev.seatsLeft !== undefined && ev.seatsLeft >= 0 ? (ev.seatsLimit ?? 0) - ev.seatsLeft : '—' }} registered</td>
+                    <td style="font-weight:600;color:var(--primary);">{{ ev.isPaidEvent ? '₹' + ((ev.seatsLimit ?? 0) - (ev.seatsLeft ?? 0)) * ev.ticketPrice : 'Free' }}</td>
+                  }
                   <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                      @if (ev.approvalStatus === ApprovalStatus.PENDING) {
+                      @if (ev.approvalStatus === ApprovalStatus.PENDING && !isExpiredEvent(ev)) {
                         <button type="button" class="btn btn-success btn-sm" [disabled]="approving() === ev.eventId" (click)="approve(ev)">
                           @if (approving() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">check</span> Approve }
                         </button>
@@ -73,7 +97,10 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all';
                           @if (rejecting() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">close</span> Reject }
                         </button>
                       }
-                      @if ((ev.status ?? 1) === EventStatus.ACTIVE && ev.approvalStatus === ApprovalStatus.APPROVED) {
+                      @if (ev.approvalStatus === ApprovalStatus.PENDING && isExpiredEvent(ev)) {
+                        <span class="badge badge-gray" style="font-size:.72rem;">Expired — cannot approve</span>
+                      }
+                      @if ((ev.status ?? 1) === EventStatus.ACTIVE && ev.approvalStatus === ApprovalStatus.APPROVED && !isExpiredEvent(ev)) {
                         <button type="button" class="btn btn-warning btn-sm" [disabled]="cancelling() === ev.eventId" (click)="cancelEv(ev)">
                           @if (cancelling() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
                         </button>
@@ -100,38 +127,46 @@ export class AdminEventsComponent implements OnInit {
   EventStatus      = EventStatus;
 
   events     = signal<EventResponse[]>([]);
+  expired    = signal<EventResponse[]>([]);
   loading    = signal(true);
   approving  = signal<number | null>(null);
   rejecting  = signal<number | null>(null);
   cancelling = signal<number | null>(null);
   deleting   = signal<number | null>(null);
   activeTab  = signal<FilterTab>('pending');
-
-  tabs = [
-    { key: 'pending'  as FilterTab, label: 'Pending' },
-    { key: 'approved' as FilterTab, label: 'Approved' },
-    { key: 'rejected' as FilterTab, label: 'Rejected' },
-    { key: 'all'      as FilterTab, label: 'All' },
-  ];
+  allSearch  = '';
 
   pendingCount  = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.PENDING).length);
   approvedCount = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.APPROVED).length);
   rejectedCount = computed(() => this.events().filter(e => e.approvalStatus === ApprovalStatus.REJECTED).length);
   allCount      = computed(() => this.events().length);
+  expiredCount  = computed(() => this.expired().length);
 
   filtered = computed(() => {
     const t = this.activeTab();
-    if (t === 'pending')  return this.events().filter(e => e.approvalStatus === ApprovalStatus.PENDING);
-    if (t === 'approved') return this.events().filter(e => e.approvalStatus === ApprovalStatus.APPROVED);
-    if (t === 'rejected') return this.events().filter(e => e.approvalStatus === ApprovalStatus.REJECTED);
-    return this.events();
+    if (t === 'expired')  return this.expired();
+    const base =
+      t === 'pending'  ? this.events().filter(e => e.approvalStatus === ApprovalStatus.PENDING) :
+      t === 'approved' ? this.events().filter(e => e.approvalStatus === ApprovalStatus.APPROVED) :
+      t === 'rejected' ? this.events().filter(e => e.approvalStatus === ApprovalStatus.REJECTED) :
+      this.events();
+    if (t === 'all' && this.allSearch.trim()) {
+      const s = this.allSearch.toLowerCase();
+      return base.filter(e => e.title.toLowerCase().includes(s) || (e.location ?? '').toLowerCase().includes(s));
+    }
+    return base;
   });
+
+  isExpiredEvent(ev: EventResponse): boolean {
+    const endDate = ev.eventEndDate ? new Date(ev.eventEndDate) : new Date(ev.eventDate);
+    endDate.setHours(23, 59, 59, 999);
+    return endDate < new Date();
+  }
 
   ngOnInit() { this.loadAll(); }
 
   loadAll() {
     this.loading.set(true);
-    // Load pending first (primary workflow), then fetch all for the 'all' tab
     this.eventSvc.getPending().subscribe({
       next: pending => {
         this.eventSvc.getApproved().subscribe({
@@ -143,16 +178,18 @@ export class AdminEventsComponent implements OnInit {
                 this.events.set([...map.values()]);
                 this.loading.set(false);
               },
-              error: () => {
-                this.events.set([...pending, ...approved]);
-                this.loading.set(false);
-              }
+              error: () => { this.events.set([...pending, ...approved]); this.loading.set(false); }
             });
           },
           error: () => { this.events.set(pending); this.loading.set(false); }
         });
       },
       error: () => this.loading.set(false)
+    });
+    // Load expired separately
+    this.eventSvc.getExpired().subscribe({
+      next: exp => this.expired.set(exp),
+      error: () => {}
     });
   }
 
@@ -201,6 +238,7 @@ export class AdminEventsComponent implements OnInit {
     this.eventSvc.delete(ev.eventId).subscribe({
       next: () => {
         this.events.update(es => es.filter(e => e.eventId !== ev.eventId));
+        this.expired.update(es => es.filter(e => e.eventId !== ev.eventId));
         this.toast.success(`"${ev.title}" permanently deleted.`, 'Event Deleted');
         this.deleting.set(null);
       },

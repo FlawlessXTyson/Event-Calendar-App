@@ -17,12 +17,15 @@ import { RoleChangeRequest, RequestStatus } from '../../../core/models/models';
       } @else {
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>#</th><th>User ID</th><th>Requested Role</th><th>Status</th><th>Requested At</th><th>Actions</th></tr></thead>
+            <thead><tr><th>#</th><th>User</th><th>Requested Role</th><th>Status</th><th>Requested At</th><th>Actions</th></tr></thead>
             <tbody>
               @for (r of requests(); track r.requestId) {
                 <tr>
                   <td style="color:var(--text-muted);">#{{ r.requestId }}</td>
-                  <td>User #{{ r.userId }}</td>
+                  <td>
+                    <div style="font-weight:600;font-size:.9rem;">{{ r.user?.name || 'User #' + r.userId }}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted);">{{ r.user?.email || '—' }}</div>
+                  </td>
                   <td><span class="badge badge-warning">Organizer</span></td>
                   <td><span class="badge" [class]="statusBadge(r.status)">{{ statusLabel(r.status) }}</span></td>
                   <td style="color:var(--text-muted);">{{ r.requestedAt | date:'MMM d, y, h:mm a' }}</td>
@@ -68,7 +71,7 @@ export class AdminRoleRequestsComponent implements OnInit {
     this.roleSvc.approve(r.requestId).subscribe({
       next: () => {
         this.requests.update(rs => rs.filter(x => x.requestId !== r.requestId));
-        this.toast.success(`User #${r.userId} has been promoted to Organizer! They can now create events.`, 'Role Approved');
+        this.toast.success(`${r.user?.name || 'User #' + r.userId} has been promoted to Organizer!`, 'Role Approved');
         this.approving.set(null);
       },
       error: () => this.approving.set(null)
@@ -80,7 +83,7 @@ export class AdminRoleRequestsComponent implements OnInit {
     this.roleSvc.reject(r.requestId).subscribe({
       next: () => {
         this.requests.update(rs => rs.filter(x => x.requestId !== r.requestId));
-        this.toast.warning(`Role request from User #${r.userId} has been rejected.`, 'Role Rejected');
+        this.toast.warning(`Role request from ${r.user?.name || 'User #' + r.userId} has been rejected.`, 'Role Rejected');
         this.rejecting.set(null);
       },
       error: () => this.rejecting.set(null)

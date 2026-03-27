@@ -42,4 +42,11 @@ export class UserService {
   enable(id: number) {
     return this.http.put<UserDto>(`${this.base}/${id}/enable`, {});
   }
+
+  /** POST /api/User/me/profile-image — multipart/form-data */
+  uploadProfileImage(file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<UserDto>(`${this.base}/me/profile-image`, form);
+  }
 }

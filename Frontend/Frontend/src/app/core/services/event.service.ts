@@ -68,6 +68,9 @@ export class EventService {
   /** GET /api/Event/approved */
   getApproved()                 { return this.http.get<EventResponse[]>(`${this.base}/approved`); }
 
+  /** GET /api/Event/expired — ADMIN only */
+  getExpired()                  { return this.http.get<EventResponse[]>(`${this.base}/expired`); }
+
   // ── USER ONLY ────────────────────────────────────────────────────────────
   /** GET /api/Event/registered — events user is registered for */
   getRegistered()               { return this.http.get<EventResponse[]>(`${this.base}/registered`); }

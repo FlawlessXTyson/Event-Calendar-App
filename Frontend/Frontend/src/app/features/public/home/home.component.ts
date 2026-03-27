@@ -107,20 +107,31 @@ import { EventResponse, ApprovalStatus } from '../../../core/models/models';
                 </div>
                 <div class="event-card-title">{{ ev.title }}</div>
               </div>
-              <div class="event-card-body">
+                <div class="event-card-body">
                 <p>{{ ev.description || 'Join this exciting event. Click to learn more.' }}</p>
                 <div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;">
                   <div class="event-detail-row">
                     <span class="material-icons-round">calendar_today</span>
                     {{ ev.eventDate | date:'EEE, MMM d, y' }}
                   </div>
+                  @if (ev.startTime) {
+                    <div class="event-detail-row">
+                      <span class="material-icons-round">schedule</span>
+                      {{ fmt(ev.startTime) }}{{ ev.endTime ? ' – ' + fmt(ev.endTime) : '' }}
+                    </div>
+                  }
                   @if (ev.location) {
                     <div class="event-detail-row">
                       <span class="material-icons-round">location_on</span>
                       {{ ev.location }}
                     </div>
                   }
-                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
+                  @if (isClosed(ev)) {
+                    <div class="event-detail-row" style="margin-top:2px;">
+                      <span class="material-icons-round" style="color:#991B1B;">lock</span>
+                      <span class="badge badge-danger" style="font-size:.72rem;">Registration Closed</span>
+                    </div>
+                  } @else if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
                     <div class="event-detail-row" style="margin-top:2px;">
                       <span class="material-icons-round">event_seat</span>
                       <span [class]="seatBadge(ev.seatsLeft)" style="font-size:.72rem;">{{ seatLabel(ev.seatsLeft) }}</span>
@@ -130,7 +141,11 @@ import { EventResponse, ApprovalStatus } from '../../../core/models/models';
               </div>
               <div class="event-card-footer">
                 <span class="text-muted text-sm">Click to view details</span>
-                <button type="button" class="btn btn-primary btn-sm">Register</button>
+                @if (!isClosed(ev)) {
+                  <button type="button" class="btn btn-primary btn-sm">Register</button>
+                } @else {
+                  <span class="badge badge-danger" style="font-size:.75rem;">Closed</span>
+                }
               </div>
             </div>
           }
@@ -191,6 +206,17 @@ export class HomeComponent implements OnInit {
   }
   approvalBadge(ev: EventResponse) {
     return ev.approvalStatus === ApprovalStatus.APPROVED ? 'badge-success' : 'badge-warning';
+  }
+
+  isClosed(ev: EventResponse): boolean {
+    if (ev.isRegistrationOpen === undefined) return false;
+    return !ev.isRegistrationOpen;
+  }
+
+  fmt(t: string): string {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
   seatLabel(left: number): string {

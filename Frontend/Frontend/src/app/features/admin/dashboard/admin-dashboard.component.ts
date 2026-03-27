@@ -71,8 +71,8 @@ import { EventResponse, UserDto, CommissionSummary, RoleChangeRequest, ApprovalS
               @for (r of roleRequests().slice(0,5); track r.requestId) {
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;">
                   <div>
-                    <div style="font-weight:600;font-size:.9rem;">User #{{ r.userId }}</div>
-                    <div style="font-size:.8rem;color:var(--text-muted);">Requesting Organizer Role</div>
+                    <div style="font-weight:600;font-size:.9rem;">{{ r.user?.name || 'User #' + r.userId }}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted);">{{ r.user?.email || 'Requesting Organizer Role' }}</div>
                   </div>
                   <div style="display:flex;gap:6px;">
                     <button type="button" class="btn btn-success btn-sm" [disabled]="approvingRole() === r.requestId" (click)="approveRole(r)">
@@ -138,7 +138,7 @@ export class AdminDashboardComponent implements OnInit {
   approveRole(r: RoleChangeRequest) {
     this.approvingRole.set(r.requestId);
     this.roleSvc.approve(r.requestId).subscribe({
-      next: () => { this.roleRequests.update(rs => rs.filter(x => x.requestId !== r.requestId)); this.toast.success(`User #${r.userId} promoted to Organizer!`, 'Role Approved'); this.approvingRole.set(null); },
+      next: () => { this.roleRequests.update(rs => rs.filter(x => x.requestId !== r.requestId)); this.toast.success(`${r.user?.name || 'User #' + r.userId} promoted to Organizer!`, 'Role Approved'); this.approvingRole.set(null); },
       error: () => this.approvingRole.set(null)
     });
   }
@@ -146,7 +146,7 @@ export class AdminDashboardComponent implements OnInit {
   rejectRole(r: RoleChangeRequest) {
     this.rejectingRole.set(r.requestId);
     this.roleSvc.reject(r.requestId).subscribe({
-      next: () => { this.roleRequests.update(rs => rs.filter(x => x.requestId !== r.requestId)); this.toast.warning(`Role request from User #${r.userId} rejected.`, 'Role Rejected'); this.rejectingRole.set(null); },
+      next: () => { this.roleRequests.update(rs => rs.filter(x => x.requestId !== r.requestId)); this.toast.warning(`Role request from ${r.user?.name || 'User #' + r.userId} rejected.`, 'Role Rejected'); this.rejectingRole.set(null); },
       error: () => this.rejectingRole.set(null)
     });
   }

@@ -68,26 +68,66 @@ namespace EventCalenderApi.Services
                 throw new BadRequestException("Event already ended");
 
             // ================= SEAT CHECK =================
+            // Count only payments linked to currently-active registrations
             if (eventEntity.SeatsLimit != null)
             {
                 var totalPaid = await _paymentRepo.GetQueryable()
                     .CountAsync(p =>
                         p.EventId == request.EventId &&
-                        p.Status == PaymentStatus.SUCCESS);
+                        p.Status == PaymentStatus.SUCCESS &&
+                        _registrationRepo.GetQueryable().Any(r =>
+                            r.UserId == p.UserId &&
+                            r.EventId == request.EventId &&
+                            r.Status == RegistrationStatus.REGISTERED));
 
                 if (totalPaid >= eventEntity.SeatsLimit)
                     throw new BadRequestException("Event is fully booked");
             }
 
             // ================= DUPLICATE =================
-            var alreadyPaid = await _paymentRepo.GetQueryable()
-                .AnyAsync(p =>
-                    p.UserId == userId &&
-                    p.EventId == request.EventId &&
-                    p.Status == PaymentStatus.SUCCESS);
+            // Only block if user is CURRENTLY REGISTERED and has a SUCCESS payment.
+            // A cancelled registration's payment stays SUCCESS until admin processes the refund,
+            // so we must check active registration status to avoid false "already paid" errors.
+            //var alreadyPaid = await _paymentRepo.GetQueryable()
+            //    .AnyAsync(p =>
+            //        p.UserId == userId &&
+            //        p.EventId == request.EventId &&
+            //        p.Status == PaymentStatus.SUCCESS &&
+            //        _registrationRepo.GetQueryable().Any(r =>
+            //            r.UserId == userId &&
+            //            r.EventId == request.EventId &&
+            //            r.Status == RegistrationStatus.REGISTERED));
 
-            if (alreadyPaid)
-                throw new BadRequestException("You already paid for this event");
+            //if (alreadyPaid)
+            //    throw new BadRequestException("You already paid for this event");
+
+            // ================= DUPLICATE =================
+            // FIX: Handle refund flow correctly without breaking existing logic
+            var existingPayment = await _paymentRepo.GetQueryable()
+                .Where(p =>
+                    p.UserId == userId &&
+                    p.EventId == request.EventId)
+                .OrderByDescending(p => p.PaymentDate)
+                .FirstOrDefaultAsync();
+
+            if (existingPayment != null)
+            {
+                // Case 1: Already paid and still registered
+                var isStillRegistered = await _registrationRepo.GetQueryable()
+                    .AnyAsync(r =>
+                        r.UserId == userId &&
+                        r.EventId == request.EventId &&
+                        r.Status == RegistrationStatus.REGISTERED);
+
+                if (existingPayment.Status == PaymentStatus.SUCCESS && isStillRegistered)
+                    throw new BadRequestException("You already paid for this event");
+
+                // Case 2: Refund not completed yet
+                if (existingPayment.Status != PaymentStatus.REFUNDED)
+                    throw new BadRequestException("Please wait for refund to complete");
+
+                // Case 3: Refunded → allow again
+            }
 
             // ================= CALC =================
             float price = eventEntity.TicketPrice;

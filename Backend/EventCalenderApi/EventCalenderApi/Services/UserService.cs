@@ -167,7 +167,44 @@ namespace EventCalenderApi.Services
             return MapToDTO(updated!);
         }
 
-        //helper method for mapping entity → DTO
+        // upload profile image
+        public async Task<CreateUserResponseDTO> UploadProfileImageAsync(int userId, IFormFile file)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException("User not found");
+
+            // Validate file
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowed.Contains(ext))
+                throw new BadRequestException("Only JPG, PNG, or WEBP images are allowed");
+
+            if (file.Length > 5 * 1024 * 1024)
+                throw new BadRequestException("Image must be under 5 MB");
+
+            // Save to wwwroot/uploads/profiles/
+            var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+            Directory.CreateDirectory(uploadsDir);
+
+            // Delete old image if exists
+            if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+            {
+                var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    user.ProfileImageUrl.TrimStart('/'));
+                if (File.Exists(oldPath)) File.Delete(oldPath);
+            }
+
+            var fileName = $"user_{userId}_{Guid.NewGuid():N}{ext}";
+            var filePath = Path.Combine(uploadsDir, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+                await file.CopyToAsync(stream);
+
+            user.ProfileImageUrl = $"/uploads/profiles/{fileName}";
+            await _userRepository.UpdateAsync(userId, user);
+
+            return MapToDTO(user);
+        }
         private static CreateUserResponseDTO MapToDTO(User user)
         {
             return new CreateUserResponseDTO
@@ -177,7 +214,8 @@ namespace EventCalenderApi.Services
                 Email = user.Email,
                 Role = user.Role,
                 Status = user.Status,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                ProfileImageUrl = user.ProfileImageUrl
             };
         }
     }

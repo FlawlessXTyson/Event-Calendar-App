@@ -62,11 +62,7 @@ namespace EventCalenderApi.Controllers
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllAsync();
-
-            if (!result.Any())
-                throw new NotFoundException("No events available");
-
-            return Ok(result);
+            return Ok(result); // return empty array, not 404
         }
 
 
@@ -193,12 +189,7 @@ namespace EventCalenderApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
         {
-            var result = await _service.SearchAsync(keyword);
-
-            if (!result.Any())
-                throw new NotFoundException("No events found");
-
-            return Ok(result);
+            return Ok(await _service.SearchAsync(keyword));
         }
 
 
@@ -258,13 +249,7 @@ namespace EventCalenderApi.Controllers
         public async Task<IActionResult> GetMyEvents()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            var result = await _service.GetMyEventsAsync(userId);
-
-            if (!result.Any())
-                throw new NotFoundException("No events created");
-
-            return Ok(result);
+            return Ok(await _service.GetMyEventsAsync(userId));
         }
 
 
@@ -320,12 +305,15 @@ namespace EventCalenderApi.Controllers
         [HttpGet("approved")]
         public async Task<IActionResult> GetApprovedEvents()
         {
-            var result = await _service.GetApprovedEventsAsync();
+            return Ok(await _service.GetApprovedEventsAsync());
+        }
 
-            if (!result.Any())
-                throw new NotFoundException("No approved events found");
-
-            return Ok(result);
+        // ================= EXPIRED EVENTS =================
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("expired")]
+        public async Task<IActionResult> GetExpiredEvents()
+        {
+            return Ok(await _service.GetExpiredEventsAsync());
         }
     }
 }

@@ -5,9 +5,22 @@ import { RouterLink, Router } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { RegistrationService } from '../../../core/services/registration.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { TicketService } from '../../../core/services/ticket.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
-import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStatus, RegistrationStatus, PaymentStatus } from '../../../core/models/models';
+import {
+  EventResponse, EventRegistrationResponse, PaymentResponse,
+  ApprovalStatus, RegistrationStatus, PaymentStatus, TicketResponse
+} from '../../../core/models/models';
+
+type PayMethod = 'upi' | 'netbanking' | 'card' | 'wallet' | '';
+
+const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string }[] = [
+  { key: 'upi',        label: 'UPI',           icon: '⚡', color: '#6366F1' },
+  { key: 'netbanking', label: 'Net Banking',    icon: '🏦', color: '#0EA5E9' },
+  { key: 'card',       label: 'Credit / Debit', icon: '💳', color: '#0D9488' },
+  { key: 'wallet',     label: 'Wallet',         icon: '👛', color: '#F59E0B' },
+];
 
 @Component({
   selector: 'app-user-my-events',
@@ -15,11 +28,15 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div>
-      <!-- Navigation blocked banner -->
+
+      <!-- Payment pending banner — ONLY for paid events awaiting payment -->
       @if (regState.isNavigationBlocked()) {
-        <div class="alert alert-warning" style="margin-bottom:16px;border:2px solid var(--warning);">
-          <span class="material-icons-round">lock</span>
-          <div><strong>Navigation locked</strong> — Please complete payment or cancel your registration before leaving.</div>
+        <div style="margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-left:4px solid var(--warning);border-radius:var(--r);display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(245,158,11,.15);">
+          <span class="material-icons-round" style="color:#92400E;font-size:22px;flex-shrink:0;">lock</span>
+          <div>
+            <div style="font-weight:700;color:#92400E;font-size:.9rem;">Payment Pending</div>
+            <div style="font-size:.82rem;color:#78350F;margin-top:2px;">Please complete your payment or cancel the registration before navigating away.</div>
+          </div>
         </div>
       }
 
@@ -37,7 +54,7 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
         </button>
       </div>
 
-      <!-- BROWSE -->
+      <!-- ── BROWSE TAB ─────────────────────────────────────────────────── -->
       @if (tab() === 'browse') {
         <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
           <div style="flex:1;min-width:200px;position:relative;">
@@ -45,12 +62,15 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
             <input [(ngModel)]="search" type="search" class="form-control" placeholder="Search events..." style="padding-left:38px;" />
           </div>
         </div>
+
         @if (loadingAll()) {
           <div class="loading-center"><div class="spinner"></div></div>
         } @else {
           <div class="events-grid">
             @for (ev of filteredAll(); track ev.eventId) {
-              <div class="event-card">
+              <div class="event-card" [style.opacity]="isDeadlinePassed(ev) ? '0.6' : '1'"
+                [style.pointer-events]="isDeadlinePassed(ev) && !isRegistered(ev.eventId) ? 'none' : 'auto'"
+                [style.filter]="isDeadlinePassed(ev) && !isRegistered(ev.eventId) ? 'grayscale(0.4)' : 'none'">
                 <div class="event-card-header">
                   <div class="event-card-meta">
                     <span class="badge badge-primary">{{ catLabel(ev.category) }}</span>
@@ -60,69 +80,110 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
                   </div>
                   <div class="event-card-title">{{ ev.title }}</div>
                 </div>
+
                 <div class="event-card-body">
                   <p>{{ ev.description }}</p>
-                  <!-- Seats display -->
-                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
-                    <div style="margin-top:8px;">
-                      <span [class]="seatBadgeClass(ev)" style="font-size:.78rem;">{{ seatsDisplay(ev) }}</span>
+                  @if (isDeadlinePassed(ev)) {
+                    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#FEE2E2;border-radius:var(--r-sm);padding:6px 10px;">
+                      <span class="material-icons-round" style="font-size:15px;color:#991B1B;">lock</span>
+                      <span style="font-size:.78rem;font-weight:700;color:#991B1B;">Registration Closed</span>
+                    </div>
+                  } @else {
+                    @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
+                      <div style="margin-top:8px;">
+                        <span [class]="seatBadgeClass(ev)" style="font-size:.78rem;">{{ seatsDisplay(ev) }}</span>
+                      </div>
+                    }
+                  }
+                  @if (ev.isPaidEvent && ev.refundCutoffDays !== undefined) {
+                    <div style="margin-top:6px;font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                      <span class="material-icons-round" style="font-size:13px;">info</span>
+                      {{ ev.earlyRefundPercentage }}% refund if cancelled {{ ev.refundCutoffDays }}+ days before event
                     </div>
                   }
                 </div>
+
                 <div class="event-card-footer">
                   <div>
                     <div class="event-detail-row"><span class="material-icons-round">calendar_today</span>{{ ev.eventDate | date:'MMM d, y' }}</div>
-                    @if (ev.location) { <div class="event-detail-row"><span class="material-icons-round">location_on</span>{{ ev.location | slice:0:20 }}...</div> }
+                    @if (ev.startTime) {
+                      <div class="event-detail-row" style="margin-top:3px;">
+                        <span class="material-icons-round">schedule</span>
+                        {{ formatTime(ev.startTime) }}{{ ev.endTime ? ' – ' + formatTime(ev.endTime) : '' }}
+                      </div>
+                    }
+                    @if (ev.location) { <div class="event-detail-row" style="margin-top:3px;"><span class="material-icons-round">location_on</span>{{ ev.location | slice:0:22 }}...</div> }
                   </div>
-                  <div style="display:flex;gap:8px;align-items:center;">
+
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                     @if (!isRegistered(ev.eventId)) {
+                      <!-- Not registered yet -->
                       <button type="button" class="btn btn-primary btn-sm"
-                        [disabled]="acting() === ev.eventId"
+                        [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
                         (click)="registerEvent(ev)">
                         @if (acting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
+                        @else if (isDeadlinePassed(ev)) { Closed }
                         @else { Register }
                       </button>
                     } @else {
-                      <!-- Only show Pay + Cancel when registered -->
-                      @if (ev.isPaidEvent && !isPaid(ev.eventId)) {
-                        <button type="button" class="btn btn-warning btn-sm"
-                          [disabled]="paying() === ev.eventId"
-                          (click)="payEvent(ev)">
-                          @if (paying() === ev.eventId) { <div class="spinner spinner-sm"></div> }
-                          @else { Pay &#8377;{{ ev.ticketPrice | number:'1.0-0' }} }
+                      <!-- Registered — paid event: show Pay if not paid yet -->
+                      @if (!isFreeEvent(ev) && !isPaid(ev.eventId)) {
+                        <button type="button" class="btn btn-warning btn-sm" (click)="openPayModal(ev)">
+                          <span class="material-icons-round" style="font-size:14px;">payment</span>
+                          Pay &#8377;{{ ev.ticketPrice | number:'1.0-0' }}
                         </button>
                       }
+                      <!-- Ticket icon — shown on the card once ticket is generated -->
+                      @if (getTicket(ev.eventId)) {
+                        <button type="button" class="btn btn-sm"
+                          (click)="openTicketDetail(getTicket(ev.eventId)!)"
+                          title="View / Download Ticket"
+                          style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border:none;border-radius:var(--r-sm);padding:6px 10px;display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:700;box-shadow:0 2px 8px rgba(13,148,136,.3);">
+                          <span class="material-icons-round" style="font-size:16px;">confirmation_number</span>
+                          Ticket
+                        </button>
+                      }
+                      <!-- Cancel always available when registered -->
                       <button type="button" class="btn btn-danger btn-sm"
                         [disabled]="cancelling() === getRegId(ev.eventId)"
                         (click)="cancelEvent(ev)">
-                        @if (cancelling() === getRegId(ev.eventId)) { <div class="spinner spinner-sm"></div> }
-                        @else { Cancel }
+                        @if (cancelling() === getRegId(ev.eventId)) { <div class="spinner spinner-sm"></div> } @else { Cancel }
                       </button>
                     }
-                    <a [routerLink]="regState.isNavigationBlocked() ? null : ['/events', ev.eventId]"
+                    <!-- View details — free to navigate for free events; blocked only for paid-pending -->
+                    <a [routerLink]="(regState.isNavigationBlocked() && ev.isPaidEvent) ? null : ['/events', ev.eventId]"
                        class="btn btn-ghost btn-sm btn-icon"
-                       (click)="guardNav()">
+                       (click)="guardNav(ev)">
                       <span class="material-icons-round" style="font-size:18px;">open_in_new</span>
                     </a>
                   </div>
                 </div>
               </div>
             }
-            @if (filteredAll().length === 0 && !loadingAll()) {
-              <div class="empty-state" style="grid-column:1/-1;"><span class="material-icons-round empty-icon">search_off</span><h3>No events found</h3><p>Try different search terms.</p></div>
+            @if (filteredAll().length === 0) {
+              <div class="empty-state" style="grid-column:1/-1;">
+                <span class="material-icons-round empty-icon">search_off</span>
+                <h3>No events found</h3>
+              </div>
             }
           </div>
         }
       }
 
-      <!-- MY REGISTRATIONS -->
+      <!-- ── MY REGISTRATIONS TAB ──────────────────────────────────────── -->
       @if (tab() === 'registered') {
         @if (myRegs().length === 0) {
-          <div class="empty-state"><span class="material-icons-round empty-icon">event_busy</span><h3>No registrations yet</h3><p>Browse events and register to see them here.</p><button type="button" class="btn btn-primary btn-sm" style="margin-top:16px;" (click)="switchTab('browse')">Browse Events</button></div>
+          <div class="empty-state">
+            <span class="material-icons-round empty-icon">event_busy</span>
+            <h3>No registrations yet</h3>
+            <button type="button" class="btn btn-primary btn-sm" style="margin-top:16px;" (click)="switchTab('browse')">Browse Events</button>
+          </div>
         } @else {
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Event</th><th>Date</th><th>Seats</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead>
+                <tr><th>Event</th><th>Date</th><th>Seats</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+              </thead>
               <tbody>
                 @for (reg of myRegs(); track reg.registrationId) {
                   <tr>
@@ -130,37 +191,40 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
                     <td>{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</td>
                     <td>
                       @if (getEvent(reg.eventId)?.seatsLeft !== undefined && getEvent(reg.eventId)!.seatsLeft! >= 0) {
-                        <span [class]="seatBadgeClass(getEvent(reg.eventId)!)" style="font-size:.75rem;">
-                          {{ seatsDisplay(getEvent(reg.eventId)!) }}
-                        </span>
-                      } @else {
-                        <span class="text-muted" style="font-size:.8rem;">Unlimited</span>
-                      }
+                        <span [class]="seatBadgeClass(getEvent(reg.eventId)!)" style="font-size:.75rem;">{{ seatsDisplay(getEvent(reg.eventId)!) }}</span>
+                      } @else { <span class="text-muted" style="font-size:.8rem;">Unlimited</span> }
                     </td>
-                    <td>@if (isEventPaid(reg.eventId)) { <span class="badge badge-warning">Paid</span> } @else { <span class="badge badge-success">Free</span> }</td>
                     <td>
-                      @if (isEventPaid(reg.eventId)) {
-                        @if (isPaid(reg.eventId)) { <span class="badge badge-success">Paid &#10003;</span> }
+                      @if (isEventPaid(reg.eventId)) { <span class="badge badge-warning">Paid</span> }
+                      @else { <span class="badge badge-success">Free</span> }
+                    </td>
+                    <td>
+                      @if (!isFreeEvent(getEvent(reg.eventId))) {
+                        @if (isPaid(reg.eventId)) { <span class="badge badge-success">Paid ✓</span> }
                         @else {
-                          <button type="button" class="btn btn-warning btn-sm"
-                            [disabled]="paying() === reg.eventId"
-                            (click)="payById(reg.eventId)">
-                            @if (paying() === reg.eventId) { <div class="spinner spinner-sm"></div> }
-                            @else { Pay }
+                          <button type="button" class="btn btn-warning btn-sm" (click)="openPayModalById(reg.eventId)">
+                            Pay
                           </button>
                         }
-                      } @else { <span class="text-muted">&#8212;</span> }
-                    </td>
-                    <td><span class="badge" [class]="reg.status === 1 ? 'badge-success' : 'badge-danger'">{{ reg.status === 1 ? 'Active' : 'Cancelled' }}</span></td>
-                    <td>
-                      @if (reg.status === 1) {
-                        <button type="button" class="btn btn-danger btn-sm"
-                          [disabled]="cancelling() === reg.registrationId"
-                          (click)="cancelById(reg)">
-                          @if (cancelling() === reg.registrationId) { <div class="spinner spinner-sm"></div> }
-                          @else { Cancel }
-                        </button>
+                      } @else {
+                        <span class="badge badge-success">Free ✓</span>
                       }
+                    </td>
+                    <td>
+                      <span class="badge" [class]="reg.status === 1 ? 'badge-success' : 'badge-danger'">
+                        {{ reg.status === 1 ? 'Active' : 'Cancelled' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div style="display:flex;gap:6px;">
+                        @if (reg.status === 1) {
+                          <button type="button" class="btn btn-danger btn-sm"
+                            [disabled]="cancelling() === reg.registrationId"
+                            (click)="cancelById(reg)">
+                            @if (cancelling() === reg.registrationId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
+                          </button>
+                        }
+                      </div>
                     </td>
                   </tr>
                 }
@@ -169,30 +233,169 @@ import { EventResponse, EventRegistrationResponse, PaymentResponse, ApprovalStat
           </div>
         }
       }
+
+      <!-- ── PAYMENT METHOD MODAL ──────────────────────────────────────── -->
+      @if (payModalEvent()) {
+        <div class="modal-backdrop" (click)="closePayModal()">
+          <div class="modal" (click)="$event.stopPropagation()" style="max-width:420px;">
+            <div class="modal-header">
+              <div>
+                <div style="font-weight:700;font-size:1rem;">Complete Payment</div>
+                <div style="font-size:.85rem;color:var(--text-muted);">{{ payModalEvent()!.title }}</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="closePayModal()">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:2rem;font-weight:800;color:var(--primary);">&#8377;{{ payModalEvent()!.ticketPrice | number:'1.0-0' }}</div>
+                <div style="font-size:.85rem;color:var(--text-muted);">Select a payment method to continue</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                @for (m of payMethods; track m.key) {
+                  <button type="button"
+                    (click)="selectedPayMethod.set(m.key)"
+                    style="padding:14px 10px;border-radius:var(--r);border:2px solid;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:.85rem;transition:all .15s;background:var(--surface);"
+                    [style.borderColor]="selectedPayMethod() === m.key ? m.color : 'var(--border)'"
+                    [style.background]="selectedPayMethod() === m.key ? m.color + '18' : 'var(--surface)'"
+                    [style.color]="selectedPayMethod() === m.key ? m.color : 'var(--text-secondary)'">
+                    <span style="font-size:1.6rem;">{{ m.icon }}</span>
+                    {{ m.label }}
+                    @if (selectedPayMethod() === m.key) {
+                      <span class="material-icons-round" style="font-size:16px;">check_circle</span>
+                    }
+                  </button>
+                }
+              </div>
+              @if (payModalEvent()!.refundCutoffDays !== undefined) {
+                <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:10px 14px;font-size:.8rem;color:var(--text-secondary);display:flex;gap:8px;">
+                  <span class="material-icons-round" style="font-size:16px;color:var(--warning);flex-shrink:0;">info</span>
+                  <span>Refund policy: <strong>{{ payModalEvent()!.earlyRefundPercentage }}%</strong> refund if cancelled {{ payModalEvent()!.refundCutoffDays }}+ days before event.</span>
+                </div>
+              }
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-ghost" (click)="closePayModal()">Cancel</button>
+              <button type="button" class="btn btn-primary"
+                [disabled]="!selectedPayMethod() || paying() === payModalEvent()!.eventId"
+                (click)="confirmPay()">
+                @if (paying() === payModalEvent()!.eventId) { <div class="spinner spinner-sm"></div> }
+                @else { <span class="material-icons-round">payment</span> }
+                Pay &#8377;{{ payModalEvent()!.ticketPrice | number:'1.0-0' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TICKET FULL-DETAIL MODAL (print/download) ─────────────────── -->
+      @if (ticketDetailModal()) {
+        <div class="modal-backdrop" (click)="ticketDetailModal.set(null)">
+          <div class="modal" (click)="$event.stopPropagation()" style="max-width:480px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="material-icons-round" style="font-size:28px;">confirmation_number</span>
+                <div>
+                  <div style="font-weight:800;font-size:1rem;">Event Ticket</div>
+                  <div style="font-size:.78rem;opacity:.8;">Ticket #{{ ticketDetailModal()!.ticketId }}</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-icon btn-sm" style="color:#fff;" (click)="ticketDetailModal.set(null)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+              <h2 style="font-size:1.2rem;margin-bottom:4px;">{{ ticketDetailModal()!.eventTitle }}</h2>
+              <p style="font-size:.875rem;color:var(--text-secondary);margin-bottom:20px;">{{ ticketDetailModal()!.eventDescription }}</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;">
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Date</div>
+                  <div style="font-weight:600;font-size:.9rem;">{{ ticketDetailModal()!.eventDate | date:'EEE, MMM d, y' }}</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;">
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Time</div>
+                  <div style="font-weight:600;font-size:.9rem;">
+                    {{ ticketDetailModal()!.startTime ? formatTime(ticketDetailModal()!.startTime!) : '—' }}
+                    @if (ticketDetailModal()!.endTime) { – {{ formatTime(ticketDetailModal()!.endTime!) }} }
+                  </div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;">
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Location</div>
+                  <div style="font-weight:600;font-size:.9rem;">{{ ticketDetailModal()!.eventLocation || '—' }}</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;">
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Amount</div>
+                  <div style="font-weight:700;font-size:.9rem;color:var(--primary);">{{ ticketDetailModal()!.isPaidEvent ? ('₹' + ticketDetailModal()!.amountPaid) : 'Free' }}</div>
+                </div>
+              </div>
+              <div style="border:2px dashed var(--border);border-radius:var(--r-sm);padding:14px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">Attendee</div>
+                  <div style="font-weight:700;">{{ ticketDetailModal()!.userName }}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">Ticket ID</div>
+                  <div style="font-weight:700;font-family:monospace;font-size:1rem;color:var(--primary);">#{{ ticketDetailModal()!.ticketId }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-ghost" (click)="printTicket()">
+                <span class="material-icons-round">print</span> Print
+              </button>
+              <button type="button" class="btn btn-primary" (click)="downloadTicketPdf()">
+                <span class="material-icons-round">download</span> Download
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
     </div>
-  `
+
+    <!-- Ticket detail modal handles everything — no global widget needed -->
+  `,
+  styles: [`
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  `]
 })
 export class UserMyEventsComponent implements OnInit {
-  private eventSvc = inject(EventService);
-  private regSvc   = inject(RegistrationService);
-  private paySvc   = inject(PaymentService);
-  private toast    = inject(ToastService);
+  private eventSvc  = inject(EventService);
+  private regSvc    = inject(RegistrationService);
+  private paySvc    = inject(PaymentService);
+  private ticketSvc = inject(TicketService);
+  private toast     = inject(ToastService);
   readonly regState = inject(RegistrationStateService);
-  private router   = inject(Router);
+  private router    = inject(Router);
 
   allEvents  = signal<EventResponse[]>([]);
   myRegs     = signal<EventRegistrationResponse[]>([]);
   myPayments = signal<PaymentResponse[]>([]);
+  myTickets  = signal<TicketResponse[]>([]);
   loadingAll = signal(true);
-  tab        = signal<'browse'|'registered'>('browse');
+  tab        = signal<'browse' | 'registered'>('browse');
   search     = '';
-  acting     = signal<number|null>(null);
-  paying     = signal<number|null>(null);
-  cancelling = signal<number|null>(null);
+  acting     = signal<number | null>(null);
+  paying     = signal<number | null>(null);
+  cancelling = signal<number | null>(null);
+
+  // Payment modal
+  payModalEvent     = signal<EventResponse | null>(null);
+  selectedPayMethod = signal<PayMethod>('');
+  payMethods        = PAY_METHODS;
+
+  // Ticket detail modal (full view)
+  ticketDetailModal = signal<TicketResponse | null>(null);
 
   filteredAll = computed(() => {
     const s = this.search.toLowerCase();
-    return this.allEvents().filter(ev => !s || ev.title.toLowerCase().includes(s) || (ev.location??'').toLowerCase().includes(s));
+    return this.allEvents().filter(ev =>
+      !s || ev.title.toLowerCase().includes(s) || (ev.location ?? '').toLowerCase().includes(s)
+    );
   });
 
   activeRegCount = computed(() =>
@@ -200,19 +403,24 @@ export class UserMyEventsComponent implements OnInit {
   );
 
   ngOnInit() {
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     this.eventSvc.getAll().subscribe({
       next: evs => {
-        this.allEvents.set(evs.filter(e => e.approvalStatus === ApprovalStatus.APPROVED && new Date(e.eventDate) >= today));
+        this.allEvents.set(
+          evs.filter(e => e.approvalStatus === ApprovalStatus.APPROVED && new Date(e.eventDate) >= today)
+        );
         this.loadingAll.set(false);
       },
       error: () => this.loadingAll.set(false)
     });
     this.regSvc.getMyRegistrations().subscribe({ next: r => this.myRegs.set(r), error: () => {} });
     this.paySvc.getMyPayments().subscribe({ next: p => this.myPayments.set(p), error: () => {} });
+    this.ticketSvc.getMyTickets().subscribe({ next: t => this.myTickets.set(t), error: () => {} });
   }
 
-  switchTab(t: 'browse'|'registered') {
+  // ── Tab navigation ─────────────────────────────────────────────────────────
+  switchTab(t: 'browse' | 'registered') {
+    // Only block navigation for paid events with pending payment
     if (this.regState.isNavigationBlocked()) {
       this.toast.warning('Please complete payment or cancel registration before leaving.', 'Navigation Blocked');
       return;
@@ -220,19 +428,43 @@ export class UserMyEventsComponent implements OnInit {
     this.tab.set(t);
   }
 
-  guardNav() {
-    if (this.regState.isNavigationBlocked()) {
+  // Only block navigation for paid-pending events
+  guardNav(ev?: EventResponse) {
+    if (this.regState.isNavigationBlocked() && ev?.isPaidEvent) {
       this.toast.warning('Please complete payment or cancel registration before leaving.', 'Navigation Blocked');
     }
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   isRegistered(eid: number) { return this.myRegs().some(r => r.eventId === eid && r.status === RegistrationStatus.REGISTERED); }
-  isPaid(eid: number)       { return this.myPayments().some(p => p.eventId === eid && p.status === PaymentStatus.SUCCESS); }
+
+  /** True when event is free — either not marked as paid OR ticket price is 0 */
+  isFreeEvent(ev: EventResponse | null): boolean {
+    if (!ev) return true;
+    return !ev.isPaidEvent || ev.ticketPrice === 0;
+  }
+
+  /** True when registration is no longer possible — uses server-computed flag (UTC-correct) */
+  isDeadlinePassed(ev: EventResponse): boolean {
+    // isRegistrationOpen is computed server-side with exact UTC logic matching the validator.
+    // If not present (older API response), fall back to false (allow attempt, backend will reject).
+    if (ev.isRegistrationOpen === undefined) return false;
+    return !ev.isRegistrationOpen;
+  }
+
+  // A payment is only "active" if the user is currently registered AND payment is SUCCESS.
+  // This prevents old SUCCESS payments from a previous cancelled registration from blocking re-payment.
+  isPaid(eid: number) {
+    const isCurrentlyRegistered = this.isRegistered(eid);
+    if (!isCurrentlyRegistered) return false;
+    return this.myPayments().some(p => p.eventId === eid && p.status === PaymentStatus.SUCCESS);
+  }
   getRegId(eid: number)     { return this.myRegs().find(r => r.eventId === eid && r.status === RegistrationStatus.REGISTERED)?.registrationId ?? null; }
   getEvent(eid: number)     { return this.allEvents().find(e => e.eventId === eid) ?? null; }
   getEventTitle(eid: number){ return this.allEvents().find(e => e.eventId === eid)?.title ?? `Event #${eid}`; }
   getEventDate(eid: number) { return this.allEvents().find(e => e.eventId === eid)?.eventDate ?? ''; }
   isEventPaid(eid: number)  { return this.allEvents().find(e => e.eventId === eid)?.isPaidEvent ?? false; }
+  getTicket(eid: number)    { return this.myTickets().find(t => t.eventId === eid) ?? null; }
 
   seatsDisplay(ev: EventResponse): string {
     const left = ev.seatsLeft;
@@ -250,16 +482,51 @@ export class UserMyEventsComponent implements OnInit {
     return 'badge badge-success';
   }
 
+  // ── Payment modal ──────────────────────────────────────────────────────────
+  openPayModal(ev: EventResponse) { this.selectedPayMethod.set(''); this.payModalEvent.set(ev); }
+  openPayModalById(eid: number)   { const ev = this.allEvents().find(e => e.eventId === eid); if (ev) this.openPayModal(ev); }
+  closePayModal()                 { this.payModalEvent.set(null); this.selectedPayMethod.set(''); }
+
+  confirmPay() {
+    const ev = this.payModalEvent();
+    if (!ev || !this.selectedPayMethod()) return;
+    this.paying.set(ev.eventId);
+    this.paySvc.create({ eventId: ev.eventId }).subscribe({
+      next: p => {
+        this.myPayments.update(ps => [...ps, p]);
+        this.regState.clearPending();
+        this.toast.success(`₹${ev.ticketPrice} paid via ${this.selectedPayMethod().toUpperCase()} for "${ev.title}"!`, 'Payment Successful');
+        this.paying.set(null);
+        this.closePayModal();
+        // Auto-generate ticket after payment → show in corner widget
+        this.ticketSvc.generate(ev.eventId, p.paymentId).subscribe({
+          next: t => {
+            this.myTickets.update(ts => [...ts, t]);
+          },
+          error: () => {}
+        });
+      },
+      error: () => this.paying.set(null)
+    });
+  }
+
+  // ── Registration ───────────────────────────────────────────────────────────
   registerEvent(ev: EventResponse) {
     this.acting.set(ev.eventId);
     this.regSvc.register({ eventId: ev.eventId }).subscribe({
       next: res => {
         this.myRegs.update(rs => [...rs, res.data]);
-        if (ev.isPaidEvent) {
-          this.regState.setPending(ev.eventId, true);
-          this.toast.info(`Registered for "${ev.title}". Please complete payment or cancel registration.`, 'Payment Required');
+        if (this.isFreeEvent(ev)) {
+          // Free event (isPaidEvent=false OR ticketPrice=0): no lock, auto-generate ticket
+          this.toast.success(`Registered for "${ev.title}"!`, 'Registered!');
+          this.ticketSvc.generate(ev.eventId).subscribe({
+            next: t => { this.myTickets.update(ts => [...ts, t]); },
+            error: () => {}
+          });
         } else {
-          this.toast.success(res.message, 'Registered!');
+          // Paid event: lock navigation until paid or cancelled
+          this.regState.setPending(ev.eventId, true);
+          this.toast.info(`Registered for "${ev.title}". Please complete payment or cancel.`, 'Payment Required');
         }
         this.acting.set(null);
       },
@@ -267,36 +534,15 @@ export class UserMyEventsComponent implements OnInit {
     });
   }
 
-  payEvent(ev: EventResponse) {
-    this.paying.set(ev.eventId);
-    this.paySvc.create({ eventId: ev.eventId }).subscribe({
-      next: p => {
-        this.myPayments.update(ps => [...ps, p]);
-        this.regState.clearPending();
-        this.toast.success(`\u20B9${ev.ticketPrice} paid successfully for "${ev.title}"!`, 'Payment Successful');
-        this.paying.set(null);
-      },
-      error: () => this.paying.set(null)
-    });
-  }
-
-  payById(eid: number) {
-    const ev = this.allEvents().find(e => e.eventId === eid);
-    if (ev) this.payEvent(ev);
-  }
-
   cancelEvent(ev: EventResponse) {
     const regId = this.getRegId(ev.eventId);
     if (!regId) return;
-    if (!confirm(`Cancel registration for "${ev.title}"? Any payments will be refunded.`)) return;
     this.cancelling.set(regId);
     this.regSvc.cancel(regId).subscribe({
       next: res => {
-        this.myRegs.update(rs => rs.map(r => r.registrationId === regId ? {...r, status: RegistrationStatus.CANCELLED} : r));
-        // Mark any successful payment for this event as refunded so Pay button shows on re-register
-        this.myPayments.update(ps => ps.map(p => p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS
-          ? { ...p, status: PaymentStatus.REFUNDED }
-          : p
+        this.myRegs.update(rs => rs.map(r => r.registrationId === regId ? { ...r, status: RegistrationStatus.CANCELLED } : r));
+        this.myPayments.update(ps => ps.map(p =>
+          p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
         ));
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
@@ -307,15 +553,12 @@ export class UserMyEventsComponent implements OnInit {
   }
 
   cancelById(reg: EventRegistrationResponse) {
-    if (!confirm('Cancel this registration? Any payments will be refunded.')) return;
     this.cancelling.set(reg.registrationId);
     this.regSvc.cancel(reg.registrationId).subscribe({
       next: res => {
-        this.myRegs.update(rs => rs.map(r => r.registrationId === reg.registrationId ? {...r, status: RegistrationStatus.CANCELLED} : r));
-        // Mark any successful payment for this event as refunded so Pay button shows on re-register
-        this.myPayments.update(ps => ps.map(p => p.eventId === reg.eventId && p.status === PaymentStatus.SUCCESS
-          ? { ...p, status: PaymentStatus.REFUNDED }
-          : p
+        this.myRegs.update(rs => rs.map(r => r.registrationId === reg.registrationId ? { ...r, status: RegistrationStatus.CANCELLED } : r));
+        this.myPayments.update(ps => ps.map(p =>
+          p.eventId === reg.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
         ));
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
@@ -325,5 +568,47 @@ export class UserMyEventsComponent implements OnInit {
     });
   }
 
-  catLabel(c: number) { return ['','Holiday','Awareness','Public','Personal'][c] ?? 'Event'; }
+  // ── Ticket detail ─────────────────────────────────────────────────────────
+  openTicketDetail(t: TicketResponse) { this.ticketDetailModal.set(t); }
+
+  printTicket() { window.print(); }
+
+  downloadTicketPdf() { const t = this.ticketDetailModal(); if (t) this._doDownload(t); }
+
+  private _doDownload(t: TicketResponse) {
+    const content = [
+      'EVENT TICKET',
+      '============',
+      `Ticket ID  : #${t.ticketId}`,
+      `Event      : ${t.eventTitle}`,
+      `Description: ${t.eventDescription}`,
+      `Location   : ${t.eventLocation}`,
+      `Date       : ${new Date(t.eventDate).toDateString()}`,
+      `Time       : ${t.startTime ? this.formatTime(t.startTime) : '—'} – ${t.endTime ? this.formatTime(t.endTime) : '—'}`,
+      `Attendee   : ${t.userName}`,
+      `Amount Paid: ${t.isPaidEvent ? '₹' + t.amountPaid : 'Free'}`,
+      `Generated  : ${new Date(t.generatedAt).toLocaleString()}`,
+      '============',
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `ticket-${t.ticketId}-${t.eventTitle.replace(/\s+/g, '_')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  catLabel(c: number) { return ['', 'Holiday', 'Awareness', 'Public', 'Personal'][c] ?? 'Event'; }
+
+  /** Convert "HH:mm:ss" or "HH:mm" to "h:mm AM/PM" */
+  formatTime(time: string): string {
+    if (!time) return '—';
+    const [hourStr, minuteStr] = time.split(':');
+    let h = parseInt(hourStr, 10);
+    const m = minuteStr ?? '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+  }
 }

@@ -43,6 +43,12 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
         public float TicketPrice { get; set; } = 0;
         public float CommissionPercentage { get; set; } = 10;
 
+        // Refund policy: % refunded if user cancels >= RefundCutoffDays before event
+        // If cancelled within RefundCutoffDays → 0% refund (no refund)
+        // Default: 100% refund if cancelled 2+ days before, 0% within 2 days
+        public int RefundCutoffDays { get; set; } = 2;
+        public float EarlyRefundPercentage { get; set; } = 100f;
+
         public List<EventRegistration> Registrations { get; set; } = new();
         public List<Payment> Payments { get; set; } = new();
 

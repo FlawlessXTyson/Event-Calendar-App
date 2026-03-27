@@ -18,7 +18,7 @@ public class RoleRequestService : IRoleRequestService
         _userRepo = userRepo;
     }
 
-    // ✅ USER REQUEST ORGANIZER ROLE (FIXED)
+    // USER REQUEST ORGANIZER ROLE (FIXED)
     public async Task<string> RequestOrganizerRoleAsync(int userId)
     {
         var user = await _userRepo.GetByIdAsync(userId)
@@ -27,7 +27,7 @@ public class RoleRequestService : IRoleRequestService
         if (user.Role == UserRole.ORGANIZER)
             throw new BadRequestException("You are already an organizer");
 
-        // 🔥 FIX: Prevent duplicate pending requests
+        //  FIX: Prevent duplicate pending requests
         var existingRequest = await _requestRepo
             .GetQueryable()
             .Where(r => r.UserId == userId && r.Status == RequestStatus.PENDING)
@@ -54,6 +54,7 @@ public class RoleRequestService : IRoleRequestService
     {
         return await _requestRepo
             .GetQueryable()
+            .Include(r => r.User)
             .Where(r => r.Status == RequestStatus.PENDING)
             .ToListAsync();
     }

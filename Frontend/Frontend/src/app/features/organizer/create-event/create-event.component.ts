@@ -57,9 +57,12 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
         <h1 style="font-size:1.5rem;">Create New Event</h1>
         <p>Fill in the details. Events are reviewed by an admin before going live.</p>
       </div>
-      <div class="alert alert-info" style="margin-bottom:20px;">
-        <span class="material-icons-round">info</span>
-        <div>All events are set to <strong>Public</strong> by default. Backend validates all date/time constraints.</div>
+      <div class="alert alert-info" style="margin-bottom:20px;background:linear-gradient(135deg,var(--primary-light),#E0F2FE);border-left:4px solid var(--primary);border-radius:var(--r);">
+        <span class="material-icons-round" style="color:var(--primary);">auto_awesome</span>
+        <div>
+          <div style="font-weight:700;color:var(--primary);font-size:.95rem;">✨ Bring your vision to life!</div>
+          <div style="font-size:.85rem;color:var(--text-secondary);margin-top:2px;">Create an event that inspires, connects, and leaves a lasting impression. Your next great event starts here.</div>
+        </div>
       </div>
       <div class="card card-body">
         <form [formGroup]="form" (ngSubmit)="submit()">

@@ -30,6 +30,10 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
 
         public DbSet<AuditLog> AuditLogs { get; set; }
 
+        public DbSet<Ticket> Tickets { get; set; }
+
+        public DbSet<RefundRequest> RefundRequests { get; set; }
+
         //  AUTO AUDIT LOG (ADDED ONLY THIS)
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -153,6 +157,45 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasIndex(r => r.UserId)
                 .HasFilter("[Status] = 1")
                 .IsUnique();
+
+            //================ TICKET =================
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.Event)
+                .WithMany()
+                .HasForeignKey(t => t.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.Payment)
+                .WithMany()
+                .HasForeignKey(t => t.PaymentId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .IsRequired(false);
+
+            //================ REFUND REQUEST =================
+            modelBuilder.Entity<RefundRequest>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RefundRequest>()
+                .HasOne(r => r.Event)
+                .WithMany()
+                .HasForeignKey(r => r.EventId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<RefundRequest>()
+                .HasOne(r => r.Payment)
+                .WithMany()
+                .HasForeignKey(r => r.PaymentId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

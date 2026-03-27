@@ -1,12 +1,12 @@
-using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.AuditLog;
 
 namespace EventCalenderApi.Interfaces.ServiceInterfaces
 {
     public interface IAuditLogService
     {
-        Task<IEnumerable<AuditLog>> GetAllAsync();
-        Task<IEnumerable<AuditLog>> GetByUserIdAsync(int userId);
-        Task<IEnumerable<AuditLog>> GetByEntityAsync(string entity);
-        Task<IEnumerable<AuditLog>> GetByActionAsync(string action);
+        Task<IEnumerable<AuditLogResponseDTO>> GetAllAsync();
+        Task<IEnumerable<AuditLogResponseDTO>> GetByUserIdAsync(int userId);
+        Task<IEnumerable<AuditLogResponseDTO>> GetByEntityAsync(string entity);
+        Task<IEnumerable<AuditLogResponseDTO>> GetByActionAsync(string action);
     }
 }

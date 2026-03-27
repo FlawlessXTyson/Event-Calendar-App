@@ -13,17 +13,20 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
+        private readonly IRepository<int, RefundRequest> _refundRepo;
         private readonly IAuditLogRepository _auditRepo;
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, Payment> paymentRepo,
+            IRepository<int, RefundRequest> refundRepo,
             IAuditLogRepository auditRepo)
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
             _paymentRepo = paymentRepo;
+            _refundRepo = refundRepo;
             _auditRepo = auditRepo;
         }
 
@@ -154,14 +157,54 @@ namespace EventCalenderApi.Services
 
             if (payment != null)
             {
-                payment.Status = PaymentStatus.REFUNDED;
-                payment.RefundedAmount = payment.AmountPaid;
-                payment.RefundedAt = DateTime.UtcNow;
+                // USER cancels → create RefundRequest for admin to review
+                // ADMIN/ORGANIZER cancels event → full refund handled in EventService (unchanged)
+                if (role == "USER")
+                {
+                    var alreadyRequested = await _refundRepo.GetQueryable()
+                        .AnyAsync(r => r.PaymentId == payment.PaymentId && r.Status == RefundRequestStatus.PENDING);
 
-                payment.CommissionAmount = 0;
-                payment.OrganizerAmount = 0;
+                    if (!alreadyRequested)
+                    {
+                        var refundReq = new RefundRequest
+                        {
+                            UserId = userId,
+                            EventId = registration.EventId,
+                            PaymentId = payment.PaymentId,
+                            RequestedAt = DateTime.UtcNow,
+                            Status = RefundRequestStatus.PENDING
+                        };
+                        await _refundRepo.AddAsync(refundReq);
 
-                await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+                        await _auditRepo.AddAsync(new AuditLog
+                        {
+                            UserId = userId,
+                            Role = role,
+                            Action = "REFUND_REQUESTED",
+                            Entity = "RefundRequest",
+                            EntityId = payment.PaymentId
+                        });
+                    }
+                }
+                else
+                {
+                    // Admin/Organizer cancels → immediate full refund (existing logic preserved)
+                    payment.Status = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount = payment.AmountPaid;
+                    payment.RefundedAt = DateTime.UtcNow;
+                    payment.CommissionAmount = 0;
+                    payment.OrganizerAmount = 0;
+                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+
+                    await _auditRepo.AddAsync(new AuditLog
+                    {
+                        UserId = userId,
+                        Role = role,
+                        Action = "REFUND",
+                        Entity = "Payment",
+                        EntityId = payment.PaymentId
+                    });
+                }
             }
 
             registration.Status = RegistrationStatus.CANCELLED;

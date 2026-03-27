@@ -74,6 +74,8 @@ builder.Services.AddScoped<ITodoService, TodoService>();
 
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IRefundRequestService, RefundRequestService>();
 builder.Services.AddHttpContextAccessor();
 // CORS
 builder.Services.AddCors(options =>
@@ -137,6 +139,8 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles(); // serve wwwroot/uploads
 
 app.UseCors("AllowAngular");
 

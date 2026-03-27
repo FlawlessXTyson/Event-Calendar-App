@@ -56,7 +56,10 @@ import { EventResponse, EventCategory } from '../../../core/models/models';
         </div>
         <div class="events-grid">
           @for (ev of events(); track ev.eventId) {
-            <a [routerLink]="['/events', ev.eventId]" class="event-card card-hover" style="text-decoration:none;color:inherit;">
+            <a [routerLink]="['/events', ev.eventId]" class="event-card card-hover"
+              style="text-decoration:none;color:inherit;"
+              [style.opacity]="isDeadlinePassed(ev) ? '0.6' : '1'"
+              [style.filter]="isDeadlinePassed(ev) ? 'grayscale(0.35)' : 'none'">
               <div class="event-card-header">
                 <div class="event-card-meta">
                   <span class="badge" [ngClass]="categoryBadge(ev.category)">{{ categoryLabel(ev.category) }}</span>
@@ -74,13 +77,24 @@ import { EventResponse, EventCategory } from '../../../core/models/models';
                     <span class="material-icons-round">calendar_today</span>
                     {{ ev.eventDate | date:'EEE, MMM d, y' }}
                   </div>
+                  @if (ev.startTime) {
+                    <div class="event-detail-row" style="margin-top:3px;">
+                      <span class="material-icons-round">schedule</span>
+                      {{ fmt(ev.startTime) }}{{ ev.endTime ? ' – ' + fmt(ev.endTime) : '' }}
+                    </div>
+                  }
                   @if (ev.location) {
                     <div class="event-detail-row" style="margin-top:3px;">
                       <span class="material-icons-round">location_on</span>
                       {{ ev.location }}
                     </div>
                   }
-                  @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
+                  @if (isDeadlinePassed(ev)) {
+                    <div class="event-detail-row" style="margin-top:6px;">
+                      <span class="material-icons-round" style="color:#991B1B;">lock</span>
+                      <span class="badge badge-danger" style="font-size:.72rem;">Registration Closed</span>
+                    </div>
+                  } @else if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
                     <div class="event-detail-row" style="margin-top:6px;">
                       <span class="material-icons-round">event_seat</span>
                       <span [class]="seatBadge(ev.seatsLeft)" style="font-size:.72rem;">{{ seatLabel(ev.seatsLeft) }}</span>
@@ -157,5 +171,16 @@ export class EventsComponent implements OnInit {
     if (left === 0) return 'badge badge-danger';
     if (left <= 5)  return 'badge badge-warning';
     return 'badge badge-success';
+  }
+
+  isDeadlinePassed(ev: EventResponse): boolean {
+    if (ev.isRegistrationOpen === undefined) return false;
+    return !ev.isRegistrationOpen;
+  }
+
+  fmt(t: string): string {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 }

@@ -103,7 +103,7 @@ const ACTION_STYLES: Record<string, { bg: string; color: string }> = {
                 <tr style="background:var(--surface-2);border-bottom:2px solid var(--border);">
                   <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">ID</th>
                   <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Timestamp</th>
-                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">User ID</th>
+                  <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">User</th>
                   <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Role</th>
                   <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Action</th>
                   <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;">Entity</th>
@@ -116,7 +116,8 @@ const ACTION_STYLES: Record<string, { bg: string; color: string }> = {
                     <td style="padding:10px 16px;color:var(--text-muted);">#{{ log.id }}</td>
                     <td style="padding:10px 16px;white-space:nowrap;">{{ log.createdAt | date:'MMM d, y, HH:mm:ss' }}</td>
                     <td style="padding:10px 16px;">
-                      <span style="font-weight:600;">{{ log.userId || '—' }}</span>
+                      <div style="font-weight:600;font-size:.88rem;">{{ log.userName || '—' }}</div>
+                      <div style="font-size:.75rem;color:var(--text-muted);">ID #{{ log.userId }}</div>
                     </td>
                     <td style="padding:10px 16px;">
                       <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;"
@@ -181,7 +182,7 @@ export class AdminAuditLogsComponent implements OnInit {
   filtered = computed(() => {
     const s = this.search.toLowerCase();
     return this.logs().filter(l => {
-      const matchSearch = !s || l.userId.toString().includes(s) || l.entity.toLowerCase().includes(s);
+      const matchSearch = !s || l.userId.toString().includes(s) || l.entity.toLowerCase().includes(s) || (l.userName ?? '').toLowerCase().includes(s);
       const matchAction = !this.filterAction || l.action === this.filterAction;
       const matchEntity = !this.filterEntity || l.entity === this.filterEntity;
       const matchRole   = !this.filterRole   || l.role === this.filterRole;

@@ -13,5 +13,7 @@
         public AccountStatus Status { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public string? ProfileImageUrl { get; set; }
     }
 }
