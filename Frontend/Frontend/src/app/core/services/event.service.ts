@@ -43,6 +43,13 @@ export class EventService {
   /** GET /api/Event/my — events created by the logged-in organizer */
   getMyEvents()                 { return this.http.get<EventResponse[]>(`${this.base}/my`); }
 
+  /** GET /api/Event/my/paged — paginated + optional date filter */
+  getMyEventsPaged(pageNumber: number, pageSize: number, filterDate?: string) {
+    let params = `pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    if (filterDate) params += `&filterDate=${filterDate}`;
+    return this.http.get<{ pageNumber: number; pageSize: number; totalRecords: number; data: EventResponse[] }>(`${this.base}/my/paged?${params}`);
+  }
+
   /** PUT /api/Event/{id}/cancel — auto-refunds all payments */
   cancel(id: number)            { return this.http.put<EventResponse>(`${this.base}/${id}/cancel`, {}); }
 

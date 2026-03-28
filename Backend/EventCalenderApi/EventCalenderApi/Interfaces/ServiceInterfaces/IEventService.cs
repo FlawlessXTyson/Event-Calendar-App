@@ -25,6 +25,8 @@ public interface IEventService
 
     Task<IEnumerable<EventResponseDTO>> GetMyEventsAsync(int userId);
 
+    Task<PagedResultDTO<EventResponseDTO>> GetMyEventsPagedAsync(int userId, int pageNumber, int pageSize, DateTime? filterDate);
+
     Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId);
     Task<RefundSummaryDTO> GetRefundSummaryAsync(int eventId);
     Task<IEnumerable<EventResponseDTO>> GetPendingEventsAsync();

@@ -27,7 +27,7 @@ import { PaymentResponse, PaymentStatus } from '../../../core/models/models';
               @for (p of payments(); track p.paymentId) {
                 <tr>
                   <td style="color:var(--text-muted);">#{{ p.paymentId }}</td>
-                  <td style="font-weight:600;">Event #{{ p.eventId }}</td>
+                  <td style="font-weight:600;">{{ p.eventTitle || 'Event #' + p.eventId }}</td>
                   <td style="font-weight:700;">₹{{ p.amountPaid | number:'1.0-0' }}</td>
                   <td><span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span></td>
                   <td>{{ p.refundedAmount ? ('₹' + (p.refundedAmount | number:'1.0-0')) : '—' }}</td>

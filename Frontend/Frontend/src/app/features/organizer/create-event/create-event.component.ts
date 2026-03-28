@@ -177,12 +177,12 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
           <h3 style="margin-bottom:16px;font-size:1rem;">Capacity &amp; Pricing</h3>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Seats Limit <span style="color:var(--text-muted);">(optional)</span></label>
+              <label class="form-label">Seats Limit <span style="color:var(--danger)">*</span></label>
               <input formControlName="seatsLimit" type="number" class="form-control"
                 [class.is-invalid]="fi('seatsLimit')"
-                placeholder="Leave blank for unlimited" min="1" />
-              @if (fi('seatsLimit')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Seats must be at least 1</div> }
-              <div class="form-hint">For free events, seats are checked at registration. For paid events, at payment.</div>
+                placeholder="e.g. 100" min="1" />
+              @if (fi('seatsLimit')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Seats limit is required and must be at least 1</div> }
+              <div class="form-hint">Number of seats available for this event.</div>
             </div>
             <div></div>
           </div>
@@ -241,7 +241,7 @@ export class CreateEventComponent implements OnInit {
     startTime:            ['', Validators.required],
     endTime:              ['', Validators.required],
     registrationDeadline: [''],
-    seatsLimit:           [null as number|null, Validators.min(1)],
+    seatsLimit:           [null as number|null, [Validators.required, Validators.min(1)]],
     isPaidEvent:          [false],
     ticketPrice:          [0]
   }, { validators: this.crossValidate.bind(this) });
@@ -271,18 +271,21 @@ export class CreateEventComponent implements OnInit {
   }
 
   crossValidate(g: AbstractControl) {
-    // End time must be after start time
-    const start = g.get('startTime')?.value as string;
-    const end   = g.get('endTime')?.value as string;
-    if (start && end && end <= start) {
+    const start      = g.get('startTime')?.value as string;
+    const end        = g.get('endTime')?.value as string;
+    const eDate      = g.get('eventDate')?.value as string;
+    const eEndDate   = g.get('eventEndDate')?.value as string;
+
+    // End time vs start time — only validate when it's a SINGLE-DAY event
+    // (no eventEndDate, or eventEndDate === eventDate)
+    const isSameDay = !eEndDate || eEndDate === eDate;
+    if (isSameDay && start && end && end <= start) {
       g.get('endTime')?.setErrors({ endBeforeStart: true });
     } else if (g.get('endTime')?.hasError('endBeforeStart')) {
       g.get('endTime')?.setErrors(null);
     }
 
     // End date must be >= start date
-    const eDate    = g.get('eventDate')?.value as string;
-    const eEndDate = g.get('eventEndDate')?.value as string;
     if (eDate && eEndDate && eEndDate < eDate) {
       g.get('eventEndDate')?.setErrors({ endBeforeStart: true });
     } else if (g.get('eventEndDate')?.hasError('endBeforeStart')) {
@@ -356,8 +359,9 @@ export class CreateEventComponent implements OnInit {
       return;
     }
 
-    if (v.startTime && v.endTime && v.endTime <= v.startTime) {
-      this.toast.error('End time must be after start time.', 'Validation Error');
+    const isSameDay = !v.eventEndDate || v.eventEndDate === v.eventDate;
+    if (isSameDay && v.startTime && v.endTime && v.endTime <= v.startTime) {
+      this.toast.error('End time must be after start time for single-day events.', 'Validation Error');
       return;
     }
 
@@ -371,8 +375,8 @@ export class CreateEventComponent implements OnInit {
       return;
     }
 
-    if (v.seatsLimit !== null && v.seatsLimit !== undefined && v.seatsLimit < 1) {
-      this.toast.error('Seats limit must be at least 1.', 'Validation Error');
+    if (!v.seatsLimit || v.seatsLimit < 1) {
+      this.toast.error('Seats limit is required and must be at least 1.', 'Validation Error');
       return;
     }
 
@@ -411,7 +415,7 @@ export class CreateEventComponent implements OnInit {
     };
     if (v.eventEndDate)         payload.eventEndDate         = v.eventEndDate;
     if (v.registrationDeadline) payload.registrationDeadline = new Date(v.registrationDeadline!).toISOString();
-    if (v.seatsLimit)           payload.seatsLimit           = v.seatsLimit;
+    payload.seatsLimit = v.seatsLimit;
 
     this.eventSvc.create(payload).subscribe({
       next: ev => {

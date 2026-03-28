@@ -6,6 +6,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment
     {
         public int PaymentId { get; set; }
         public int EventId { get; set; }
+        public string EventTitle { get; set; } = string.Empty;
 
         public float AmountPaid { get; set; }
 

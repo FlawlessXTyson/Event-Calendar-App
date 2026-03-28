@@ -138,6 +138,8 @@ export interface EventResponse {
   earlyRefundPercentage?: number;
   registrationDeadline?: string;
   isRegistrationOpen?: boolean;    // computed server-side — use this instead of local time math
+  hasStarted?: boolean;            // true once event start time passed (UTC)
+  hasEnded?: boolean;              // true once event end time passed (UTC)
   status?: EventStatus;
   createdByUserId?: number;
   createdAt?: string;
@@ -218,6 +220,7 @@ export interface PaymentRequest {
 export interface PaymentResponse {
   paymentId: number;
   eventId: number;
+  eventTitle?: string;
   amountPaid: number;
   refundedAmount?: number;
   status: PaymentStatus;

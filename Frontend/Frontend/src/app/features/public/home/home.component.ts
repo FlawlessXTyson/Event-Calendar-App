@@ -192,7 +192,7 @@ export class HomeComponent implements OnInit {
       next: evs => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const filtered = evs
-          .filter(e => new Date(e.eventDate) >= today)
+          .filter(e => new Date(e.eventDate) >= today && e.isRegistrationOpen !== false)
           .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
         this.events.set(filtered);
         this.loading.set(false);
@@ -209,8 +209,15 @@ export class HomeComponent implements OnInit {
   }
 
   isClosed(ev: EventResponse): boolean {
-    if (ev.isRegistrationOpen === undefined) return false;
-    return !ev.isRegistrationOpen;
+    const now = new Date();
+    if (ev.registrationDeadline) {
+      const dl = ev.registrationDeadline;
+      const deadlineDate = new Date(dl.endsWith('Z') || dl.includes('+') ? dl : dl + 'Z');
+      if (deadlineDate <= now) return true;
+    }
+    if (ev.hasStarted === true || ev.hasEnded === true) return true;
+    if (!ev.registrationDeadline && ev.isRegistrationOpen === false) return true;
+    return false;
   }
 
   fmt(t: string): string {

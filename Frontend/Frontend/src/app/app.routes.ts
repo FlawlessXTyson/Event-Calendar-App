@@ -39,6 +39,7 @@ export const routes: Routes = [
       { path: 'profile',      canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/profile/user-profile.component').then(m => m.UserProfileComponent) },
       { path: 'request-role', canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/request-role/request-role.component').then(m => m.RequestRoleComponent) },
       { path: 'calendar',     canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/calendar/user-calendar.component').then(m => m.UserCalendarComponent) },
+      { path: 'events-attended', canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/events-attended/events-attended.component').then(m => m.EventsAttendedComponent) },
     ]
   },
 

@@ -252,6 +252,18 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetMyEventsAsync(userId));
         }
 
+        // GET /api/Event/my/paged?pageNumber=1&pageSize=10&filterDate=2026-03-28
+        [Authorize(Roles = "ORGANIZER,ADMIN")]
+        [HttpGet("my/paged")]
+        public async Task<IActionResult> GetMyEventsPaged(int pageNumber = 1, int pageSize = 10, string? filterDate = null)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            DateTime? date = null;
+            if (!string.IsNullOrEmpty(filterDate) && DateTime.TryParse(filterDate, out var parsed))
+                date = parsed;
+            return Ok(await _service.GetMyEventsPagedAsync(userId, pageNumber, pageSize, date));
+        }
+
 
         /// <summary>
         /// Retrieves the list of events that the currently authenticated user is registered for.

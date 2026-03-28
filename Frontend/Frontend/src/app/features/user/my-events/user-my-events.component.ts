@@ -52,6 +52,13 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
             <span style="margin-left:6px;background:var(--primary);color:#fff;font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:var(--r-full);vertical-align:middle;">{{ activeRegCount() }}</span>
           }
         </button>
+        <button type="button" class="tab-btn" [class.active]="tab() === 'attended'" (click)="switchTab('attended')">
+          <span class="material-icons-round" style="font-size:16px;vertical-align:middle;">verified</span>
+          Events Attended
+          @if (attendedCount() > 0) {
+            <span style="margin-left:6px;background:#065F46;color:#fff;font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:var(--r-full);vertical-align:middle;">{{ attendedCount() }}</span>
+          }
+        </button>
       </div>
 
       <!-- ── BROWSE TAB ─────────────────────────────────────────────────── -->
@@ -68,34 +75,45 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
         } @else {
           <div class="events-grid">
             @for (ev of filteredAll(); track ev.eventId) {
-              <div class="event-card" [style.opacity]="isDeadlinePassed(ev) ? '0.6' : '1'"
-                [style.pointer-events]="isDeadlinePassed(ev) && !isRegistered(ev.eventId) ? 'none' : 'auto'"
-                [style.filter]="isDeadlinePassed(ev) && !isRegistered(ev.eventId) ? 'grayscale(0.4)' : 'none'">
+              <div class="event-card">
                 <div class="event-card-header">
                   <div class="event-card-meta">
                     <span class="badge badge-primary">{{ catLabel(ev.category) }}</span>
                     @if (ev.isPaidEvent) { <span class="badge badge-warning">&#8377;{{ ev.ticketPrice | number:'1.0-0' }}</span> }
                     @else { <span class="badge badge-success">Free</span> }
-                    @if (isRegistered(ev.eventId)) { <span class="badge badge-info">Registered</span> }
+                    @if (ev.hasEnded) {
+                      <span class="badge badge-gray">Event Ended</span>
+                    } @else if (isRegistered(ev.eventId)) {
+                      @if (ev.hasStarted) {
+                        <span class="badge" style="background:#FEF3C7;color:#92400E;">🟡 Ongoing</span>
+                      } @else {
+                        <span class="badge badge-info">Registered</span>
+                      }
+                    }
                   </div>
                   <div class="event-card-title">{{ ev.title }}</div>
                 </div>
 
                 <div class="event-card-body">
                   <p>{{ ev.description }}</p>
-                  @if (isDeadlinePassed(ev)) {
+                  @if (ev.hasEnded) {
+                    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:var(--r-sm);padding:6px 10px;">
+                      <span class="material-icons-round" style="font-size:15px;color:var(--text-muted);">event_busy</span>
+                      <span style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Event has ended</span>
+                    </div>
+                  } @else if (isDeadlinePassed(ev) && !isRegistered(ev.eventId)) {
                     <div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#FEE2E2;border-radius:var(--r-sm);padding:6px 10px;">
                       <span class="material-icons-round" style="font-size:15px;color:#991B1B;">lock</span>
                       <span style="font-size:.78rem;font-weight:700;color:#991B1B;">Registration Closed</span>
                     </div>
-                  } @else {
+                  } @else if (!isDeadlinePassed(ev)) {
                     @if (ev.seatsLeft !== undefined && ev.seatsLeft >= 0) {
                       <div style="margin-top:8px;">
                         <span [class]="seatBadgeClass(ev)" style="font-size:.78rem;">{{ seatsDisplay(ev) }}</span>
                       </div>
                     }
                   }
-                  @if (ev.isPaidEvent && ev.refundCutoffDays !== undefined) {
+                  @if (ev.isPaidEvent && ev.refundCutoffDays !== undefined && !ev.hasEnded) {
                     <div style="margin-top:6px;font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
                       <span class="material-icons-round" style="font-size:13px;">info</span>
                       {{ ev.earlyRefundPercentage }}% refund if cancelled {{ ev.refundCutoffDays }}+ days before event
@@ -116,8 +134,19 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                   </div>
 
                   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    @if (!isRegistered(ev.eventId)) {
-                      <!-- Not registered yet -->
+                    @if (ev.hasEnded) {
+                      <!-- Event ended — no actions for anyone -->
+                      @if (isRegistered(ev.eventId) && getTicket(ev.eventId)) {
+                        <button type="button" class="btn btn-sm"
+                          (click)="openTicketDetail(getTicket(ev.eventId)!)"
+                          title="View Ticket"
+                          style="background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;display:flex;align-items:center;gap:4px;font-size:.78rem;">
+                          <span class="material-icons-round" style="font-size:16px;">confirmation_number</span>
+                          Ticket
+                        </button>
+                      }
+                    } @else if (!isRegistered(ev.eventId)) {
+                      <!-- Not registered -->
                       <button type="button" class="btn btn-primary btn-sm"
                         [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
                         (click)="registerEvent(ev)">
@@ -126,14 +155,14 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                         @else { Register }
                       </button>
                     } @else {
-                      <!-- Registered — paid event: show Pay if not paid yet -->
-                      @if (!isFreeEvent(ev) && !isPaid(ev.eventId)) {
+                      <!-- Registered -->
+                      @if (!isFreeEvent(ev) && !isPaid(ev.eventId) && !ev.hasStarted) {
                         <button type="button" class="btn btn-warning btn-sm" (click)="openPayModal(ev)">
                           <span class="material-icons-round" style="font-size:14px;">payment</span>
                           Pay &#8377;{{ ev.ticketPrice | number:'1.0-0' }}
                         </button>
                       }
-                      <!-- Ticket icon — shown on the card once ticket is generated -->
+                      <!-- Ticket — always visible for registered users until event ends -->
                       @if (getTicket(ev.eventId)) {
                         <button type="button" class="btn btn-sm"
                           (click)="openTicketDetail(getTicket(ev.eventId)!)"
@@ -143,14 +172,16 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                           Ticket
                         </button>
                       }
-                      <!-- Cancel always available when registered -->
-                      <button type="button" class="btn btn-danger btn-sm"
-                        [disabled]="cancelling() === getRegId(ev.eventId)"
-                        (click)="cancelEvent(ev)">
-                        @if (cancelling() === getRegId(ev.eventId)) { <div class="spinner spinner-sm"></div> } @else { Cancel }
-                      </button>
+                      <!-- Cancel — only before event starts -->
+                      @if (!ev.hasStarted) {
+                        <button type="button" class="btn btn-danger btn-sm"
+                          [disabled]="cancelling() === getRegId(ev.eventId)"
+                          (click)="cancelEvent(ev)">
+                          @if (cancelling() === getRegId(ev.eventId)) { <div class="spinner spinner-sm"></div> } @else { Cancel }
+                        </button>
+                      }
                     }
-                    <!-- View details — free to navigate for free events; blocked only for paid-pending -->
+                    <!-- View details link — always available -->
                     <a [routerLink]="(regState.isNavigationBlocked() && ev.isPaidEvent) ? null : ['/events', ev.eventId]"
                        class="btn btn-ghost btn-sm btn-icon"
                        (click)="guardNav(ev)">
@@ -172,7 +203,7 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
 
       <!-- ── MY REGISTRATIONS TAB ──────────────────────────────────────── -->
       @if (tab() === 'registered') {
-        @if (myRegs().length === 0) {
+        @if (activeRegCount() === 0) {
           <div class="empty-state">
             <span class="material-icons-round empty-icon">event_busy</span>
             <h3>No registrations yet</h3>
@@ -185,7 +216,7 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                 <tr><th>Event</th><th>Date</th><th>Seats</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
-                @for (reg of myRegs(); track reg.registrationId) {
+                @for (reg of activeRegs(); track reg.registrationId) {
                   <tr>
                     <td style="font-weight:600;">{{ getEventTitle(reg.eventId) }}</td>
                     <td>{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</td>
@@ -217,14 +248,81 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                     </td>
                     <td>
                       <div style="display:flex;gap:6px;">
-                        @if (reg.status === 1) {
+                        @if (reg.status === 1 && !getEvent(reg.eventId)?.hasStarted) {
                           <button type="button" class="btn btn-danger btn-sm"
                             [disabled]="cancelling() === reg.registrationId"
                             (click)="cancelById(reg)">
                             @if (cancelling() === reg.registrationId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
                           </button>
                         }
+                        @if (getTicket(reg.eventId) && !getEvent(reg.eventId)?.hasEnded) {
+                          <button type="button" class="btn btn-ghost btn-sm btn-icon"
+                            (click)="openTicketDetail(getTicket(reg.eventId)!)"
+                            title="View Ticket">
+                            <span class="material-icons-round" style="font-size:18px;color:var(--primary);">confirmation_number</span>
+                          </button>
+                        }
                       </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      <!-- ── EVENTS ATTENDED TAB ──────────────────────────────────────── -->
+      @if (tab() === 'attended') {
+        @if (attendedRegs().length === 0) {
+          <div class="empty-state">
+            <span class="material-icons-round empty-icon">verified</span>
+            <h3>No attended events yet</h3>
+            <p>Events you've registered for will appear here once they end.</p>
+          </div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Event</th><th>Date</th><th>Type</th><th>Payment</th><th>Status</th><th>Ticket</th></tr>
+              </thead>
+              <tbody>
+                @for (reg of attendedRegs(); track reg.registrationId) {
+                  <tr>
+                    <td>
+                      <div style="font-weight:600;font-size:.9rem;">{{ getEventTitle(reg.eventId) }}</div>
+                      <div style="font-size:.75rem;color:var(--text-muted);">{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</div>
+                    </td>
+                    <td>{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</td>
+                    <td>
+                      @if (isEventPaid(reg.eventId)) { <span class="badge badge-warning">Paid</span> }
+                      @else { <span class="badge badge-success">Free</span> }
+                    </td>
+                    <td>
+                      @if (isEventPaid(reg.eventId)) {
+                        @if (isPaid(reg.eventId)) { <span class="badge badge-success">Paid ✓</span> }
+                        @else { <span class="badge badge-gray">—</span> }
+                      } @else {
+                        <span class="badge badge-success">Free ✓</span>
+                      }
+                    </td>
+                    <td>
+                      <span class="badge" style="background:#D1FAE5;color:#065F46;font-weight:700;">
+                        ✅ Attended
+                      </span>
+                    </td>
+                    <td>
+                      @if (getTicket(reg.eventId)) {
+                        <button type="button" class="btn btn-sm"
+                          (click)="openTicketDetail(getTicket(reg.eventId)!)"
+                          title="View Ticket — Proof of Attendance"
+                          style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border:none;border-radius:var(--r-sm);padding:5px 10px;display:flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;">
+                          <span class="material-icons-round" style="font-size:15px;">confirmation_number</span>
+                          Ticket
+                        </button>
+                      } @else {
+                        <span style="font-size:.78rem;color:var(--text-muted);">—</span>
+                      }
                     </td>
                   </tr>
                 }
@@ -372,12 +470,13 @@ export class UserMyEventsComponent implements OnInit {
   readonly regState = inject(RegistrationStateService);
   private router    = inject(Router);
 
-  allEvents  = signal<EventResponse[]>([]);
+  allEvents        = signal<EventResponse[]>([]);
+  registeredEvents = signal<EventResponse[]>([]); // event details for My Registrations table
   myRegs     = signal<EventRegistrationResponse[]>([]);
   myPayments = signal<PaymentResponse[]>([]);
   myTickets  = signal<TicketResponse[]>([]);
   loadingAll = signal(true);
-  tab        = signal<'browse' | 'registered'>('browse');
+  tab        = signal<'browse' | 'registered' | 'attended'>('browse');
   search     = '';
   acting     = signal<number | null>(null);
   paying     = signal<number | null>(null);
@@ -398,28 +497,70 @@ export class UserMyEventsComponent implements OnInit {
     );
   });
 
-  activeRegCount = computed(() =>
-    this.myRegs().filter(r => r.status === RegistrationStatus.REGISTERED).length
-  );
+  // My Registrations = active registrations for events that have NOT ended
+  activeRegs = computed(() => {
+    const regs = this.myRegs().filter(r => r.status === RegistrationStatus.REGISTERED);
+    // If registeredEvents not loaded yet, show all (fallback)
+    if (this.registeredEvents().length === 0) return regs;
+    return regs.filter(r => {
+      const ev = this.registeredEvents().find(e => e.eventId === r.eventId)
+                 ?? this.allEvents().find(e => e.eventId === r.eventId);
+      return ev?.hasEnded !== true; // undefined or false = not ended = show here
+    });
+  });
+
+  // Count badge = same as activeRegs
+  activeRegCount = computed(() => this.activeRegs().length);
+
+  // Attended = registered events that have EXPLICITLY ended
+  attendedRegs = computed(() => {
+    const regs = this.myRegs().filter(r => r.status === RegistrationStatus.REGISTERED);
+    if (this.registeredEvents().length === 0) return [];
+    return regs.filter(r => {
+      const ev = this.registeredEvents().find(e => e.eventId === r.eventId)
+                 ?? this.allEvents().find(e => e.eventId === r.eventId);
+      return ev?.hasEnded === true;
+    });
+  });
+
+  attendedCount = computed(() => this.attendedRegs().length);
 
   ngOnInit() {
+    // Load registrations first, then events — so the filter can check registration status
+    this.regSvc.getMyRegistrations().subscribe({
+      next: regs => {
+        this.myRegs.set(regs);
+        this._loadEvents();
+      },
+      error: () => { this._loadEvents(); }
+    });
+    this.paySvc.getMyPayments().subscribe({ next: p => this.myPayments.set(p), error: () => {} });
+    this.ticketSvc.getMyTickets().subscribe({ next: t => this.myTickets.set(t), error: () => {} });
+    // Load registered event details for My Registrations table (includes ended events)
+    this.eventSvc.getRegistered().subscribe({ next: evs => this.registeredEvents.set(evs), error: () => {} });
+  }
+
+  private _loadEvents() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     this.eventSvc.getAll().subscribe({
       next: evs => {
         this.allEvents.set(
-          evs.filter(e => e.approvalStatus === ApprovalStatus.APPROVED && new Date(e.eventDate) >= today)
+          evs
+            .filter(e =>
+              e.approvalStatus === ApprovalStatus.APPROVED &&
+              new Date(e.eventDate) >= today &&
+              e.hasEnded !== true   // hide ended events from browse
+            )
+            .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
         );
         this.loadingAll.set(false);
       },
       error: () => this.loadingAll.set(false)
     });
-    this.regSvc.getMyRegistrations().subscribe({ next: r => this.myRegs.set(r), error: () => {} });
-    this.paySvc.getMyPayments().subscribe({ next: p => this.myPayments.set(p), error: () => {} });
-    this.ticketSvc.getMyTickets().subscribe({ next: t => this.myTickets.set(t), error: () => {} });
   }
 
   // ── Tab navigation ─────────────────────────────────────────────────────────
-  switchTab(t: 'browse' | 'registered') {
+  switchTab(t: 'browse' | 'registered' | 'attended') {
     // Only block navigation for paid events with pending payment
     if (this.regState.isNavigationBlocked()) {
       this.toast.warning('Please complete payment or cancel registration before leaving.', 'Navigation Blocked');
@@ -444,12 +585,25 @@ export class UserMyEventsComponent implements OnInit {
     return !ev.isPaidEvent || ev.ticketPrice === 0;
   }
 
-  /** True when registration is no longer possible — uses server-computed flag (UTC-correct) */
+  /** True when registration is no longer possible */
   isDeadlinePassed(ev: EventResponse): boolean {
-    // isRegistrationOpen is computed server-side with exact UTC logic matching the validator.
-    // If not present (older API response), fall back to false (allow attempt, backend will reject).
-    if (ev.isRegistrationOpen === undefined) return false;
-    return !ev.isRegistrationOpen;
+    const now = new Date();
+
+    // Check registration deadline — ensure UTC parsing by appending Z if missing
+    if (ev.registrationDeadline) {
+      const dl = ev.registrationDeadline;
+      // If no timezone info, treat as UTC (backend stores in UTC)
+      const deadlineDate = new Date(dl.endsWith('Z') || dl.includes('+') ? dl : dl + 'Z');
+      if (deadlineDate <= now) return true;
+    }
+
+    // Event has started or ended (server-computed with local time)
+    if (ev.hasStarted === true || ev.hasEnded === true) return true;
+
+    // No deadline set + server says closed
+    if (!ev.registrationDeadline && ev.isRegistrationOpen === false) return true;
+
+    return false;
   }
 
   // A payment is only "active" if the user is currently registered AND payment is SUCCESS.
@@ -460,10 +614,10 @@ export class UserMyEventsComponent implements OnInit {
     return this.myPayments().some(p => p.eventId === eid && p.status === PaymentStatus.SUCCESS);
   }
   getRegId(eid: number)     { return this.myRegs().find(r => r.eventId === eid && r.status === RegistrationStatus.REGISTERED)?.registrationId ?? null; }
-  getEvent(eid: number)     { return this.allEvents().find(e => e.eventId === eid) ?? null; }
-  getEventTitle(eid: number){ return this.allEvents().find(e => e.eventId === eid)?.title ?? `Event #${eid}`; }
-  getEventDate(eid: number) { return this.allEvents().find(e => e.eventId === eid)?.eventDate ?? ''; }
-  isEventPaid(eid: number)  { return this.allEvents().find(e => e.eventId === eid)?.isPaidEvent ?? false; }
+  getEvent(eid: number)     { return this.registeredEvents().find(e => e.eventId === eid) ?? this.allEvents().find(e => e.eventId === eid) ?? null; }
+  getEventTitle(eid: number){ return this.getEvent(eid)?.title ?? `Event #${eid}`; }
+  getEventDate(eid: number) { return this.getEvent(eid)?.eventDate ?? ''; }
+  isEventPaid(eid: number)  { return this.getEvent(eid)?.isPaidEvent ?? false; }
   getTicket(eid: number)    { return this.myTickets().find(t => t.eventId === eid) ?? null; }
 
   seatsDisplay(ev: EventResponse): string {

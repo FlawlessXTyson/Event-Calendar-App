@@ -80,7 +80,7 @@ import { EventResponse, PaymentResponse, TodoResponse, PaymentStatus, TodoStatus
               @for (p of payments().slice(0,4); track p.paymentId) {
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
                   <div>
-                    <div style="font-weight:600;font-size:.9rem;">Event #{{ p.eventId }}</div>
+                    <div style="font-weight:600;font-size:.9rem;">{{ p.eventTitle || 'Event #' + p.eventId }}</div>
                     <div style="font-size:.8rem;color:var(--text-muted);">{{ p.paymentDate | date:'MMM d, y' }}</div>
                   </div>
                   <div style="text-align:right;">
@@ -111,7 +111,17 @@ export class UserDashboardComponent implements OnInit {
   pendingTodos = () => this.todos().filter(t => t.status === TodoStatus.PENDING).length;
 
   ngOnInit() {
-    this.eventSvc.getRegistered().subscribe({ next: evs => this.registeredEvents.set(evs), error: () => {} });
+    this.eventSvc.getRegistered().subscribe({
+      next: evs => {
+        // Only keep events that haven't ended yet, sorted by date
+        const now = new Date();
+        const upcoming = evs
+          .filter(e => !e.hasEnded && new Date(e.eventDate) >= new Date(now.toDateString()))
+          .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+        this.registeredEvents.set(upcoming);
+      },
+      error: () => {}
+    });
     this.paySvc.getMyPayments().subscribe({ next: ps => this.payments.set(ps), error: () => {} });
     this.todoSvc.getMyTodos().subscribe({ next: ts => this.todos.set(ts), error: () => {} });
   }

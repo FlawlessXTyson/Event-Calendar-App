@@ -96,13 +96,8 @@ namespace EventCalenderApi.Controllers
         public async Task<IActionResult> GetMyRegistrations()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
             var data = await _service.GetMyRegistrationsAsync(userId);
-
-            if (!data.Any())
-                throw new NotFoundException("You have not registered for any events");
-
-            return Ok(data);
+            return Ok(data); // always return array, never 404
         }
     }
 }

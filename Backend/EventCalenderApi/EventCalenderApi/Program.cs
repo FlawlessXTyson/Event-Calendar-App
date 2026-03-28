@@ -13,6 +13,13 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Force IST timezone for all DateTime.Now comparisons
+// This ensures event times (stored as IST) are compared correctly
+TimeZoneInfo ist;
+try { ist = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"); }
+catch { ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"); }
+Environment.SetEnvironmentVariable("TZ", "Asia/Kolkata");
+
 // Controllers + validation
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>

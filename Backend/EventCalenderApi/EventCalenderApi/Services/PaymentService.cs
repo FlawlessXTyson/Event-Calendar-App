@@ -3,6 +3,7 @@ using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Commission;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
+using EventCalenderApi.Helpers;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.EntityFrameworkCore;
@@ -53,7 +54,7 @@ namespace EventCalenderApi.Services
                 throw new BadRequestException("Event is not approved");
 
             // ================= TIME VALIDATION =================
-            var now = DateTime.UtcNow;
+            var now = IstClock.Now; // IST — EventDate is stored in IST
 
             var eventStartDateTime = eventEntity.EventDate.Add(eventEntity.StartTime ?? TimeSpan.Zero);
 
@@ -164,6 +165,7 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<PaymentResponseDTO>> GetByUserAsync(int userId)
         {
             var payments = await _paymentRepo.GetQueryable()
+                .Include(p => p.Event)
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
@@ -186,6 +188,7 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<PaymentResponseDTO>> GetAllPaymentsAsync()
         {
             var payments = await _paymentRepo.GetQueryable()
+                .Include(p => p.Event)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
 
@@ -211,7 +214,7 @@ namespace EventCalenderApi.Services
             var eventEndTime = eventEntity.EndTime ?? new TimeSpan(23, 59, 59);
             var eventEndDateTime = eventEndDate.Add(eventEndTime);
 
-            if (DateTime.UtcNow > eventEndDateTime)
+            if (IstClock.Now > eventEndDateTime)
                 throw new BadRequestException("Cannot refund after event has ended");
 
             payment.Status = PaymentStatus.REFUNDED;
@@ -300,6 +303,7 @@ namespace EventCalenderApi.Services
             {
                 PaymentId = p.PaymentId,
                 EventId = p.EventId,
+                EventTitle = p.Event?.Title ?? string.Empty,
                 AmountPaid = p.AmountPaid,
                 RefundedAmount = p.RefundedAmount,
                 Status = p.Status,

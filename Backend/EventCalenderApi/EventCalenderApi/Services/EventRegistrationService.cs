@@ -1,4 +1,5 @@
 ﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+using EventCalenderApi.Helpers;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.EventRegisration;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
@@ -56,10 +57,10 @@ namespace EventCalenderApi.Services
                 throw new BadRequestException("Registration deadline has passed");
 
 
-            
+
             // ================= TIME VALIDATION =================
             
-            var now = DateTime.UtcNow;
+            var now = IstClock.Now; // IST — EventDate is stored in IST
 
             // START CHECK (UNCHANGED)
             var eventStartDateTime = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
@@ -145,7 +146,7 @@ namespace EventCalenderApi.Services
             var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
             var eventEndDateTime = eventEndDate.Add(eventEndTime);
 
-            if (DateTime.UtcNow > eventEndDateTime)
+            if (IstClock.Now > eventEndDateTime)
                 throw new BadRequestException("Cannot cancel after event has ended");
 
             var payment = await _paymentRepo

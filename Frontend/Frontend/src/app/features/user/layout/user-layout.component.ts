@@ -40,8 +40,9 @@ export class UserLayoutComponent {
   sidebarOpen = signal(false);
   nav: NavItem[] = [
     { label:'Dashboard',     icon:'dashboard',         route:'/user/dashboard' },
-    { label:'Browse Events', icon:'search',             route:'/user/my-events' },
-    { label:'Calendar',      icon:'calendar_month',     route:'/user/calendar' },
+    { label:'Browse Events',    icon:'search',             route:'/user/my-events' },
+    { label:'Events Attended',  icon:'verified',           route:'/user/events-attended' },
+    { label:'Calendar',         icon:'calendar_month',     route:'/user/calendar' },
     { label:'My Payments',   icon:'payment',            route:'/user/payments' },
     { label:'Reminders',     icon:'notifications',      route:'/user/reminders' },
     { label:'To-Do List',    icon:'checklist',          route:'/user/todos' },

@@ -89,21 +89,23 @@ type FilterTab = 'pending' | 'approved' | 'rejected' | 'all' | 'expired';
                   }
                   <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                      @if (ev.approvalStatus === ApprovalStatus.PENDING && !isExpiredEvent(ev)) {
-                        <button type="button" class="btn btn-success btn-sm" [disabled]="approving() === ev.eventId" (click)="approve(ev)">
-                          @if (approving() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">check</span> Approve }
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" [disabled]="rejecting() === ev.eventId" (click)="reject(ev)">
-                          @if (rejecting() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">close</span> Reject }
-                        </button>
-                      }
-                      @if (ev.approvalStatus === ApprovalStatus.PENDING && isExpiredEvent(ev)) {
-                        <span class="badge badge-gray" style="font-size:.72rem;">Expired — cannot approve</span>
-                      }
-                      @if ((ev.status ?? 1) === EventStatus.ACTIVE && ev.approvalStatus === ApprovalStatus.APPROVED && !isExpiredEvent(ev)) {
-                        <button type="button" class="btn btn-warning btn-sm" [disabled]="cancelling() === ev.eventId" (click)="cancelEv(ev)">
-                          @if (cancelling() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
-                        </button>
+                      @if (activeTab() === 'expired') {
+                        <!-- Expired events: no approve/reject/cancel — only label + delete -->
+                        <span style="font-size:.75rem;color:var(--text-muted);font-style:italic;padding:4px 0;">Event Expired</span>
+                      } @else {
+                        @if (ev.approvalStatus === ApprovalStatus.PENDING) {
+                          <button type="button" class="btn btn-success btn-sm" [disabled]="approving() === ev.eventId" (click)="approve(ev)">
+                            @if (approving() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">check</span> Approve }
+                          </button>
+                          <button type="button" class="btn btn-danger btn-sm" [disabled]="rejecting() === ev.eventId" (click)="reject(ev)">
+                            @if (rejecting() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round" style="font-size:15px;">close</span> Reject }
+                          </button>
+                        }
+                        @if ((ev.status ?? 1) === EventStatus.ACTIVE && ev.approvalStatus === ApprovalStatus.APPROVED && !isExpiredEvent(ev)) {
+                          <button type="button" class="btn btn-warning btn-sm" [disabled]="cancelling() === ev.eventId" (click)="cancelEv(ev)">
+                            @if (cancelling() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
+                          </button>
+                        }
                       }
                       <button type="button" class="btn btn-ghost btn-sm btn-icon" [disabled]="deleting() === ev.eventId" (click)="deleteEv(ev)" title="Delete permanently">
                         @if (deleting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
@@ -158,6 +160,9 @@ export class AdminEventsComponent implements OnInit {
   });
 
   isExpiredEvent(ev: EventResponse): boolean {
+    // Only use hasEnded (event fully over) — NOT isRegistrationOpen
+    // isRegistrationOpen becomes false once event starts, but admin still needs to approve/reject
+    if (ev.hasEnded !== undefined) return ev.hasEnded;
     const endDate = ev.eventEndDate ? new Date(ev.eventEndDate) : new Date(ev.eventDate);
     endDate.setHours(23, 59, 59, 999);
     return endDate < new Date();
@@ -173,23 +178,42 @@ export class AdminEventsComponent implements OnInit {
           next: approved => {
             this.eventSvc.getRejected().subscribe({
               next: rejected => {
+                // Pending events whose end time has passed → auto-move to Expired
+                const activePending  = pending.filter(e => !e.hasEnded);
+                const expiredPending = pending.filter(e =>  e.hasEnded);
+
                 const map = new Map<number, EventResponse>();
-                [...pending, ...approved, ...rejected].forEach(e => map.set(e.eventId, e));
+                [...activePending, ...approved, ...rejected].forEach(e => map.set(e.eventId, e));
                 this.events.set([...map.values()]);
+
+                // Merge expired-pending with backend expired (deduplicated)
+                this.eventSvc.getExpired().subscribe({
+                  next: backendExpired => {
+                    const expMap = new Map<number, EventResponse>();
+                    [...backendExpired, ...expiredPending].forEach(e => expMap.set(e.eventId, e));
+                    this.expired.set([...expMap.values()]);
+                  },
+                  error: () => {
+                    this.expired.set(expiredPending);
+                  }
+                });
+
                 this.loading.set(false);
               },
-              error: () => { this.events.set([...pending, ...approved]); this.loading.set(false); }
+              error: () => {
+                const activePending = pending.filter(e => !e.hasEnded);
+                this.events.set([...activePending, ...approved]);
+                this.loading.set(false);
+              }
             });
           },
-          error: () => { this.events.set(pending); this.loading.set(false); }
+          error: () => {
+            this.events.set(pending.filter(e => !e.hasEnded));
+            this.loading.set(false);
+          }
         });
       },
       error: () => this.loading.set(false)
-    });
-    // Load expired separately
-    this.eventSvc.getExpired().subscribe({
-      next: exp => this.expired.set(exp),
-      error: () => {}
     });
   }
 

@@ -6,6 +6,8 @@ using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.EntityFrameworkCore;
 
+using EventCalenderApi.Helpers;
+
 namespace EventCalenderApi.Services
 {
     public class EventService : IEventService
@@ -287,6 +289,34 @@ namespace EventCalenderApi.Services
             return data.Select(e => MapToDTO(e, 0));
         }
 
+        public async Task<PagedResultDTO<EventResponseDTO>> GetMyEventsPagedAsync(int userId, int pageNumber, int pageSize, DateTime? filterDate)
+        {
+            var query = _eventRepo.GetQueryable()
+                .Where(e => e.CreatedByUserId == userId);
+
+            // Filter by date if provided
+            if (filterDate.HasValue)
+                query = query.Where(e => e.EventDate.Date == filterDate.Value.Date);
+
+            var total = await query.CountAsync();
+
+            // Sort descending by date + start time
+            var data = await query
+                .OrderByDescending(e => e.EventDate)
+                .ThenByDescending(e => e.StartTime)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResultDTO<EventResponseDTO>
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = total,
+                Data = data.Select(e => MapToDTO(e, 0))
+            };
+        }
+
         public async Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId)
         {
             var data = await _registrationRepo.GetQueryable()
@@ -398,7 +428,9 @@ namespace EventCalenderApi.Services
                 EndTime = ev.EndTime.HasValue
                     ? $"{(int)ev.EndTime.Value.TotalHours:D2}:{ev.EndTime.Value.Minutes:D2}"
                     : null,
-                IsRegistrationOpen = ComputeIsRegistrationOpen(ev)
+                IsRegistrationOpen = ComputeIsRegistrationOpen(ev),
+                HasStarted = IstClock.Now >= ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero),
+                HasEnded   = IstClock.Now >  (ev.EventEndDate ?? ev.EventDate).Add(ev.EndTime ?? new TimeSpan(23, 59, 59))
             };
         }
 
@@ -409,22 +441,23 @@ namespace EventCalenderApi.Services
         /// </summary>
         private static bool ComputeIsRegistrationOpen(Event ev)
         {
-            var now = DateTime.UtcNow;
+            var nowIst = IstClock.Now;    // IST — for event start/end (stored as IST)
+            var nowUtc = IstClock.UtcNow; // UTC — for registration deadline (stored as UTC)
 
-            // Explicit registration deadline
-            if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < now)
+            // Registration deadline stored as UTC (frontend sends ISO string)
+            if (ev.RegistrationDeadline != null && ev.RegistrationDeadline < nowUtc)
                 return false;
 
-            // Event already started
+            // Event already started (EventDate + StartTime stored as IST)
             var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
-            if (now >= eventStart)
+            if (nowIst >= eventStart)
                 return false;
 
             // Event already ended
             var eventEndDate = ev.EventEndDate ?? ev.EventDate;
             var eventEndTime = ev.EndTime ?? new TimeSpan(23, 59, 59);
             var eventEnd = eventEndDate.Add(eventEndTime);
-            if (now > eventEnd)
+            if (nowIst > eventEnd)
                 return false;
 
             return true;
