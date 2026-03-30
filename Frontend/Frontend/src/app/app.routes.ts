@@ -55,6 +55,7 @@ export const routes: Routes = [
       { path: 'my-events',     loadComponent: () => import('./features/organizer/my-events/organizer-my-events.component').then(m => m.OrganizerMyEventsComponent) },
       { path: 'earnings',      loadComponent: () => import('./features/organizer/earnings/organizer-earnings.component').then(m => m.OrganizerEarningsComponent) },
       { path: 'registrations', loadComponent: () => import('./features/organizer/event-registrations/event-registrations.component').then(m => m.EventRegistrationsComponent) },
+      { path: 'refunds',       loadComponent: () => import('./features/organizer/refunds/organizer-refunds.component').then(m => m.OrganizerRefundsComponent) },
       { path: 'profile',       loadComponent: () => import('./features/organizer/profile/organizer-profile.component').then(m => m.OrganizerProfileComponent) },
       { path: 'calendar',      loadComponent: () => import('./features/organizer/calendar/organizer-calendar.component').then(m => m.OrganizerCalendarComponent) },
     ]

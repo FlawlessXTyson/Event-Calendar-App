@@ -110,7 +110,10 @@ export class AdminDashboardComponent implements OnInit {
   rejectingRole= signal<number | null>(null);
 
   totalEvents  = () => this.allEvents().length;
-  pendingEvents= () => this.allEvents().filter(e => e.approvalStatus === ApprovalStatus.PENDING);
+  // Only show upcoming pending events (not ended) in the dashboard widget
+  pendingEvents = () => this.allEvents().filter(e =>
+    e.approvalStatus === ApprovalStatus.PENDING && e.hasEnded !== true
+  );
 
   ngOnInit() {
     this.eventSvc.getPending().subscribe({ next: evs => this.allEvents.set(evs), error: () => {} });

@@ -36,6 +36,7 @@ export class OrganizerLayoutComponent {
     { label:'Dashboard',         icon:'dashboard',             route:'/organizer/dashboard' },
     { label:'Create Event',      icon:'add_circle',            route:'/organizer/create-event' },
     { label:'My Events',         icon:'event_note',            route:'/organizer/my-events' },
+    { label:'Refunds',           icon:'currency_rupee',         route:'/organizer/refunds' },
     { label:'Calendar',          icon:'calendar_month',        route:'/organizer/calendar' },
     { label:'Registrations',     icon:'people',                route:'/organizer/registrations' },
     { label:'Earnings',          icon:'account_balance_wallet', route:'/organizer/earnings' },

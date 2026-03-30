@@ -177,6 +177,8 @@ namespace EventCalenderApi.Services
         public async Task<IEnumerable<PaymentResponseDTO>> GetByEventAsync(int eventId)
         {
             var payments = await _paymentRepo.GetQueryable()
+                .Include(p => p.Event)
+                .Include(p => p.User)
                 .Where(p => p.EventId == eventId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
@@ -304,6 +306,9 @@ namespace EventCalenderApi.Services
                 PaymentId = p.PaymentId,
                 EventId = p.EventId,
                 EventTitle = p.Event?.Title ?? string.Empty,
+                UserId = p.UserId,
+                UserName  = p.User?.Name  ?? string.Empty,
+                UserEmail = p.User?.Email ?? string.Empty,
                 AmountPaid = p.AmountPaid,
                 RefundedAmount = p.RefundedAmount,
                 Status = p.Status,

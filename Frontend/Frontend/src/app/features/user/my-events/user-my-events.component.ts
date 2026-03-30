@@ -130,6 +130,14 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                         {{ formatTime(ev.startTime) }}{{ ev.endTime ? ' – ' + formatTime(ev.endTime) : '' }}
                       </div>
                     }
+                    @if (ev.registrationDeadline) {
+                      <div class="event-detail-row" style="margin-top:3px;">
+                        <span class="material-icons-round" style="font-size:14px;color:var(--warning);">event_busy</span>
+                        <span style="font-size:.75rem;color:var(--warning);font-weight:600;">
+                          Reg. deadline: {{ toUtc(ev.registrationDeadline) | date:'MMM d, h:mm a' }}
+                        </span>
+                      </div>
+                    }
                     @if (ev.location) { <div class="event-detail-row" style="margin-top:3px;"><span class="material-icons-round">location_on</span>{{ ev.location | slice:0:22 }}...</div> }
                   </div>
 
@@ -147,13 +155,20 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                       }
                     } @else if (!isRegistered(ev.eventId)) {
                       <!-- Not registered -->
-                      <button type="button" class="btn btn-primary btn-sm"
-                        [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
-                        (click)="registerEvent(ev)">
-                        @if (acting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
-                        @else if (isDeadlinePassed(ev)) { Closed }
-                        @else { Register }
-                      </button>
+                      @if (pendingRefundEventIds().has(ev.eventId)) {
+                        <div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border-radius:var(--r-sm);padding:5px 10px;font-size:.75rem;font-weight:600;color:#92400E;">
+                          <span class="material-icons-round" style="font-size:14px;">hourglass_top</span>
+                          Refund in progress
+                        </div>
+                      } @else {
+                        <button type="button" class="btn btn-primary btn-sm"
+                          [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
+                          (click)="registerEvent(ev)">
+                          @if (acting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
+                          @else if (isDeadlinePassed(ev)) { Closed }
+                          @else { Register }
+                        </button>
+                      }
                     } @else {
                       <!-- Registered -->
                       @if (!isFreeEvent(ev) && !isPaid(ev.eventId) && !ev.hasStarted) {
@@ -213,18 +228,13 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
           <div class="table-wrapper">
             <table>
               <thead>
-                <tr><th>Event</th><th>Date</th><th>Seats</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Event</th><th>Date</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 @for (reg of activeRegs(); track reg.registrationId) {
                   <tr>
                     <td style="font-weight:600;">{{ getEventTitle(reg.eventId) }}</td>
                     <td>{{ getEventDate(reg.eventId) | date:'MMM d, y' }}</td>
-                    <td>
-                      @if (getEvent(reg.eventId)?.seatsLeft !== undefined && getEvent(reg.eventId)!.seatsLeft! >= 0) {
-                        <span [class]="seatBadgeClass(getEvent(reg.eventId)!)" style="font-size:.75rem;">{{ seatsDisplay(getEvent(reg.eventId)!) }}</span>
-                      } @else { <span class="text-muted" style="font-size:.8rem;">Unlimited</span> }
-                    </td>
                     <td>
                       @if (isEventPaid(reg.eventId)) { <span class="badge badge-warning">Paid</span> }
                       @else { <span class="badge badge-success">Free</span> }
@@ -490,6 +500,9 @@ export class UserMyEventsComponent implements OnInit {
   // Ticket detail modal (full view)
   ticketDetailModal = signal<TicketResponse | null>(null);
 
+  // Track events with pending refund requests (paid events that were cancelled)
+  pendingRefundEventIds = signal<Set<number>>(new Set());
+
   filteredAll = computed(() => {
     const s = this.search.toLowerCase();
     return this.allEvents().filter(ev =>
@@ -698,6 +711,10 @@ export class UserMyEventsComponent implements OnInit {
         this.myPayments.update(ps => ps.map(p =>
           p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
         ));
+        // If paid event, mark refund as pending so user can't re-register until refund processed
+        if (ev.isPaidEvent && ev.ticketPrice > 0) {
+          this.pendingRefundEventIds.update(s => new Set([...s, ev.eventId]));
+        }
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
         this.cancelling.set(null);
@@ -711,9 +728,13 @@ export class UserMyEventsComponent implements OnInit {
     this.regSvc.cancel(reg.registrationId).subscribe({
       next: res => {
         this.myRegs.update(rs => rs.map(r => r.registrationId === reg.registrationId ? { ...r, status: RegistrationStatus.CANCELLED } : r));
+        const ev = this.getEvent(reg.eventId);
         this.myPayments.update(ps => ps.map(p =>
           p.eventId === reg.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
         ));
+        if (ev?.isPaidEvent && (ev?.ticketPrice ?? 0) > 0) {
+          this.pendingRefundEventIds.update(s => new Set([...s, reg.eventId]));
+        }
         this.regState.clearPending();
         this.toast.success(res.message, 'Registration Cancelled');
         this.cancelling.set(null);
@@ -754,6 +775,11 @@ export class UserMyEventsComponent implements OnInit {
   }
 
   catLabel(c: number) { return ['', 'Holiday', 'Awareness', 'Public', 'Personal'][c] ?? 'Event'; }
+
+  /** Ensure UTC datetime string is parsed as UTC (append Z if missing) */
+  toUtc(dt: string): Date {
+    return new Date(dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z');
+  }
 
   /** Convert "HH:mm:ss" or "HH:mm" to "h:mm AM/PM" */
   formatTime(time: string): string {

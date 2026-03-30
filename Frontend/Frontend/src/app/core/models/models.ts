@@ -221,6 +221,9 @@ export interface PaymentResponse {
   paymentId: number;
   eventId: number;
   eventTitle?: string;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
   amountPaid: number;
   refundedAmount?: number;
   status: PaymentStatus;

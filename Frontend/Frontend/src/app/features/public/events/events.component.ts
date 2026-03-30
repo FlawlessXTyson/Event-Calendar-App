@@ -83,6 +83,14 @@ import { EventResponse, EventCategory } from '../../../core/models/models';
                       {{ fmt(ev.startTime) }}{{ ev.endTime ? ' – ' + fmt(ev.endTime) : '' }}
                     </div>
                   }
+                  @if (ev.registrationDeadline) {
+                    <div class="event-detail-row" style="margin-top:3px;">
+                      <span class="material-icons-round" style="font-size:14px;color:var(--warning);">event_busy</span>
+                      <span style="font-size:.72rem;color:var(--warning);font-weight:600;">
+                        Reg. closes: {{ toUtc(ev.registrationDeadline) | date:'MMM d, h:mm a' }}
+                      </span>
+                    </div>
+                  }
                   @if (ev.location) {
                     <div class="event-detail-row" style="margin-top:3px;">
                       <span class="material-icons-round">location_on</span>
@@ -183,6 +191,10 @@ export class EventsComponent implements OnInit {
     if (ev.hasStarted === true || ev.hasEnded === true) return true;
     if (!ev.registrationDeadline && ev.isRegistrationOpen === false) return true;
     return false;
+  }
+
+  toUtc(dt: string): Date {
+    return new Date(dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z');
   }
 
   fmt(t: string): string {
