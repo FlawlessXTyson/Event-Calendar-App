@@ -160,25 +160,107 @@ namespace EventCalenderApi.Services
             return MapToDTO(deleted, 0);
         }
 
-        // ================= CANCEL =================
+        // ================= CANCEL EVENT (ADMIN or ORGANIZER) =================
         public async Task<EventResponseDTO> CancelEventAsync(int eventId, int userId, string role)
         {
             var ev = await _eventRepo.GetByIdAsync(eventId)
                 ?? throw new NotFoundException("Event not found");
 
+            // ── Block cancellation after event has started ──────────────────
+            var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
+            if (IstClock.Now >= eventStart)
+                throw new BadRequestException("Cannot cancel an event that has already started");
+
+            var hoursBeforeStart = (eventStart - IstClock.Now).TotalHours;
+            bool isLessThan48h   = hoursBeforeStart < 48;
+
+            // ── Load all SUCCESS payments for this event ────────────────────
             var payments = await _paymentRepo.GetQueryable()
                 .Where(p => p.EventId == eventId && p.Status == PaymentStatus.SUCCESS)
                 .ToListAsync();
 
-            foreach (var payment in payments)
+            if (role == "ADMIN")
             {
-                payment.Status = PaymentStatus.REFUNDED;
-                payment.RefundedAmount = payment.AmountPaid;
-                payment.RefundedAt = DateTime.UtcNow;
-                payment.CommissionAmount = 0;
-                payment.OrganizerAmount = 0;
+                foreach (var payment in payments)
+                {
+                    // Users always get 100% refund
+                    payment.Status         = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount = payment.AmountPaid;
+                    payment.RefundedAt     = DateTime.UtcNow;
+                    payment.CommissionAmount = 0;
+                    payment.OrganizerAmount  = 0;
+                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
 
-                await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+                    await _auditRepo.AddAsync(new AuditLog
+                    {
+                        UserId = userId, Role = role,
+                        Action = "ADMIN_CANCEL_REFUND",
+                        Entity = "Payment", EntityId = payment.PaymentId
+                    });
+                }
+
+                // If < 48h before start → organizer gets 50% of ticket price as compensation
+                if (isLessThan48h && ev.IsPaidEvent && ev.TicketPrice > 0)
+                {
+                    float compensation = ev.TicketPrice * 0.5f;
+                    // Record compensation as a separate audit entry (platform pays organizer)
+                    await _auditRepo.AddAsync(new AuditLog
+                    {
+                        UserId = userId, Role = role,
+                        Action = $"ORGANIZER_COMPENSATION|EventId:{eventId}|Amount:{compensation:F2}",
+                        Entity = "Event", EntityId = eventId
+                    });
+                }
+            }
+            else if (role == "ORGANIZER")
+            {
+                // Verify organizer owns this event
+                if (ev.CreatedByUserId != userId)
+                    throw new UnauthorizedException("You can only cancel your own events");
+
+                foreach (var payment in payments)
+                {
+                    payment.Status         = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount = payment.AmountPaid;
+                    payment.RefundedAt     = DateTime.UtcNow;
+
+                    if (isLessThan48h)
+                    {
+                        // < 48h: platform gives only 2% of commission; organizer bears the rest
+                        // Platform contribution = 2% of original commission
+                        float platformContribution = payment.CommissionAmount * 0.02f;
+                        // Organizer bears: full amount - platform contribution
+                        // (organizer's stored amount is already reduced)
+                        payment.CommissionAmount = Math.Max(0, payment.CommissionAmount - platformContribution);
+                        payment.OrganizerAmount  = 0; // organizer pays their share
+                    }
+                    else
+                    {
+                        // ≥ 48h: normal full refund from commission + organizer earnings
+                        payment.CommissionAmount = 0;
+                        payment.OrganizerAmount  = 0;
+                    }
+
+                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+
+                    await _auditRepo.AddAsync(new AuditLog
+                    {
+                        UserId = userId, Role = role,
+                        Action = isLessThan48h ? "ORGANIZER_CANCEL_PENALTY_REFUND" : "ORGANIZER_CANCEL_REFUND",
+                        Entity = "Payment", EntityId = payment.PaymentId
+                    });
+                }
+            }
+
+            // ── Cancel all active registrations ────────────────────────────
+            var registrations = await _registrationRepo.GetQueryable()
+                .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.REGISTERED)
+                .ToListAsync();
+
+            foreach (var reg in registrations)
+            {
+                reg.Status = RegistrationStatus.CANCELLED;
+                await _registrationRepo.UpdateAsync(reg.RegistrationId, reg);
             }
 
             ev.Status = EventStatus.CANCELLED;
@@ -186,11 +268,9 @@ namespace EventCalenderApi.Services
 
             await _auditRepo.AddAsync(new AuditLog
             {
-                UserId = userId,
-                Role = role,
+                UserId = userId, Role = role,
                 Action = "CANCEL_EVENT",
-                Entity = "Event",
-                EntityId = eventId
+                Entity = "Event", EntityId = eventId
             });
 
             return MapToDTO(ev, 0);

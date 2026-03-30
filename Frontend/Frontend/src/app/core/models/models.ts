@@ -221,10 +221,12 @@ export interface PaymentResponse {
   paymentId: number;
   eventId: number;
   eventTitle?: string;
+  eventDate?: string;
   userId?: number;
   userName?: string;
   userEmail?: string;
   amountPaid: number;
+  organizerAmount?: number;
   refundedAmount?: number;
   status: PaymentStatus;
   paymentDate: string;

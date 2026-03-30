@@ -31,8 +31,8 @@ import { PaymentResponse, CommissionSummary, PaymentStatus } from '../../../core
               @for (p of payments(); track p.paymentId) {
                 <tr>
                   <td style="color:var(--text-muted);">#{{ p.paymentId }}</td>
-                  <td>Event #{{ p.eventId }}</td>
-                  <td style="color:var(--text-muted);">—</td>
+                  <td>{{ p.eventTitle || ('Event #' + p.eventId) }}</td>
+                  <td style="color:var(--text-muted);">{{ p.userName || '—' }}</td>
                   <td style="font-weight:700;">₹{{ p.amountPaid | number:'1.0-0' }}</td>
                   <td style="color:var(--danger);">₹{{ (p.amountPaid * 0.1) | number:'1.0-0' }}</td>
                   <td style="color:var(--success);">₹{{ (p.amountPaid * 0.9) | number:'1.0-0' }}</td>

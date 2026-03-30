@@ -23,8 +23,14 @@ import { ToastService } from '../../../core/services/toast.service';
           </button>
           <div class="page-title">User Dashboard</div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:.85rem;color:var(--text-muted);">{{ auth.userEmail() }}</span>
+            <div style="text-align:right;">
+              <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">{{ auth.userName() }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ auth.userEmail() }}</div>
+            </div>
             <span class="badge badge-primary">USER</span>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Sign Out" (click)="auth.logout()" style="color:var(--danger);">
+              <span class="material-icons-round">logout</span>
+            </button>
           </div>
         </header>
         <div class="dash-content"><router-outlet /></div>
@@ -42,8 +48,8 @@ export class UserLayoutComponent {
     { label:'Dashboard',     icon:'dashboard',         route:'/user/dashboard' },
     { label:'Browse Events',    icon:'search',             route:'/user/my-events' },
     { label:'Events Attended',  icon:'verified',           route:'/user/events-attended' },
+    { label:'My Payments',      icon:'payment',            route:'/user/payments' },
     { label:'Calendar',         icon:'calendar_month',     route:'/user/calendar' },
-    { label:'My Payments',   icon:'payment',            route:'/user/payments' },
     { label:'Reminders',     icon:'notifications',      route:'/user/reminders' },
     { label:'To-Do List',    icon:'checklist',          route:'/user/todos' },
     { label:'Profile',       icon:'manage_accounts',    route:'/user/profile' },

@@ -166,6 +166,7 @@ namespace EventCalenderApi.Services
         {
             var payments = await _paymentRepo.GetQueryable()
                 .Include(p => p.Event)
+                .Include(p => p.User)
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
@@ -191,10 +192,38 @@ namespace EventCalenderApi.Services
         {
             var payments = await _paymentRepo.GetQueryable()
                 .Include(p => p.Event)
+                .Include(p => p.User)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
 
             return payments.Select(MapToDTO);
+        }
+
+        // ================= ORGANIZER REFUNDS PAGED =================
+        public async Task<PagedResultDTO<PaymentResponseDTO>> GetOrganizerRefundsPagedAsync(int organizerId, int pageNumber, int pageSize)
+        {
+            var query = _paymentRepo.GetQueryable()
+                .Include(p => p.Event)
+                .Include(p => p.User)
+                .Where(p =>
+                    p.Status == PaymentStatus.REFUNDED &&
+                    p.Event != null &&
+                    p.Event.CreatedByUserId == organizerId);
+
+            var total = await query.CountAsync();
+            var data  = await query
+                .OrderByDescending(p => p.RefundedAt ?? p.PaymentDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResultDTO<PaymentResponseDTO>
+            {
+                PageNumber   = pageNumber,
+                PageSize     = pageSize,
+                TotalRecords = total,
+                Data         = data.Select(MapToDTO)
+            };
         }
 
         // ================= REFUND =================
@@ -306,10 +335,12 @@ namespace EventCalenderApi.Services
                 PaymentId = p.PaymentId,
                 EventId = p.EventId,
                 EventTitle = p.Event?.Title ?? string.Empty,
+                EventDate = p.Event?.EventDate,
                 UserId = p.UserId,
                 UserName  = p.User?.Name  ?? string.Empty,
                 UserEmail = p.User?.Email ?? string.Empty,
                 AmountPaid = p.AmountPaid,
+                OrganizerAmount = p.OrganizerAmount,
                 RefundedAmount = p.RefundedAmount,
                 Status = p.Status,
                 PaymentDate = p.PaymentDate,

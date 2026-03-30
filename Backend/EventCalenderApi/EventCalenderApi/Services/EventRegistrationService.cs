@@ -160,7 +160,7 @@ namespace EventCalenderApi.Services
             {
                 if (role == "USER")
                 {
-                    // ── AUTO REFUND based on hours before event start ──────────────
+                    // ── AUTO REFUND based on hours before event start (USER ONLY - DO NOT MODIFY) ──
                     var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
                     var hoursBeforeEvent = (eventStart - IstClock.Now).TotalHours;
 
@@ -170,16 +170,16 @@ namespace EventCalenderApi.Services
                         >= 24 => 75f,
                         >= 12 => 50f,
                         > 0   => 25f,
-                        _     => 0f   // event started or passed
+                        _     => 0f
                     };
 
-                    float refundAmount   = payment.AmountPaid * refundPct / 100f;
-                    float adminRefund    = payment.AmountPaid > 0 ? refundAmount * (payment.CommissionAmount / payment.AmountPaid) : 0;
-                    float orgRefund      = refundAmount - adminRefund;
+                    float refundAmount = payment.AmountPaid * refundPct / 100f;
+                    float adminRefund  = payment.AmountPaid > 0 ? refundAmount * (payment.CommissionAmount / payment.AmountPaid) : 0;
+                    float orgRefund    = refundAmount - adminRefund;
 
-                    payment.Status         = PaymentStatus.REFUNDED;
-                    payment.RefundedAmount = refundAmount;
-                    payment.RefundedAt     = DateTime.UtcNow;
+                    payment.Status           = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount   = refundAmount;
+                    payment.RefundedAt       = DateTime.UtcNow;
                     payment.CommissionAmount = Math.Max(0, payment.CommissionAmount - adminRefund);
                     payment.OrganizerAmount  = Math.Max(0, payment.OrganizerAmount  - orgRefund);
 
@@ -187,32 +187,12 @@ namespace EventCalenderApi.Services
 
                     await _auditRepo.AddAsync(new AuditLog
                     {
-                        UserId = userId,
-                        Role   = role,
-                        Action = "REFUND",
-                        Entity = "Payment",
-                        EntityId = payment.PaymentId
+                        UserId = userId, Role = role,
+                        Action = "REFUND", Entity = "Payment", EntityId = payment.PaymentId
                     });
                 }
-                else
-                {
-                    // Admin/Organizer cancels event → immediate full refund (unchanged)
-                    payment.Status = PaymentStatus.REFUNDED;
-                    payment.RefundedAmount = payment.AmountPaid;
-                    payment.RefundedAt = DateTime.UtcNow;
-                    payment.CommissionAmount = 0;
-                    payment.OrganizerAmount  = 0;
-                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
-
-                    await _auditRepo.AddAsync(new AuditLog
-                    {
-                        UserId = userId,
-                        Role   = role,
-                        Action = "REFUND",
-                        Entity = "Payment",
-                        EntityId = payment.PaymentId
-                    });
-                }
+                // NOTE: Admin/Organizer event-level cancellation is handled by EventService.CancelEventAsync
+                // This path (CancelAsync) is for individual USER registration cancellation only
             }
 
             registration.Status = RegistrationStatus.CANCELLED;
@@ -242,6 +222,36 @@ namespace EventCalenderApi.Services
                 .ToListAsync();
 
             return data.Select(MapToDTO);
+        }
+
+        // ================= GET BY EVENT PAGED =================
+        public async Task<PagedResultDTO<EventRegistrationResponseDTO>> GetByEventPagedAsync(int eventId, int pageNumber, int pageSize, DateTime? filterDate)
+        {
+            var query = _registrationRepo
+                .GetQueryable()
+                .Include(r => r.User)
+                .Where(r => r.EventId == eventId);
+
+            if (filterDate.HasValue)
+            {
+                var date = filterDate.Value.Date;
+                query = query.Where(r => r.RegisteredAt.Date == date);
+            }
+
+            var total = await query.CountAsync();
+            var data  = await query
+                .OrderByDescending(r => r.RegisteredAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResultDTO<EventRegistrationResponseDTO>
+            {
+                PageNumber   = pageNumber,
+                PageSize     = pageSize,
+                TotalRecords = total,
+                Data         = data.Select(MapToDTO)
+            };
         }
 
         // ================= GET MY REGISTRATIONS =================

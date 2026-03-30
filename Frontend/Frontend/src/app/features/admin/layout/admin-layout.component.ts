@@ -19,8 +19,14 @@ import { AuthService } from '../../../core/services/auth.service';
           </button>
           <div class="page-title">Admin Panel</div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:.85rem;color:var(--text-muted);">{{ auth.userEmail() }}</span>
+            <div style="text-align:right;">
+              <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">{{ auth.userName() }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ auth.userEmail() }}</div>
+            </div>
             <span class="badge badge-danger">ADMIN</span>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Sign Out" (click)="auth.logout()" style="color:var(--danger);">
+              <span class="material-icons-round">logout</span>
+            </button>
           </div>
         </header>
         <div class="dash-content"><router-outlet /></div>

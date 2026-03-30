@@ -19,8 +19,14 @@ import { AuthService } from '../../../core/services/auth.service';
           </button>
           <div class="page-title">Organizer Dashboard</div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:.85rem;color:var(--text-muted);">{{ auth.userEmail() }}</span>
+            <div style="text-align:right;">
+              <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">{{ auth.userName() }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ auth.userEmail() }}</div>
+            </div>
             <span class="badge badge-warning">ORGANIZER</span>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Sign Out" (click)="auth.logout()" style="color:var(--danger);">
+              <span class="material-icons-round">logout</span>
+            </button>
           </div>
         </header>
         <div class="dash-content"><router-outlet /></div>
@@ -33,13 +39,13 @@ export class OrganizerLayoutComponent {
   auth        = inject(AuthService);
   sidebarOpen = signal(false);
   nav: NavItem[] = [
-    { label:'Dashboard',         icon:'dashboard',             route:'/organizer/dashboard' },
-    { label:'Create Event',      icon:'add_circle',            route:'/organizer/create-event' },
-    { label:'My Events',         icon:'event_note',            route:'/organizer/my-events' },
-    { label:'Refunds',           icon:'currency_rupee',         route:'/organizer/refunds' },
-    { label:'Calendar',          icon:'calendar_month',        route:'/organizer/calendar' },
-    { label:'Registrations',     icon:'people',                route:'/organizer/registrations' },
+    { label:'Dashboard',         icon:'dashboard',              route:'/organizer/dashboard' },
+    { label:'Create Event',      icon:'add_circle',             route:'/organizer/create-event' },
+    { label:'My Events',         icon:'event_note',             route:'/organizer/my-events' },
+    { label:'Registrations',     icon:'people',                 route:'/organizer/registrations' },
     { label:'Earnings',          icon:'account_balance_wallet', route:'/organizer/earnings' },
-    { label:'Profile',           icon:'manage_accounts',       route:'/organizer/profile' },
+    { label:'Refunds',           icon:'currency_rupee',         route:'/organizer/refunds' },
+    { label:'Calendar',          icon:'calendar_month',         route:'/organizer/calendar' },
+    { label:'Profile',           icon:'manage_accounts',        route:'/organizer/profile' },
   ];
 }

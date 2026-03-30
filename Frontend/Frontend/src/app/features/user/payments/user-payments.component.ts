@@ -22,7 +22,7 @@ import { PaymentResponse, PaymentStatus } from '../../../core/models/models';
       } @else {
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>#</th><th>Event</th><th>Amount</th><th>Status</th><th>Refunded</th><th>Date</th></tr></thead>
+            <thead><tr><th>#</th><th>Event</th><th>Amount Paid</th><th>Status</th><th>Refunded Amount</th><th>Date</th></tr></thead>
             <tbody>
               @for (p of payments(); track p.paymentId) {
                 <tr>
