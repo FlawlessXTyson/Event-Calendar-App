@@ -166,7 +166,7 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Registration Deadline <span style="color:var(--text-muted);">(optional)</span></label>
+            <label class="form-label">Registration Deadline <span style="color:var(--danger)">*</span></label>
             <input formControlName="registrationDeadline" type="datetime-local" class="form-control"
               [class.is-invalid]="fi('registrationDeadline')" />
             @if (fi('registrationDeadline')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>{{ deadlineError() }}</div> }
@@ -240,7 +240,7 @@ export class CreateEventComponent implements OnInit {
     eventEndDate:         [''],
     startTime:            ['', Validators.required],
     endTime:              ['', Validators.required],
-    registrationDeadline: [''],
+    registrationDeadline: ['', Validators.required],
     seatsLimit:           [null as number|null, [Validators.required, Validators.min(1)]],
     isPaidEvent:          [false],
     ticketPrice:          [0]
@@ -301,9 +301,11 @@ export class CreateEventComponent implements OnInit {
       g.get('ticketPrice')?.setErrors(null);
     }
 
-    // Registration deadline must be in future and before event start
+    // Registration deadline — required + must be in future and before event start
     const deadline = g.get('registrationDeadline')?.value as string;
-    if (deadline) {
+    if (!deadline) {
+      g.get('registrationDeadline')?.setErrors({ required: true });
+    } else {
       const now = new Date();
       const dl  = new Date(deadline);
       if (dl <= now) {
@@ -337,7 +339,8 @@ export class CreateEventComponent implements OnInit {
 
   deadlineError() {
     const e = this.form.get('registrationDeadline')?.errors;
-    if (e?.['pastDeadline']) return 'Registration deadline must be in the future';
+    if (e?.['required'])           return 'Registration deadline is required';
+    if (e?.['pastDeadline'])       return 'Registration deadline must be in the future';
     if (e?.['deadlineAfterEvent']) return 'Registration deadline must be before the event start';
     return '';
   }
@@ -380,18 +383,20 @@ export class CreateEventComponent implements OnInit {
       return;
     }
 
-    if (v.registrationDeadline) {
-      const dl = new Date(v.registrationDeadline);
-      if (dl <= new Date()) {
-        this.toast.error('Registration deadline must be in the future.', 'Validation Error');
+    if (!v.registrationDeadline) {
+      this.toast.error('Registration deadline is required.', 'Validation Error');
+      return;
+    }
+    const dl = new Date(v.registrationDeadline);
+    if (dl <= new Date()) {
+      this.toast.error('Registration deadline must be in the future.', 'Validation Error');
+      return;
+    }
+    if (v.eventDate && v.startTime) {
+      const eventStart = new Date(`${v.eventDate}T${v.startTime}`);
+      if (dl >= eventStart) {
+        this.toast.error('Registration deadline must be before the event start.', 'Validation Error');
         return;
-      }
-      if (v.eventDate && v.startTime) {
-        const eventStart = new Date(`${v.eventDate}T${v.startTime}`);
-        if (dl >= eventStart) {
-          this.toast.error('Registration deadline must be before the event start.', 'Validation Error');
-          return;
-        }
       }
     }
 

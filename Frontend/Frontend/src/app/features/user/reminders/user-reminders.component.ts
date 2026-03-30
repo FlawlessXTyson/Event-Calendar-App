@@ -1,19 +1,21 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { ReminderService } from '../../../core/services/reminder.service';
+import { RegistrationService } from '../../../core/services/registration.service';
+import { EventService } from '../../../core/services/event.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { ReminderResponse } from '../../../core/models/models';
+import { ReminderResponse, EventResponse, RegistrationStatus } from '../../../core/models/models';
 
 @Component({
   selector: 'app-user-reminders',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   template: `
     <div>
       <div class="section-header" style="margin-bottom:24px;">
         <div><h1 style="font-size:1.5rem;">Reminders</h1><p>Get notified before your events</p></div>
-        <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+        <button type="button" class="btn btn-primary btn-sm" (click)="toggleForm()">
           <span class="material-icons-round">{{ showForm() ? 'close' : 'add' }}</span>
           {{ showForm() ? 'Cancel' : 'New Reminder' }}
         </button>
@@ -22,32 +24,54 @@ import { ReminderResponse } from '../../../core/models/models';
       @if (showForm()) {
         <div class="card card-body" style="margin-bottom:24px;">
           <h3 style="margin-bottom:16px;">Create Reminder</h3>
-          <div class="alert alert-info" style="margin-bottom:16px;">
-            <span class="material-icons-round">info</span>
-            <div>Provide either a <strong>specific date/time</strong> OR an <strong>Event ID + minutes before</strong> — not both.</div>
-          </div>
+
           <form [formGroup]="form" (ngSubmit)="submit()">
+
+            <!-- Reminder Title -->
             <div class="form-group">
               <label class="form-label">Reminder Title <span style="color:var(--danger)">*</span></label>
-              <input formControlName="reminderTitle" type="text" class="form-control" [class.is-invalid]="fi('reminderTitle')" placeholder="e.g. Prepare for conference" />
-              @if (fi('reminderTitle')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Title is required</div> }
+              <input formControlName="reminderTitle" type="text" class="form-control"
+                [class.is-invalid]="fi('reminderTitle')"
+                placeholder="e.g. Prepare for conference" />
+              @if (fi('reminderTitle')) {
+                <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Title is required</div>
+              }
             </div>
-            <div class="form-row">
+
+            <!-- Mode toggle -->
+            <div style="display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+              <button type="button"
+                (click)="mode.set('datetime')"
+                [style.background]="mode() === 'datetime' ? 'var(--primary)' : 'var(--surface)'"
+                [style.color]="mode() === 'datetime' ? '#fff' : 'var(--text-secondary)'"
+                style="flex:1;padding:10px;font-size:.875rem;font-weight:600;border:none;cursor:pointer;">
+                📅 Date &amp; Time
+              </button>
+              <button type="button"
+                (click)="mode.set('minutes')"
+                [style.background]="mode() === 'minutes' ? 'var(--primary)' : 'var(--surface)'"
+                [style.color]="mode() === 'minutes' ? '#fff' : 'var(--text-secondary)'"
+                style="flex:1;padding:10px;font-size:.875rem;font-weight:600;border:none;cursor:pointer;">
+                ⏱ Minutes Before
+              </button>
+            </div>
+
+            @if (mode() === 'datetime') {
               <div class="form-group">
-                <label class="form-label">Specific Date & Time</label>
+                <label class="form-label">Date &amp; Time <span style="color:var(--danger)">*</span></label>
                 <input formControlName="reminderDateTime" type="datetime-local" class="form-control" />
-                <div class="form-hint">Leave blank if using Event ID + minutes</div>
+              </div>
+            } @else {
+              <div class="form-group">
+                <label class="form-label">Event ID</label>
+                <input formControlName="eventId" type="number" class="form-control" placeholder="e.g. 5" min="1" />
               </div>
               <div class="form-group">
-                <label class="form-label">Event ID (optional)</label>
-                <input formControlName="eventId" type="number" class="form-control" placeholder="Event ID" />
+                <label class="form-label">Minutes Before Event Start <span style="color:var(--danger)">*</span></label>
+                <input formControlName="minutesBefore" type="number" class="form-control" placeholder="e.g. 30" min="1" />
+                <div class="form-hint">Reminder will fire this many minutes before the event starts.</div>
               </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Minutes Before Event Start</label>
-              <input formControlName="minutesBefore" type="number" class="form-control" placeholder="e.g. 30" min="1" />
-              <div class="form-hint">Only used if Event ID is set. Cannot use with Date/Time.</div>
-            </div>
+            }
             <div style="display:flex;gap:10px;">
               <button type="submit" class="btn btn-primary" [disabled]="saving()">
                 @if (saving()) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round">save</span> }
@@ -100,6 +124,9 @@ export class UserRemindersComponent implements OnInit {
   saving    = signal(false);
   deleting  = signal<number|null>(null);
   showForm  = signal(false);
+  mode      = signal<'datetime' | 'minutes'>('datetime');
+
+  toggleForm() { this.showForm.update(v => !v); this.mode.set('datetime'); this.form.reset(); }
 
   form = this.fb.group({
     reminderTitle:   ['', Validators.required],

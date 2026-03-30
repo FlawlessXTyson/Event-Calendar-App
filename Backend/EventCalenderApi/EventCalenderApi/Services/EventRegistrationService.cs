@@ -158,49 +158,56 @@ namespace EventCalenderApi.Services
 
             if (payment != null)
             {
-                // USER cancels → create RefundRequest for admin to review
-                // ADMIN/ORGANIZER cancels event → full refund handled in EventService (unchanged)
                 if (role == "USER")
                 {
-                    var alreadyRequested = await _refundRepo.GetQueryable()
-                        .AnyAsync(r => r.PaymentId == payment.PaymentId && r.Status == RefundRequestStatus.PENDING);
+                    // ── AUTO REFUND based on hours before event start ──────────────
+                    var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
+                    var hoursBeforeEvent = (eventStart - IstClock.Now).TotalHours;
 
-                    if (!alreadyRequested)
+                    float refundPct = hoursBeforeEvent switch
                     {
-                        var refundReq = new RefundRequest
-                        {
-                            UserId = userId,
-                            EventId = registration.EventId,
-                            PaymentId = payment.PaymentId,
-                            RequestedAt = DateTime.UtcNow,
-                            Status = RefundRequestStatus.PENDING
-                        };
-                        await _refundRepo.AddAsync(refundReq);
+                        >= 48 => 100f,
+                        >= 24 => 75f,
+                        >= 12 => 50f,
+                        > 0   => 25f,
+                        _     => 0f   // event started or passed
+                    };
 
-                        await _auditRepo.AddAsync(new AuditLog
-                        {
-                            UserId = userId,
-                            Role = role,
-                            Action = "REFUND_REQUESTED",
-                            Entity = "RefundRequest",
-                            EntityId = payment.PaymentId
-                        });
-                    }
-                }
-                else
-                {
-                    // Admin/Organizer cancels → immediate full refund (existing logic preserved)
-                    payment.Status = PaymentStatus.REFUNDED;
-                    payment.RefundedAmount = payment.AmountPaid;
-                    payment.RefundedAt = DateTime.UtcNow;
-                    payment.CommissionAmount = 0;
-                    payment.OrganizerAmount = 0;
+                    float refundAmount   = payment.AmountPaid * refundPct / 100f;
+                    float adminRefund    = payment.AmountPaid > 0 ? refundAmount * (payment.CommissionAmount / payment.AmountPaid) : 0;
+                    float orgRefund      = refundAmount - adminRefund;
+
+                    payment.Status         = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount = refundAmount;
+                    payment.RefundedAt     = DateTime.UtcNow;
+                    payment.CommissionAmount = Math.Max(0, payment.CommissionAmount - adminRefund);
+                    payment.OrganizerAmount  = Math.Max(0, payment.OrganizerAmount  - orgRefund);
+
                     await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
 
                     await _auditRepo.AddAsync(new AuditLog
                     {
                         UserId = userId,
-                        Role = role,
+                        Role   = role,
+                        Action = "REFUND",
+                        Entity = "Payment",
+                        EntityId = payment.PaymentId
+                    });
+                }
+                else
+                {
+                    // Admin/Organizer cancels event → immediate full refund (unchanged)
+                    payment.Status = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount = payment.AmountPaid;
+                    payment.RefundedAt = DateTime.UtcNow;
+                    payment.CommissionAmount = 0;
+                    payment.OrganizerAmount  = 0;
+                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+
+                    await _auditRepo.AddAsync(new AuditLog
+                    {
+                        UserId = userId,
+                        Role   = role,
                         Action = "REFUND",
                         Entity = "Payment",
                         EntityId = payment.PaymentId

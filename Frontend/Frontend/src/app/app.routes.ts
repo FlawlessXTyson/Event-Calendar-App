@@ -76,7 +76,6 @@ export const routes: Routes = [
       { path: 'profile',       loadComponent: () => import('./features/admin/profile/admin-profile.component').then(m => m.AdminProfileComponent) },
       { path: 'calendar',      loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent) },
       { path: 'audit-logs',       loadComponent: () => import('./features/admin/audit-logs/admin-audit-logs.component').then(m => m.AdminAuditLogsComponent) },
-      { path: 'refund-requests',  loadComponent: () => import('./features/admin/refund-requests/admin-refund-requests.component').then(m => m.AdminRefundRequestsComponent) },
     ]
   },
 

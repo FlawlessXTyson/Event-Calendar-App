@@ -126,16 +126,25 @@ import { EventResponse, ApprovalStatus, EventStatus } from '../../../core/models
       @if (refundModal()) {
         <div class="modal-backdrop" (click)="refundModal.set(null)">
           <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header"><h3>Refund Summary</h3></div>
+            <div class="modal-header">
+              <div>
+                <h3 style="margin-bottom:2px;">Refund Summary</h3>
+                <div style="font-size:.82rem;color:var(--text-muted);">{{ refundModal()!.eventTitle }}</div>
+              </div>
+            </div>
             <div class="modal-body">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div style="text-align:center;padding:20px;background:var(--surface-2);border-radius:var(--r-sm);">
-                  <div style="font-size:2rem;font-weight:800;">{{ refundModal()!.totalUsersRefunded }}</div>
-                  <div style="color:var(--text-muted);font-size:.85rem;">Users Refunded</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+                <div style="text-align:center;padding:18px 12px;background:var(--primary-light);border-radius:var(--r-sm);">
+                  <div style="font-size:1.6rem;font-weight:800;color:var(--primary);">₹{{ refundModal()!.ticketPrice | number:'1.0-0' }}</div>
+                  <div style="color:var(--text-muted);font-size:.82rem;margin-top:4px;">Ticket Price</div>
                 </div>
-                <div style="text-align:center;padding:20px;background:var(--success-light);border-radius:var(--r-sm);">
-                  <div style="font-size:2rem;font-weight:800;color:var(--success);">₹{{ refundModal()!.totalRefundAmount | number:'1.0-0' }}</div>
-                  <div style="color:var(--text-muted);font-size:.85rem;">Total Refunded</div>
+                <div style="text-align:center;padding:18px 12px;background:var(--surface-2);border-radius:var(--r-sm);">
+                  <div style="font-size:1.6rem;font-weight:800;">{{ refundModal()!.totalUsersRefunded }}</div>
+                  <div style="color:var(--text-muted);font-size:.82rem;margin-top:4px;">Users Refunded</div>
+                </div>
+                <div style="text-align:center;padding:18px 12px;background:var(--success-light);border-radius:var(--r-sm);">
+                  <div style="font-size:1.6rem;font-weight:800;color:var(--success);">₹{{ refundModal()!.totalRefundAmount | number:'1.0-0' }}</div>
+                  <div style="color:var(--text-muted);font-size:.82rem;margin-top:4px;">Total Refunded</div>
                 </div>
               </div>
             </div>
@@ -154,7 +163,7 @@ export class OrganizerMyEventsComponent implements OnInit {
   events       = signal<EventResponse[]>([]);
   loading      = signal(true);
   cancelling   = signal<number | null>(null);
-  refundModal  = signal<{ totalUsersRefunded: number; totalRefundAmount: number } | null>(null);
+  refundModal  = signal<{ totalUsersRefunded: number; totalRefundAmount: number; ticketPrice: number; eventTitle: string } | null>(null);
 
   currentPage  = signal(1);
   totalRecords = signal(0);
@@ -227,7 +236,10 @@ export class OrganizerMyEventsComponent implements OnInit {
   }
 
   viewRefund(ev: EventResponse) {
-    this.eventSvc.getRefundSummary(ev.eventId).subscribe({ next: s => this.refundModal.set(s), error: () => {} });
+    this.eventSvc.getRefundSummary(ev.eventId).subscribe({
+      next: s => this.refundModal.set({ ...s, ticketPrice: ev.ticketPrice, eventTitle: ev.title }),
+      error: () => {}
+    });
   }
 
   fmt(t: string): string {

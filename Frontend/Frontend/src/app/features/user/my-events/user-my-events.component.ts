@@ -155,20 +155,13 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                       }
                     } @else if (!isRegistered(ev.eventId)) {
                       <!-- Not registered -->
-                      @if (pendingRefundEventIds().has(ev.eventId)) {
-                        <div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border-radius:var(--r-sm);padding:5px 10px;font-size:.75rem;font-weight:600;color:#92400E;">
-                          <span class="material-icons-round" style="font-size:14px;">hourglass_top</span>
-                          Refund in progress
-                        </div>
-                      } @else {
-                        <button type="button" class="btn btn-primary btn-sm"
-                          [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
-                          (click)="registerEvent(ev)">
-                          @if (acting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
-                          @else if (isDeadlinePassed(ev)) { Closed }
-                          @else { Register }
-                        </button>
-                      }
+                      <button type="button" class="btn btn-primary btn-sm"
+                        [disabled]="acting() === ev.eventId || isDeadlinePassed(ev)"
+                        (click)="registerEvent(ev)">
+                        @if (acting() === ev.eventId) { <div class="spinner spinner-sm"></div> }
+                        @else if (isDeadlinePassed(ev)) { Closed }
+                        @else { Register }
+                      </button>
                     } @else {
                       <!-- Registered -->
                       @if (!isFreeEvent(ev) && !isPaid(ev.eventId) && !ev.hasStarted) {
@@ -177,8 +170,8 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
                           Pay &#8377;{{ ev.ticketPrice | number:'1.0-0' }}
                         </button>
                       }
-                      <!-- Ticket — always visible for registered users until event ends -->
-                      @if (getTicket(ev.eventId)) {
+                      <!-- Ticket — only show after payment confirmed (or free event) -->
+                      @if (getTicket(ev.eventId) && (isFreeEvent(ev) || isPaid(ev.eventId))) {
                         <button type="button" class="btn btn-sm"
                           (click)="openTicketDetail(getTicket(ev.eventId)!)"
                           title="View / Download Ticket"
@@ -397,6 +390,84 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
         </div>
       }
 
+      <!-- ── CANCEL CONFIRM MODAL ──────────────────────────────────────── -->
+      @if (showCancelModal && cancelConfirmEvent().ev) {
+        <div class="modal-backdrop" (click)="closeCancelModal()">
+          <div class="modal" (click)="$event.stopPropagation()" style="max-width:420px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#FEE2E2,#FECACA);border-radius:var(--r-lg) var(--r-lg) 0 0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="material-icons-round" style="color:#DC2626;font-size:26px;">cancel</span>
+                <div style="font-weight:700;font-size:1rem;color:#7F1D1D;">Cancel Registration</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="closeCancelModal()">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+              <p style="font-size:.95rem;margin-bottom:20px;">
+                Are you sure you want to cancel your registration for
+                <strong>{{ cancelConfirmEvent().ev!.title }}</strong>?
+              </p>
+              @if (cancelConfirmEvent().ev!.isPaidEvent && isPaid(cancelConfirmEvent().ev!.eventId)) {                <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border);">
+                  <div style="background:var(--surface-2);padding:10px 14px;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Refund Breakdown</div>
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+                    <div style="display:flex;justify-content:space-between;font-size:.9rem;">
+                      <span style="color:var(--text-secondary);">Amount Paid</span>
+                      <span style="font-weight:600;">&#8377;{{ getPaidAmount(cancelConfirmEvent().ev!.eventId) | number }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:.9rem;">
+                      <span style="color:var(--text-secondary);">Refund %</span>
+                      <span style="font-weight:600;">{{ refundPercent(cancelConfirmEvent().ev!) }}%</span>
+                    </div>
+                    <div style="height:1px;background:var(--border);"></div>
+                    <div style="display:flex;justify-content:space-between;font-size:1rem;">
+                      <span style="font-weight:700;">You will get back</span>
+                      <span style="font-weight:800;font-size:1.1rem;"
+                        [style.color]="calcRefund(cancelConfirmEvent().ev!) > 0 ? 'var(--success)' : 'var(--danger)'">
+                        &#8377;{{ calcRefund(cancelConfirmEvent().ev!) | number }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                @if (refundPercent(cancelConfirmEvent().ev!) < 100) {
+                  <div style="margin-top:12px;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#FEF3C7;border-radius:var(--r-sm);">
+                    <span class="material-icons-round" style="font-size:16px;color:#92400E;flex-shrink:0;margin-top:1px;">info</span>
+                    <span style="font-size:.8rem;color:#78350F;">
+                      @if (refundPercent(cancelConfirmEvent().ev!) === 0) {
+                        The event has already started. No refund will be issued.
+                      } @else {
+                        Partial refund applies because the event starts in less than
+                        @if (refundPercent(cancelConfirmEvent().ev!) === 25) { 12 hours. }
+                        @else if (refundPercent(cancelConfirmEvent().ev!) === 50) { 24 hours. }
+                        @else { 48 hours. }
+                      }
+                    </span>
+                  </div>
+                }
+              } @else if (cancelConfirmEvent().ev!.isPaidEvent && !isPaid(cancelConfirmEvent().ev!.eventId)) {
+                <!-- Paid event but not yet paid — just confirm, no refund info needed -->
+                <div style="display:flex;align-items:center;gap:8px;padding:12px;background:#FEF3C7;border-radius:var(--r-sm);">
+                  <span class="material-icons-round" style="font-size:18px;color:#92400E;">info</span>
+                  <span style="font-size:.9rem;color:#78350F;">You haven't paid yet — cancelling will simply remove your registration.</span>
+                </div>
+              } @else {
+                <!-- Free event — no payment info at all -->
+              }
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-ghost" (click)="closeCancelModal()">Keep Registration</button>
+              <button type="button" class="btn btn-danger"
+                [disabled]="cancelling() !== null"
+                (click)="confirmCancel()">
+                @if (cancelling() !== null) { <div class="spinner spinner-sm"></div> }
+                @else { <span class="material-icons-round">cancel</span> }
+                Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- ── TICKET FULL-DETAIL MODAL (print/download) ─────────────────── -->
       @if (ticketDetailModal()) {
         <div class="modal-backdrop" (click)="ticketDetailModal.set(null)">
@@ -502,6 +573,10 @@ export class UserMyEventsComponent implements OnInit {
 
   // Track events with pending refund requests (paid events that were cancelled)
   pendingRefundEventIds = signal<Set<number>>(new Set());
+
+  // Cancel confirm modal
+  cancelConfirmEvent = signal<{ ev: EventResponse | null; reg: EventRegistrationResponse | null }>({ ev: null, reg: null });
+  get showCancelModal() { return this.cancelConfirmEvent().ev !== null; }
 
   filteredAll = computed(() => {
     const s = this.search.toLowerCase();
@@ -633,6 +708,10 @@ export class UserMyEventsComponent implements OnInit {
   isEventPaid(eid: number)  { return this.getEvent(eid)?.isPaidEvent ?? false; }
   getTicket(eid: number)    { return this.myTickets().find(t => t.eventId === eid) ?? null; }
 
+  getPaidAmount(eid: number): number {
+    return this.myPayments().find(p => p.eventId === eid && p.status === PaymentStatus.SUCCESS)?.amountPaid ?? 0;
+  }
+
   seatsDisplay(ev: EventResponse): string {
     const left = ev.seatsLeft;
     if (left === undefined || left < 0) return '';
@@ -704,31 +783,26 @@ export class UserMyEventsComponent implements OnInit {
   cancelEvent(ev: EventResponse) {
     const regId = this.getRegId(ev.eventId);
     if (!regId) return;
+    const reg = this.myRegs().find(r => r.registrationId === regId) ?? null;
+    this.cancelConfirmEvent.set({ ev, reg });
+  }
+
+  cancelById(reg: EventRegistrationResponse) {
+    const ev = this.getEvent(reg.eventId);
+    this.cancelConfirmEvent.set({ ev: ev ?? null, reg });
+  }
+
+  closeCancelModal() { this.cancelConfirmEvent.set({ ev: null, reg: null }); }
+
+  confirmCancel() {
+    const { ev, reg } = this.cancelConfirmEvent();
+    if (!reg) return;
+    const regId = reg.registrationId;
+    this.closeCancelModal();
     this.cancelling.set(regId);
     this.regSvc.cancel(regId).subscribe({
       next: res => {
         this.myRegs.update(rs => rs.map(r => r.registrationId === regId ? { ...r, status: RegistrationStatus.CANCELLED } : r));
-        this.myPayments.update(ps => ps.map(p =>
-          p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
-        ));
-        // If paid event, mark refund as pending so user can't re-register until refund processed
-        if (ev.isPaidEvent && ev.ticketPrice > 0) {
-          this.pendingRefundEventIds.update(s => new Set([...s, ev.eventId]));
-        }
-        this.regState.clearPending();
-        this.toast.success(res.message, 'Registration Cancelled');
-        this.cancelling.set(null);
-      },
-      error: () => this.cancelling.set(null)
-    });
-  }
-
-  cancelById(reg: EventRegistrationResponse) {
-    this.cancelling.set(reg.registrationId);
-    this.regSvc.cancel(reg.registrationId).subscribe({
-      next: res => {
-        this.myRegs.update(rs => rs.map(r => r.registrationId === reg.registrationId ? { ...r, status: RegistrationStatus.CANCELLED } : r));
-        const ev = this.getEvent(reg.eventId);
         this.myPayments.update(ps => ps.map(p =>
           p.eventId === reg.eventId && p.status === PaymentStatus.SUCCESS ? { ...p, status: PaymentStatus.REFUNDED } : p
         ));
@@ -741,6 +815,30 @@ export class UserMyEventsComponent implements OnInit {
       },
       error: () => this.cancelling.set(null)
     });
+  }
+
+  /** Calculate refund amount based on hours before event start */
+  calcRefund(ev: EventResponse): number {
+    const paid = this.myPayments().find(p => p.eventId === ev.eventId && p.status === PaymentStatus.SUCCESS)?.amountPaid ?? 0;
+    if (!ev.isPaidEvent || paid === 0) return 0;
+    const eventStart = new Date(`${ev.eventDate.split('T')[0]}T${ev.startTime ?? '00:00:00'}`);
+    const hoursLeft = (eventStart.getTime() - Date.now()) / 3600000;
+    let pct = 0;
+    if (hoursLeft >= 48)      pct = 100;
+    else if (hoursLeft >= 24) pct = 75;
+    else if (hoursLeft >= 12) pct = 50;
+    else if (hoursLeft > 0)   pct = 25;
+    return Math.round(paid * pct / 100);
+  }
+
+  refundPercent(ev: EventResponse): number {
+    const eventStart = new Date(`${ev.eventDate.split('T')[0]}T${ev.startTime ?? '00:00:00'}`);
+    const hoursLeft = (eventStart.getTime() - Date.now()) / 3600000;
+    if (hoursLeft >= 48)      return 100;
+    if (hoursLeft >= 24)      return 75;
+    if (hoursLeft >= 12)      return 50;
+    if (hoursLeft > 0)        return 25;
+    return 0;
   }
 
   // ── Ticket detail ─────────────────────────────────────────────────────────
