@@ -78,6 +78,47 @@ namespace EventCalenderApi.Tests.Services
             Assert.Equal(RequestStatus.PENDING, result[0].Status);
         }
 
+        [Fact]
+        public async Task GetPendingRequests_NoPending_ReturnsEmpty()
+        {
+            _requestRepoMock.Setup(r => r.GetQueryable()).Returns(new List<RoleChangeRequest>().BuildMock());
+            var result = await CreateService().GetPendingRequestsAsync();
+            Assert.Empty(result);
+        }
+
+        // ── ApproveRequest — sets admin id on request ────────────────────
+
+        [Fact]
+        public async Task ApproveRequest_SetsReviewedByAdminId()
+        {
+            var request = new RoleChangeRequest { RequestId = 1, UserId = 2, Status = RequestStatus.PENDING };
+            var user = new User { UserId = 2, Role = UserRole.USER };
+
+            _requestRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
+            _userRepoMock.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(user);
+            _userRepoMock.Setup(r => r.UpdateAsync(2, user)).ReturnsAsync(user);
+            _requestRepoMock.Setup(r => r.UpdateAsync(1, request)).ReturnsAsync(request);
+
+            await CreateService().ApproveRequestAsync(1, 42);
+
+            Assert.Equal(42, request.ReviewedByAdminId);
+            Assert.Equal(RequestStatus.APPROVED, request.Status);
+        }
+
+        // ── RejectRequest — sets admin id on request ─────────────────────
+
+        [Fact]
+        public async Task RejectRequest_SetsReviewedByAdminId()
+        {
+            var request = new RoleChangeRequest { RequestId = 1, Status = RequestStatus.PENDING };
+            _requestRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
+            _requestRepoMock.Setup(r => r.UpdateAsync(1, request)).ReturnsAsync(request);
+
+            await CreateService().RejectRequestAsync(1, 42);
+
+            Assert.Equal(42, request.ReviewedByAdminId);
+        }
+
         // ── ApproveRequestAsync ──────────────────────────────────────────
 
         [Fact]

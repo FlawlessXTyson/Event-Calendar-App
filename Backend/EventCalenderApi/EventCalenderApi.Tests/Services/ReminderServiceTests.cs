@@ -222,6 +222,46 @@ namespace EventCalenderApi.Tests.Services
             Assert.Single(result);
             Assert.Equal("Due", result[0].ReminderTitle);
         }
+
+        // ── CreateAsync — duplicate & DbUpdateException ──────────────────
+
+        [Fact]
+        public async Task Create_DbUpdateException_ThrowsBadRequest()
+        {
+            var dto = new CreateReminderRequestDTO
+            {
+                ReminderTitle = "Test",
+                ReminderDateTime = DateTime.UtcNow.AddHours(2)
+            };
+
+            _repoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<Reminder>().BuildMock());
+            _repoMock.Setup(r => r.AddAsync(It.IsAny<Reminder>()))
+                .ThrowsAsync(new Microsoft.EntityFrameworkCore.DbUpdateException("Duplicate", new Exception()));
+
+            await Assert.ThrowsAsync<BadRequestException>(() => CreateService().CreateAsync(dto, 1));
+        }
+
+        [Fact]
+        public async Task GetByUser_NoReminders_ReturnsEmpty()
+        {
+            _repoMock.Setup(r => r.GetQueryable()).Returns(new List<Reminder>().BuildMock());
+            var result = await CreateService().GetByUserAsync(99);
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task GetDueReminders_NoRemindersInWindow_ReturnsEmpty()
+        {
+            var reminders = new List<Reminder>
+            {
+                new() { ReminderId = 1, UserId = 1, ReminderTitle = "Future", ReminderDateTime = DateTime.UtcNow.AddHours(1) }
+            };
+            _repoMock.Setup(r => r.GetQueryable()).Returns(reminders.BuildMock());
+
+            var result = await CreateService().GetDueRemindersAsync(1);
+            Assert.Empty(result);
+        }
     }
 }
 

@@ -144,6 +144,71 @@ namespace EventCalenderApi.Tests.Services
             var result = await CreateService().GetMyTicketsAsync(99);
             Assert.Empty(result);
         }
+
+        // ── GenerateTicketAsync — with paymentId ─────────────────────────
+
+        [Fact]
+        public async Task GenerateTicket_WithPaymentId_SetsPaymentOnTicket()
+        {
+            var payment = new Payment { PaymentId = 5, AmountPaid = 100f };
+            var noExisting = new List<Ticket>();
+            _ticketRepoMock.SetupSequence(r => r.GetQueryable())
+                .Returns(noExisting.BuildMock())
+                .Returns(new List<Ticket>
+                {
+                    new() { TicketId = 1, UserId = 1, EventId = 1, PaymentId = 5, User = SampleUser(), Event = SampleEvent(), Payment = payment }
+                }.BuildMock());
+
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(SampleEvent());
+            _userRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(SampleUser());
+            _ticketRepoMock.Setup(r => r.AddAsync(It.IsAny<Ticket>()))
+                .ReturnsAsync(new Ticket { TicketId = 1, UserId = 1, EventId = 1, PaymentId = 5 });
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().GenerateTicketAsync(1, 1, 5);
+
+            Assert.Equal(5, result.PaymentId);
+            Assert.Equal(100f, result.AmountPaid);
+            Assert.True(result.IsPaidEvent == false); // SampleEvent is free
+        }
+
+        // ── TicketResponseDTO field mapping ──────────────────────────────
+
+        [Fact]
+        public async Task GetTicket_MapsAllFieldsCorrectly()
+        {
+            var ev = new Event
+            {
+                EventId = 1,
+                Title = "Concert",
+                Description = "Live music",
+                Location = "Arena",
+                EventDate = new DateTime(2026, 6, 15),
+                StartTime = new TimeSpan(18, 30, 0),
+                EndTime = new TimeSpan(22, 0, 0),
+                IsPaidEvent = true
+            };
+            var user = new User { UserId = 1, Name = "Alice" };
+            var payment = new Payment { PaymentId = 3, AmountPaid = 250f };
+
+            var tickets = new List<Ticket>
+            {
+                new() { TicketId = 7, UserId = 1, EventId = 1, PaymentId = 3, GeneratedAt = DateTime.UtcNow, User = user, Event = ev, Payment = payment }
+            };
+            _ticketRepoMock.Setup(r => r.GetQueryable()).Returns(tickets.BuildMock());
+
+            var result = await CreateService().GetTicketAsync(1, 1);
+
+            Assert.NotNull(result);
+            Assert.Equal(7, result!.TicketId);
+            Assert.Equal("Concert", result.EventTitle);
+            Assert.Equal("Live music", result.EventDescription);
+            Assert.Equal("Arena", result.EventLocation);
+            Assert.Equal("18:30", result.StartTime);
+            Assert.Equal("22:00", result.EndTime);
+            Assert.Equal(250f, result.AmountPaid);
+            Assert.True(result.IsPaidEvent);
+        }
     }
 }
 

@@ -352,6 +352,123 @@ namespace EventCalenderApi.Tests.Services
             await Assert.ThrowsAsync<BadRequestException>(() =>
                 CreateService().PayWithWalletAsync(1, new WalletPaymentRequestDTO { EventId = 1 }));
         }
+
+        // ── PayWithWallet — event already started ────────────────────────
+
+        [Fact]
+        public async Task PayWithWallet_EventAlreadyStarted_ThrowsBadRequest()
+        {
+            var ev = new Event
+            {
+                EventId = 1,
+                IsPaidEvent = true,
+                ApprovalStatus = ApprovalStatus.APPROVED,
+                Status = EventStatus.ACTIVE,
+                TicketPrice = 100f,
+                EventDate = DateTime.UtcNow.Date.AddDays(-1), // started yesterday
+                StartTime = new TimeSpan(10, 0, 0)
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+
+            await Assert.ThrowsAsync<BadRequestException>(() =>
+                CreateService().PayWithWalletAsync(1, new WalletPaymentRequestDTO { EventId = 1 }));
+        }
+
+        // ── GetTransactions — empty ──────────────────────────────────────
+
+        [Fact]
+        public async Task GetTransactions_NoTransactions_ReturnsEmpty()
+        {
+            _txRepoMock.Setup(r => r.GetQueryable()).Returns(new List<WalletTransaction>().BuildMock());
+            var result = await CreateService().GetTransactionsAsync(99);
+            Assert.Empty(result);
+        }
+
+        // ── AddMoney — creates wallet if not exists ──────────────────────
+
+        [Fact]
+        public async Task AddMoney_WalletNotExisting_CreatesAndAdds()
+        {
+            SetupWallet(null);
+            var newWallet = new Wallet { WalletId = 1, UserId = 1, Balance = 0f };
+            _walletRepoMock.Setup(r => r.AddAsync(It.IsAny<Wallet>())).ReturnsAsync(newWallet);
+            _walletRepoMock.Setup(r => r.UpdateAsync(1, newWallet)).ReturnsAsync(newWallet);
+            _txRepoMock.Setup(r => r.AddAsync(It.IsAny<WalletTransaction>())).ReturnsAsync(new WalletTransaction());
+
+            var result = await CreateService().AddMoneyAsync(1, new AddMoneyRequestDTO { Amount = 100f, PaymentMethod = "card" });
+            Assert.Equal(100f, result.Balance);
+        }
+
+        // ── PayWithWallet — audit log fields ─────────────────────────────
+
+        [Fact]
+        public async Task PayWithWallet_AuditLog_HasCorrectAction()
+        {
+            var ev = new Event
+            {
+                EventId = 1, Title = "Test",
+                IsPaidEvent = true, ApprovalStatus = ApprovalStatus.APPROVED,
+                Status = EventStatus.ACTIVE, TicketPrice = 100f, CommissionPercentage = 10f,
+                EventDate = DateTime.UtcNow.Date.AddDays(1), StartTime = new TimeSpan(10, 0, 0)
+            };
+            var wallet = new Wallet { WalletId = 1, UserId = 1, Balance = 500f };
+
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            SetupWallet(wallet);
+            _walletRepoMock.Setup(r => r.UpdateAsync(1, wallet)).ReturnsAsync(wallet);
+            _regRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<EventRegistration> { new() { UserId = 1, EventId = 1, Status = RegistrationStatus.REGISTERED } }.BuildMock());
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment>().BuildMock());
+            _paymentRepoMock.Setup(r => r.AddAsync(It.IsAny<Payment>()))
+                .ReturnsAsync(new Payment { PaymentId = 1, UserId = 1, EventId = 1, AmountPaid = 100f, Status = PaymentStatus.SUCCESS });
+            _txRepoMock.Setup(r => r.AddAsync(It.IsAny<WalletTransaction>())).ReturnsAsync(new WalletTransaction());
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().PayWithWalletAsync(1, new WalletPaymentRequestDTO { EventId = 1 });
+
+            Assert.Equal("WALLET_PAYMENT", captured?.Action);
+            Assert.Equal(1, captured?.UserId);
+        }
+
+        // ── AddMoney — transaction description includes method ────────────
+
+        [Fact]
+        public async Task AddMoney_TransactionDescription_IncludesPaymentMethod()
+        {
+            var wallet = new Wallet { WalletId = 1, UserId = 1, Balance = 0f };
+            SetupWallet(wallet);
+            _walletRepoMock.Setup(r => r.UpdateAsync(1, wallet)).ReturnsAsync(wallet);
+
+            WalletTransaction? captured = null;
+            _txRepoMock.Setup(r => r.AddAsync(It.IsAny<WalletTransaction>()))
+                .Callback<WalletTransaction>(t => captured = t)
+                .ReturnsAsync(new WalletTransaction());
+
+            await CreateService().AddMoneyAsync(1, new AddMoneyRequestDTO { Amount = 50f, PaymentMethod = "upi" });
+
+            Assert.Contains("upi", captured?.Description);
+            Assert.Equal(WalletTransactionType.CREDIT, captured?.Type);
+            Assert.Equal(WalletTransactionSource.ADD_MONEY, captured?.Source);
+        }
+
+        // ── GetOrCreateWallet — maps all DTO fields ──────────────────────
+
+        [Fact]
+        public async Task GetOrCreateWallet_MapsAllFields()
+        {
+            var wallet = new Wallet { WalletId = 5, UserId = 3, Balance = 999f, UpdatedAt = DateTime.UtcNow };
+            SetupWallet(wallet);
+
+            var result = await CreateService().GetOrCreateWalletAsync(3);
+
+            Assert.Equal(5, result.WalletId);
+            Assert.Equal(3, result.UserId);
+            Assert.Equal(999f, result.Balance);
+        }
     }
 }
 

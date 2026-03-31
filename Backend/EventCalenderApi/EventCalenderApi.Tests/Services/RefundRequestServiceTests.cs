@@ -242,6 +242,160 @@ namespace EventCalenderApi.Tests.Services
 
             await Assert.ThrowsAsync<BadRequestException>(() => CreateService().RejectAsync(1, 1));
         }
+
+        // ── ApproveAsync — partial refund math ───────────────────────────
+
+        [Fact]
+        public async Task Approve_PartialRefund_CalculatesCorrectSplit()
+        {
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 1, EventId = 1,
+                AmountPaid = 100f, CommissionAmount = 10f, OrganizerAmount = 90f,
+                Status = PaymentStatus.SUCCESS
+            };
+            var req = new RefundRequest
+            {
+                RefundRequestId = 1, UserId = 1, EventId = 1, PaymentId = 1,
+                Status = RefundRequestStatus.PENDING,
+                Payment = payment
+            };
+
+            _refundRepoMock.SetupSequence(r => r.GetQueryable())
+                .Returns(new List<RefundRequest> { req }.BuildMock())
+                .Returns(new List<RefundRequest>
+                {
+                    new()
+                    {
+                        RefundRequestId = 1, Status = RefundRequestStatus.APPROVED,
+                        ApprovedPercentage = 50f,
+                        User = new User(), Event = new Event(), Payment = payment
+                    }
+                }.BuildMock());
+
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<Payment>())).ReturnsAsync(payment);
+            _refundRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<RefundRequest>())).ReturnsAsync(req);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().ApproveAsync(1, 99, 50f);
+
+            // 50% of 100 = 50 refunded; commission portion = 50 * (10/100) = 5
+            Assert.Equal(50f, payment.RefundedAmount);
+            Assert.Equal(PaymentStatus.REFUNDED, payment.Status);
+        }
+
+        [Fact]
+        public async Task Approve_ZeroPercentage_IsValid()
+        {
+            var payment = SamplePayment();
+            var req = new RefundRequest
+            {
+                RefundRequestId = 1, Status = RefundRequestStatus.PENDING, Payment = payment
+            };
+
+            _refundRepoMock.SetupSequence(r => r.GetQueryable())
+                .Returns(new List<RefundRequest> { req }.BuildMock())
+                .Returns(new List<RefundRequest>
+                {
+                    new()
+                    {
+                        RefundRequestId = 1, Status = RefundRequestStatus.APPROVED,
+                        User = new User(), Event = new Event(), Payment = payment
+                    }
+                }.BuildMock());
+
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<Payment>())).ReturnsAsync(payment);
+            _refundRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<RefundRequest>())).ReturnsAsync(req);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().ApproveAsync(1, 99, 0f);
+            Assert.Equal(0f, payment.RefundedAmount);
+        }
+
+        // ── GetPendingAsync — empty ──────────────────────────────────────
+
+        [Fact]
+        public async Task GetPending_NoPendingRequests_ReturnsEmpty()
+        {
+            _refundRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<RefundRequest>().BuildMock());
+
+            var result = await CreateService().GetPendingAsync();
+            Assert.Empty(result);
+        }
+
+        // ── ApproveAsync — zero AmountPaid guard ─────────────────────────
+
+        [Fact]
+        public async Task Approve_ZeroAmountPaid_AdminRefundIsZero()
+        {
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 1, EventId = 1,
+                AmountPaid = 0f, CommissionAmount = 0f, OrganizerAmount = 0f,
+                Status = PaymentStatus.SUCCESS
+            };
+            var req = new RefundRequest
+            {
+                RefundRequestId = 1, Status = RefundRequestStatus.PENDING, Payment = payment
+            };
+
+            _refundRepoMock.SetupSequence(r => r.GetQueryable())
+                .Returns(new List<RefundRequest> { req }.BuildMock())
+                .Returns(new List<RefundRequest>
+                {
+                    new()
+                    {
+                        RefundRequestId = 1, Status = RefundRequestStatus.APPROVED,
+                        User = new User(), Event = new Event(), Payment = payment
+                    }
+                }.BuildMock());
+
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<Payment>())).ReturnsAsync(payment);
+            _refundRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<RefundRequest>())).ReturnsAsync(req);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().ApproveAsync(1, 99, 100f);
+            Assert.Equal(RefundRequestStatus.APPROVED, result.Status);
+            Assert.Equal(0f, payment.RefundedAmount);
+        }
+
+        // ── CreateAsync — audit log fields ───────────────────────────────
+
+        [Fact]
+        public async Task Create_AuditLog_HasCorrectAction()
+        {
+            var payment = SamplePayment();
+            _paymentRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<Payment> { payment }.BuildMock());
+
+            _refundRepoMock.SetupSequence(r => r.GetQueryable())
+                .Returns(new List<RefundRequest>().BuildMock())
+                .Returns(new List<RefundRequest>
+                {
+                    new()
+                    {
+                        RefundRequestId = 1, UserId = 1, EventId = 1, PaymentId = 1,
+                        Status = RefundRequestStatus.PENDING,
+                        User = new User { UserId = 1, Name = "Alice" },
+                        Event = new Event { EventId = 1, Title = "Test" },
+                        Payment = payment
+                    }
+                }.BuildMock());
+
+            _refundRepoMock.Setup(r => r.AddAsync(It.IsAny<RefundRequest>()))
+                .ReturnsAsync(new RefundRequest { RefundRequestId = 1, UserId = 1, EventId = 1, PaymentId = 1 });
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().CreateAsync(1, 1);
+
+            Assert.Equal("REFUND_REQUESTED", captured?.Action);
+            Assert.Equal(1, captured?.UserId);
+        }
     }
 }
 

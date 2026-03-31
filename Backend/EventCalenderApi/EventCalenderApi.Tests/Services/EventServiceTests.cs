@@ -612,8 +612,446 @@ namespace EventCalenderApi.Tests.Services
             Assert.Equal(5, result.TotalRecords);
             Assert.Equal(3, result.Data.Count());
         }
+
+        // ── CancelEventAsync — additional branches ───────────────────────
+
+        [Fact]
+        public async Task CancelEvent_AlreadyStarted_ThrowsBadRequest()
+        {
+            var ev = new Event
+            {
+                EventId = 1,
+                CreatedByUserId = 1,
+                EventDate = DateTime.UtcNow.Date.AddDays(-1), // started yesterday
+                StartTime = new TimeSpan(10, 0, 0)
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+
+            await Assert.ThrowsAsync<BadRequestException>(() =>
+                CreateService().CancelEventAsync(1, 1, "ORGANIZER"));
+        }
+
+        [Fact]
+        public async Task CancelEvent_Organizer_OwnEvent_NoPayments_Cancels()
+        {
+            var ev = new Event
+            {
+                EventId = 1,
+                CreatedByUserId = 1,
+                IsPaidEvent = false,
+                Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date.AddDays(5),
+                StartTime = new TimeSpan(10, 0, 0)
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment>().BuildMock());
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 1, "ORGANIZER");
+            Assert.Equal(EventStatus.CANCELLED, ev.Status);
+        }
+
+        [Fact]
+        public async Task CancelEvent_Organizer_PaidEvent_EarlyCancel_RefundsWithNoAdminDebit()
+        {
+            // > 48h before start → no penalty, admin commission refunded, org earnings refunded
+            var ev = new Event
+            {
+                EventId = 1,
+                Title = "Paid",
+                CreatedByUserId = 1,
+                ApprovedByUserId = 10,
+                IsPaidEvent = true,
+                TicketPrice = 100f,
+                Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date.AddDays(5),
+                StartTime = new TimeSpan(10, 0, 0)
+            };
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 2, EventId = 1,
+                AmountPaid = 100f, CommissionAmount = 10f, OrganizerAmount = 90f,
+                Status = PaymentStatus.SUCCESS
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<Payment> { payment }.BuildMock());
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, payment)).ReturnsAsync(payment);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _walletMock.Setup(w => w.DebitAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _walletMock.Setup(w => w.CreditAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 1, "ORGANIZER");
+            Assert.Equal(EventStatus.CANCELLED, ev.Status);
+            Assert.Equal(PaymentStatus.REFUNDED, payment.Status);
+        }
+
+        [Fact]
+        public async Task CancelEvent_Admin_LateCancel_PaidEvent_CreditsOrganizerCompensation()
+        {
+            // < 48h before start → admin cancels → organizer gets 50%/ticket compensation
+            var ev = new Event
+            {
+                EventId = 1,
+                Title = "Late Cancel",
+                CreatedByUserId = 5,
+                ApprovedByUserId = 10,
+                IsPaidEvent = true,
+                TicketPrice = 100f,
+                Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date,
+                StartTime = DateTime.UtcNow.TimeOfDay.Add(TimeSpan.FromHours(24)) // 24h from now → < 48h
+            };
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 2, EventId = 1,
+                AmountPaid = 100f, CommissionAmount = 10f, OrganizerAmount = 90f,
+                Status = PaymentStatus.SUCCESS
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<Payment> { payment }.BuildMock());
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, payment)).ReturnsAsync(payment);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _walletMock.Setup(w => w.DebitAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _walletMock.Setup(w => w.CreditAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 99, "ADMIN");
+            Assert.Equal(EventStatus.CANCELLED, ev.Status);
+        }
+
+        [Fact]
+        public async Task CancelEvent_Admin_CancelsRegistrationsAlongWithEvent()
+        {
+            var ev = new Event
+            {
+                EventId = 1, CreatedByUserId = 5, IsPaidEvent = false, Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date.AddDays(5), StartTime = new TimeSpan(10, 0, 0)
+            };
+            var reg = new EventRegistration { RegistrationId = 1, EventId = 1, UserId = 2, Status = RegistrationStatus.REGISTERED };
+
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment>().BuildMock());
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration> { reg }.BuildMock());
+            _regRepoMock.Setup(r => r.UpdateAsync(1, reg)).ReturnsAsync(reg);
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 99, "ADMIN");
+            Assert.Equal(RegistrationStatus.CANCELLED, reg.Status);
+        }
+
+        // ── GetById — paid event booked count ────────────────────────────
+
+        [Fact]
+        public async Task GetById_PaidEvent_CountsSuccessfulPayments()
+        {
+            var ev = new Event { EventId = 1, Title = "Paid", IsPaidEvent = true, SeatsLimit = 10 };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+
+            var payments = new List<Payment>
+            {
+                new() { EventId = 1, Status = PaymentStatus.SUCCESS },
+                new() { EventId = 1, Status = PaymentStatus.SUCCESS },
+                new() { EventId = 1, Status = PaymentStatus.REFUNDED }
+            };
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(payments.BuildMock());
+
+            var result = await CreateService().GetByIdAsync(1);
+            Assert.Equal(8, result.SeatsLeft); // 10 - 2 successful
+        }
+
+        // ── CreateEvent — today's date with future start time ────────────
+
+        [Fact]
+        public async Task CreateEvent_TodayWithPastStartTime_ThrowsBadRequest()
+        {
+            var dto = FutureEventDto();
+            dto.EventDate = DateTime.UtcNow.Date;
+            dto.StartTime = DateTime.UtcNow.TimeOfDay.Add(TimeSpan.FromMinutes(-30)); // 30 min ago
+            await Assert.ThrowsAsync<BadRequestException>(() => CreateService().CreateEventAsync(dto));
+        }
+
+        [Fact]
+        public async Task CreateEvent_RegistrationDeadlineTodayInPast_ThrowsBadRequest()
+        {
+            var dto = FutureEventDto();
+            dto.RegistrationDeadline = DateTime.UtcNow.Date; // today at midnight = in the past
+            await Assert.ThrowsAsync<BadRequestException>(() => CreateService().CreateEventAsync(dto));
+        }
+
+        // ── ApproveAsync — sets ApprovedByUserId ─────────────────────────
+
+        [Fact]
+        public async Task Approve_SetsApprovedByUserId()
+        {
+            var ev = new Event { EventId = 1, ApprovalStatus = ApprovalStatus.PENDING };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().ApproveAsync(1, 42);
+
+            Assert.Equal(42, ev.ApprovedByUserId);
+        }
+
+        // ── RejectAsync — sets ApprovedByUserId ──────────────────────────
+
+        [Fact]
+        public async Task Reject_SetsApprovedByUserId()
+        {
+            var ev = new Event { EventId = 1, ApprovalStatus = ApprovalStatus.PENDING };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().RejectAsync(1, 42);
+
+            Assert.Equal(42, ev.ApprovedByUserId);
+        }
+
+        // ── CancelEventAsync — admin, no ApprovedByUserId, skips debit ──
+
+        [Fact]
+        public async Task CancelEvent_Admin_NoApprovedByUserId_SkipsAdminDebit()
+        {
+            var ev = new Event
+            {
+                EventId = 1, Title = "E", CreatedByUserId = 5,
+                ApprovedByUserId = null,  // no admin set
+                IsPaidEvent = true, TicketPrice = 100f, Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date.AddDays(5), StartTime = new TimeSpan(10, 0, 0)
+            };
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 2, EventId = 1,
+                AmountPaid = 100f, CommissionAmount = 10f, OrganizerAmount = 90f,
+                Status = PaymentStatus.SUCCESS
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment> { payment }.BuildMock());
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, payment)).ReturnsAsync(payment);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _walletMock.Setup(w => w.DebitAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _walletMock.Setup(w => w.CreditAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 99, "ADMIN");
+
+            // adminId = 0 → DebitAsync for admin commission should NOT be called with adminId=0
+            _walletMock.Verify(w => w.DebitAsync(0, It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            // Organizer debit IS called (orgEarning > 0)
+            _walletMock.Verify(w => w.DebitAsync(5, It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        }
+
+        // ── GetByDateRange — empty ───────────────────────────────────────
+
+        [Fact]
+        public async Task GetByDateRange_NoEventsInRange_ReturnsEmpty()
+        {
+            var events = new List<Event>
+            {
+                new() { EventId = 1, EventDate = DateTime.UtcNow.Date.AddDays(30) }
+            };
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(events.BuildMock());
+
+            var result = await CreateService().GetByDateRangeAsync(
+                DateTime.UtcNow.Date,
+                DateTime.UtcNow.Date.AddDays(7));
+            Assert.Empty(result);
+        }
+
+        // ── GetMyEvents — empty ──────────────────────────────────────────
+
+        [Fact]
+        public async Task GetMyEvents_NoEvents_ReturnsEmpty()
+        {
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Event>().BuildMock());
+            var result = await CreateService().GetMyEventsAsync(99);
+            Assert.Empty(result);
+        }
+
+        // ── GetRegisteredEvents — empty ──────────────────────────────────
+
+        [Fact]
+        public async Task GetRegisteredEvents_NoRegistrations_ReturnsEmpty()
+        {
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            var result = await CreateService().GetRegisteredEventsAsync(99);
+            Assert.Empty(result);
+        }
+
+        // ── CancelEventAsync — organizer late cancel penalty ─────────────
+
+        [Fact]
+        public async Task CancelEvent_Organizer_LateCancel_PenaltyRefund()
+        {
+            // < 48h before start → organizer pays penalty (2% admin + rest from org)
+            var ev = new Event
+            {
+                EventId = 1,
+                Title = "Late",
+                CreatedByUserId = 1,
+                ApprovedByUserId = 10,
+                IsPaidEvent = true,
+                TicketPrice = 100f,
+                Status = EventStatus.ACTIVE,
+                EventDate = DateTime.UtcNow.Date,
+                StartTime = DateTime.UtcNow.TimeOfDay.Add(TimeSpan.FromHours(24)) // 24h → < 48h
+            };
+            var payment = new Payment
+            {
+                PaymentId = 1, UserId = 2, EventId = 1,
+                AmountPaid = 100f, CommissionAmount = 10f, OrganizerAmount = 90f,
+                Status = PaymentStatus.SUCCESS
+            };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _paymentRepoMock.Setup(r => r.GetQueryable())
+                .Returns(new List<Payment> { payment }.BuildMock());
+            _paymentRepoMock.Setup(r => r.UpdateAsync(1, payment)).ReturnsAsync(payment);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _eventRepoMock.Setup(r => r.UpdateAsync(1, ev)).ReturnsAsync(ev);
+            _walletMock.Setup(w => w.DebitAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _walletMock.Setup(w => w.CreditAsync(It.IsAny<int>(), It.IsAny<float>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await CreateService().CancelEventAsync(1, 1, "ORGANIZER");
+
+            Assert.Equal(EventStatus.CANCELLED, ev.Status);
+            Assert.Equal(PaymentStatus.REFUNDED, payment.Status);
+            Assert.Equal("ORGANIZER", payment.CancelledBy);
+        }
+
+        // ── GetAllAsync — free event uses registration count ─────────────
+
+        [Fact]
+        public async Task GetAll_FreeEvent_CountsRegistrations()
+        {
+            var events = new List<Event>
+            {
+                new()
+                {
+                    EventId = 1, Title = "Free", IsPaidEvent = false,
+                    Status = EventStatus.ACTIVE, ApprovalStatus = ApprovalStatus.APPROVED,
+                    SeatsLimit = 5, CreatedBy = new User()
+                }
+            };
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(events.BuildMock());
+
+            var registrations = new List<EventRegistration>
+            {
+                new() { EventId = 1, Status = RegistrationStatus.REGISTERED },
+                new() { EventId = 1, Status = RegistrationStatus.REGISTERED },
+                new() { EventId = 1, Status = RegistrationStatus.CANCELLED }
+            };
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(registrations.BuildMock());
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment>().BuildMock());
+
+            var result = (await CreateService().GetAllAsync()).ToList();
+
+            Assert.Single(result);
+            Assert.Equal(3, result[0].SeatsLeft); // 5 - 2 registered
+        }
+
+        // ── MapToDTO — SeatsLimit null → SeatsLeft = -1 ──────────────────
+
+        [Fact]
+        public async Task GetById_NoSeatsLimit_SeatsLeftIsMinusOne()
+        {
+            var ev = new Event { EventId = 1, Title = "Unlimited", IsPaidEvent = false, SeatsLimit = null };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+
+            var result = await CreateService().GetByIdAsync(1);
+            Assert.Equal(-1, result.SeatsLeft);
+        }
+
+        // ── MapToDTO — no StartTime/EndTime → null strings ───────────────
+
+        [Fact]
+        public async Task GetById_NoStartEndTime_NullInDTO()
+        {
+            var ev = new Event { EventId = 1, Title = "E", IsPaidEvent = false, StartTime = null, EndTime = null };
+            _eventRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(ev);
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+
+            var result = await CreateService().GetByIdAsync(1);
+            Assert.Null(result.StartTime);
+            Assert.Null(result.EndTime);
+        }
+
+        // ── CreateEvent — audit log action ───────────────────────────────
+
+        [Fact]
+        public async Task CreateEvent_AuditLog_HasCorrectAction()
+        {
+            var dto = FutureEventDto();
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Event>().BuildMock());
+            _eventRepoMock.Setup(r => r.AddAsync(It.IsAny<Event>()))
+                .ReturnsAsync(new Event { EventId = 1, Title = "Test Event" });
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().CreateEventAsync(dto);
+
+            Assert.Equal("CREATE_EVENT", captured?.Action);
+            Assert.Equal("ORGANIZER", captured?.Role);
+        }
+
+        // ── GetExpiredEventsAsync — EventEndDate path ────────────────────
+
+        [Fact]
+        public async Task GetExpiredEvents_WithEventEndDate_UsesEndDate()
+        {
+            // EventDate is in the future but EventEndDate is in the past → expired
+            var events = new List<Event>
+            {
+                new()
+                {
+                    EventId = 1,
+                    EventDate = DateTime.UtcNow.Date.AddDays(5),   // future start
+                    EventEndDate = DateTime.UtcNow.Date.AddDays(-1), // past end
+                    IsPaidEvent = false,
+                    CreatedBy = new User()
+                }
+            };
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(events.BuildMock());
+            _regRepoMock.Setup(r => r.GetQueryable()).Returns(new List<EventRegistration>().BuildMock());
+            _paymentRepoMock.Setup(r => r.GetQueryable()).Returns(new List<Payment>().BuildMock());
+
+            var result = (await CreateService().GetExpiredEventsAsync()).ToList();
+            Assert.Single(result);
+        }
+
+        // ── GetAllEventsPagedAsync — location search ─────────────────────
+
+        [Fact]
+        public async Task GetAllEventsPaged_SearchByLocation_FiltersCorrectly()
+        {
+            var events = new List<Event>
+            {
+                new() { EventId = 1, Title = "Concert", Location = "Mumbai Arena", EventDate = DateTime.UtcNow.Date, CreatedBy = new User() },
+                new() { EventId = 2, Title = "Workshop", Location = "Delhi Hub", EventDate = DateTime.UtcNow.Date, CreatedBy = new User() }
+            };
+            _eventRepoMock.Setup(r => r.GetQueryable()).Returns(events.BuildMock());
+
+            var result = await CreateService().GetAllEventsPagedAsync(1, 10, "Mumbai");
+            Assert.Equal(1, result.TotalRecords);
+            Assert.Equal("Concert", result.Data.First().Title);
+        }
     }
 }
+
 
 
 

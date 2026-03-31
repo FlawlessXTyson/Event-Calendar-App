@@ -212,6 +212,75 @@ namespace EventCalenderApi.Tests.Services
             _repoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(todo);
             await Assert.ThrowsAsync<UnauthorizedException>(() => CreateService().DeleteAsync(1, 1));
         }
+
+        // ── CreateAsync — null due date ──────────────────────────────────
+
+        [Fact]
+        public async Task CreateAsync_NullDueDate_Succeeds()
+        {
+            var dto = new CreateTodoRequestDTO { UserId = 1, TaskTitle = "No deadline" };
+            var todo = new Todo { TodoId = 1, UserId = 1, TaskTitle = "No deadline", DueDate = null };
+            _repoMock.Setup(r => r.AddAsync(It.IsAny<Todo>())).ReturnsAsync(todo);
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().CreateAsync(dto);
+            Assert.Null(result.DueDate);
+        }
+
+        // ── CreateAsync — audit log fields ───────────────────────────────
+
+        [Fact]
+        public async Task CreateAsync_AuditLog_HasCorrectAction()
+        {
+            var dto = new CreateTodoRequestDTO { UserId = 5, TaskTitle = "Task" };
+            var todo = new Todo { TodoId = 1, UserId = 5, TaskTitle = "Task" };
+            _repoMock.Setup(r => r.AddAsync(It.IsAny<Todo>())).ReturnsAsync(todo);
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().CreateAsync(dto);
+
+            Assert.Equal("CREATE_TODO", captured?.Action);
+            Assert.Equal(5, captured?.UserId);
+        }
+
+        // ── UpdateAsync — null due date ──────────────────────────────────
+
+        [Fact]
+        public async Task UpdateAsync_NullDueDate_Succeeds()
+        {
+            var todo = new Todo { TodoId = 1, UserId = 1, TaskTitle = "Old" };
+            _repoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(todo);
+            _repoMock.Setup(r => r.UpdateAsync(1, It.IsAny<Todo>()))
+                .ReturnsAsync(new Todo { TodoId = 1, UserId = 1, TaskTitle = "New", DueDate = null });
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            var result = await CreateService().UpdateAsync(1, 1, new UpdateTodoRequestDTO { TaskTitle = "New" });
+            Assert.Null(result.DueDate);
+        }
+
+        // ── MarkCompletedAsync — audit log ───────────────────────────────
+
+        [Fact]
+        public async Task MarkCompletedAsync_AuditLog_HasCorrectAction()
+        {
+            var todo = new Todo { TodoId = 3, UserId = 7, Status = TodoStatus.PENDING };
+            _repoMock.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(todo);
+            _repoMock.Setup(r => r.UpdateAsync(3, todo)).ReturnsAsync(todo);
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().MarkCompletedAsync(3, 7);
+
+            Assert.Equal("COMPLETE_TODO", captured?.Action);
+            Assert.Equal(7, captured?.UserId);
+        }
     }
 }
 

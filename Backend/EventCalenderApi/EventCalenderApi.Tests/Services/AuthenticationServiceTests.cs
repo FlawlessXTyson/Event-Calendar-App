@@ -186,6 +186,59 @@ namespace EventCalenderApi.Tests.Services
             await Assert.ThrowsAsync<UnauthorizedException>(() =>
                 CreateService().LoginAsync(new LoginRequestDTO { Email = "alice@test.com", Password = "password123" }));
         }
+
+        // ── GenerateTokenResponse — missing JWT config ───────────────────
+
+        [Fact]
+        public async Task Register_MissingJwtKey_ThrowsBadRequest()
+        {
+            var configWithoutKey = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Jwt:Issuer"] = "TestIssuer"
+                    // No Jwt:Key
+                })
+                .Build();
+
+            var svc = new AuthenticationService(_userRepoMock.Object, configWithoutKey, _auditMock.Object);
+
+            var users = new List<User>();
+            _userRepoMock.Setup(r => r.GetQueryable()).Returns(users.BuildMock());
+            _userRepoMock.Setup(r => r.AddAsync(It.IsAny<User>()))
+                .ReturnsAsync(new User { UserId = 1, Name = "Alice", Email = "alice@test.com", Role = UserRole.USER });
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            await Assert.ThrowsAsync<BadRequestException>(() =>
+                svc.RegisterAsync(new RegisterRequestDTO
+                {
+                    UserName = "Alice",
+                    Email = "alice@test.com",
+                    Password = "password123"
+                }));
+        }
+
+        // ── Login — email normalization ──────────────────────────────────
+
+        [Fact]
+        public async Task Login_EmailNormalized_ToLowercase()
+        {
+            var hash = BCrypt.Net.BCrypt.HashPassword("password123");
+            var users = new List<User>
+            {
+                new() { UserId = 1, Email = "alice@test.com", PasswordHash = hash, Status = AccountStatus.ACTIVE, Role = UserRole.USER, Name = "Alice" }
+            };
+            _userRepoMock.Setup(r => r.GetQueryable()).Returns(users.BuildMock());
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
+
+            // Login with uppercase email — should still find the user
+            var result = await CreateService().LoginAsync(new LoginRequestDTO
+            {
+                Email = "ALICE@TEST.COM",
+                Password = "password123"
+            });
+
+            Assert.NotNull(result.Token);
+        }
     }
 }
 

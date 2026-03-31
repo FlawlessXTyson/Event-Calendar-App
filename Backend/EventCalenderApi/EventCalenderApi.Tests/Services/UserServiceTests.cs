@@ -266,6 +266,148 @@ namespace EventCalenderApi.Tests.Services
             await Assert.ThrowsAsync<NotFoundException>(() =>
                 CreateService().UploadProfileImageAsync(99, fileMock.Object));
         }
+
+        // ── UpdateUserAsync — no email change ────────────────────────────
+
+        [Fact]
+        public async Task UpdateUser_NoEmailChange_OnlyUpdatesNameAndRole()
+        {
+            var user = new User { UserId = 1, Name = "Alice", Email = "alice@test.com", Role = UserRole.USER };
+            _userRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+            _userRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<User>()))
+                .ReturnsAsync(new User { UserId = 1, Name = "Alice Updated", Email = "alice@test.com", Role = UserRole.ORGANIZER });
+
+            var result = await CreateService().UpdateUserAsync(1, new UpdateUserRequestDTO
+            {
+                Name = "Alice Updated",
+                Role = UserRole.ORGANIZER
+                // Email is null — no email change
+            });
+
+            Assert.Equal("Alice Updated", result.Name);
+            // GetQueryable should NOT be called since no email was provided
+            _userRepoMock.Verify(r => r.GetQueryable(), Times.Never);
+        }
+
+        // ── GetAllUsersAsync — empty ─────────────────────────────────────
+
+        [Fact]
+        public async Task GetAllUsers_Empty_ReturnsEmpty()
+        {
+            _userRepoMock.Setup(r => r.GetQueryable()).Returns(new List<User>().BuildMock());
+            var result = await CreateService().GetAllUsersAsync();
+            Assert.Empty(result);
+        }
+
+        // ── DisableUserAsync — audit log fields ──────────────────────────
+
+        [Fact]
+        public async Task DisableUser_AuditLog_HasCorrectFields()
+        {
+            var user = new User { UserId = 2, Status = AccountStatus.ACTIVE };
+            _userRepoMock.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(user);
+            _userRepoMock.Setup(r => r.UpdateAsync(2, user)).ReturnsAsync(user);
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().DisableUserAsync(2, 1);
+
+            Assert.Equal(1, captured?.UserId);
+            Assert.Equal("DISABLE_USER", captured?.Action);
+            Assert.Equal(2, captured?.EntityId);
+        }
+
+        // ── EnableUserAsync — audit log fields ───────────────────────────
+
+        [Fact]
+        public async Task EnableUser_AuditLog_HasCorrectFields()
+        {
+            var user = new User { UserId = 2, Status = AccountStatus.BLOCKED };
+            _userRepoMock.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(user);
+            _userRepoMock.Setup(r => r.UpdateAsync(2, user)).ReturnsAsync(user);
+
+            AuditLog? captured = null;
+            _auditMock.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .Callback<AuditLog>(log => captured = log)
+                .ReturnsAsync(new AuditLog());
+
+            await CreateService().EnableUserAsync(2, 1);
+
+            Assert.Equal(1, captured?.UserId);
+            Assert.Equal("ENABLE_USER", captured?.Action);
+            Assert.Equal(2, captured?.EntityId);
+        }
+
+        // ── CreateUserAsync — password is hashed ─────────────────────────
+
+        [Fact]
+        public async Task CreateUser_PasswordIsHashed_NotStoredPlain()
+        {
+            var users = new List<User>();
+            _userRepoMock.Setup(r => r.GetQueryable()).Returns(users.BuildMock());
+
+            User? capturedUser = null;
+            _userRepoMock.Setup(r => r.AddAsync(It.IsAny<User>()))
+                .Callback<User>(u => capturedUser = u)
+                .ReturnsAsync((User u) => u);
+
+            await CreateService().CreateUserAsync(new CreateUserRequestDTO
+            {
+                Name = "Alice",
+                Email = "alice@test.com",
+                Password = "plaintext"
+            });
+
+            Assert.NotEqual("plaintext", capturedUser?.PasswordHash);
+            Assert.True(BCrypt.Net.BCrypt.Verify("plaintext", capturedUser?.PasswordHash));
+        }
+
+        // ── UpdateUserAsync — status-only update ─────────────────────────
+
+        [Fact]
+        public async Task UpdateUser_StatusOnly_UpdatesWithoutEmailCheck()
+        {
+            var user = new User { UserId = 1, Name = "Alice", Email = "alice@test.com", Role = UserRole.USER, Status = AccountStatus.ACTIVE };
+            _userRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+            _userRepoMock.Setup(r => r.UpdateAsync(1, It.IsAny<User>()))
+                .ReturnsAsync(new User { UserId = 1, Name = "Alice", Email = "alice@test.com", Status = AccountStatus.BLOCKED });
+
+            var result = await CreateService().UpdateUserAsync(1, new UpdateUserRequestDTO
+            {
+                Status = AccountStatus.BLOCKED
+                // No email, no name, no role
+            });
+
+            Assert.Equal(AccountStatus.BLOCKED, result.Status);
+            // GetQueryable should NOT be called (no email change)
+            _userRepoMock.Verify(r => r.GetQueryable(), Times.Never);
+        }
+
+        // ── CreateUserAsync — email normalized to lowercase ──────────────
+
+        [Fact]
+        public async Task CreateUser_EmailNormalized_ToLowercase()
+        {
+            var users = new List<User>();
+            _userRepoMock.Setup(r => r.GetQueryable()).Returns(users.BuildMock());
+
+            User? capturedUser = null;
+            _userRepoMock.Setup(r => r.AddAsync(It.IsAny<User>()))
+                .Callback<User>(u => capturedUser = u)
+                .ReturnsAsync((User u) => u);
+
+            await CreateService().CreateUserAsync(new CreateUserRequestDTO
+            {
+                Name = "Alice",
+                Email = "ALICE@TEST.COM",
+                Password = "pass123"
+            });
+
+            Assert.Equal("alice@test.com", capturedUser?.Email);
+        }
     }
 }
 
