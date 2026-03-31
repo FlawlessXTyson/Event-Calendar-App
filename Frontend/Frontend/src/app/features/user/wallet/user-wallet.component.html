@@ -1,0 +1,119 @@
+<div style="max-width:700px;">
+  <div style="margin-bottom:24px;">
+    <h1 style="font-size:1.5rem;">My Wallet</h1>
+    <p>Add money and pay for events directly from your wallet</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-center"><div class="spinner"></div></div>
+  } @else {
+    <!-- Balance card -->
+    <div style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:var(--r-lg);padding:28px 32px;color:#fff;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:.85rem;opacity:.8;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Available Balance</div>
+        <div style="font-size:2.5rem;font-weight:800;">&#8377;{{ wallet()?.balance | number:'1.2-2' }}</div>
+        <div style="font-size:.78rem;opacity:.7;margin-top:4px;">Last updated: {{ wallet()?.updatedAt | date:'MMM d, y, h:mm a' }}</div>
+      </div>
+      <button type="button" class="btn btn-sm"
+        style="background:rgba(255,255,255,.2);color:#fff;border:2px solid rgba(255,255,255,.4);font-weight:700;backdrop-filter:blur(4px);"
+        (click)="showAddModal.set(true)">
+        <span class="material-icons-round">add</span> Add Money
+      </button>
+    </div>
+
+    <!-- Transaction history -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Transaction History</h3>
+      </div>
+      @if (txLoading()) {
+        <div class="card-body"><div class="loading-center"><div class="spinner"></div></div></div>
+      } @else if (transactions().length === 0) {
+        <div class="empty-state" style="padding:40px;">
+          <span class="material-icons-round empty-icon">receipt_long</span>
+          <h3>No transactions yet</h3>
+          <p>Add money to get started.</p>
+        </div>
+      } @else {
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+              @for (tx of transactions(); track tx.transactionId) {
+                <tr>
+                  <td style="color:var(--text-muted);font-size:.82rem;white-space:nowrap;">{{ tx.createdAt | date:'MMM d, y, h:mm a' }}</td>
+                  <td style="font-size:.88rem;">{{ tx.description }}</td>
+                  <td>
+                    <span class="badge" [style.background]="tx.type === 'CREDIT' ? '#D1FAE5' : '#FEE2E2'"
+                      [style.color]="tx.type === 'CREDIT' ? '#065F46' : '#991B1B'">
+                      {{ tx.type === 'CREDIT' ? '↑ Credit' : '↓ Debit' }}
+                    </span>
+                  </td>
+                  <td style="font-weight:700;" [style.color]="tx.type === 'CREDIT' ? 'var(--success)' : 'var(--danger)'">
+                    {{ tx.type === 'CREDIT' ? '+' : '-' }}&#8377;{{ tx.amount | number:'1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Add Money Modal -->
+@if (showAddModal()) {
+  <div class="modal-backdrop" (click)="closeAddModal()">
+    <div class="modal" (click)="$event.stopPropagation()" style="max-width:400px;">
+      <div class="modal-header">
+        <div style="font-weight:700;font-size:1rem;">Add Money to Wallet</div>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="closeAddModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Amount input -->
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label">Amount (&#8377;) <span style="color:var(--danger)">*</span></label>
+          <input type="number" class="form-control" [(ngModel)]="addAmount" min="1" max="100000" placeholder="Enter amount" />
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            @for (q of quickAmounts; track q) {
+              <button type="button" class="btn btn-ghost btn-sm" (click)="addAmount = q">&#8377;{{ q | number }}</button>
+            }
+          </div>
+        </div>
+
+        <!-- Payment method -->
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            @for (m of payMethods; track m.key) {
+              <button type="button"
+                (click)="selectedMethod = m.key"
+                style="padding:12px 8px;border-radius:var(--r);border:2px solid;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;font-size:.8rem;transition:all .15s;"
+                [style.borderColor]="selectedMethod === m.key ? m.color : 'var(--border)'"
+                [style.background]="selectedMethod === m.key ? m.color + '18' : 'var(--surface)'"
+                [style.color]="selectedMethod === m.key ? m.color : 'var(--text-secondary)'">
+                <span style="font-size:1.4rem;">{{ m.icon }}</span>
+                {{ m.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="closeAddModal()">Cancel</button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="!addAmount || addAmount <= 0 || !selectedMethod || adding()"
+          (click)="confirmAdd()">
+          @if (adding()) { <div class="spinner spinner-sm"></div> }
+          @else { <span class="material-icons-round">account_balance_wallet</span> }
+          Add &#8377;{{ addAmount | number:'1.0-0' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

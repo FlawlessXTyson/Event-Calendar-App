@@ -23,11 +23,11 @@ export class RoleRequestService {
 
   /** PUT /api/RoleRequest/{id}/approve — ADMIN only, updates user role to ORGANIZER */
   approve(id: number) {
-    return this.http.put<string>(`${this.base}/${id}/approve`, {});
+    return this.http.put(`${this.base}/${id}/approve`, {}, { responseType: 'text' });
   }
 
   /** PUT /api/RoleRequest/{id}/reject — ADMIN only */
   reject(id: number) {
-    return this.http.put<string>(`${this.base}/${id}/reject`, {});
+    return this.http.put(`${this.base}/${id}/reject`, {}, { responseType: 'text' });
   }
 }

@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="EventCalenderApi/EventCalenderApi.csproj" />
+  <Project Path="EventCalenderTest/EventCalenderTest.csproj" Id="cf0fa64a-3b99-44e0-ac04-976fa2e3dac6" />
 </Solution>

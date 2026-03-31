@@ -8,51 +8,8 @@ import { RoleChangeRequest, RequestStatus } from '../../../core/models/models';
   selector: 'app-admin-role-requests',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div>
-      <div style="margin-bottom:24px;"><h1 style="font-size:1.5rem;">Role Upgrade Requests</h1><p>Users requesting Organizer access</p></div>
-      @if (loading()) { <div class="loading-center"><div class="spinner"></div></div> }
-      @else if (requests().length === 0) {
-        <div class="empty-state"><span class="material-icons-round empty-icon">verified_user</span><h3>No pending requests</h3><p>All role requests have been reviewed.</p></div>
-      } @else {
-        <div class="table-wrapper">
-          <table>
-            <thead><tr><th>#</th><th>User</th><th>Requested Role</th><th>Status</th><th>Requested At</th><th>Actions</th></tr></thead>
-            <tbody>
-              @for (r of requests(); track r.requestId) {
-                <tr>
-                  <td style="color:var(--text-muted);">#{{ r.requestId }}</td>
-                  <td>
-                    <div style="font-weight:600;font-size:.9rem;">{{ r.user?.name || 'User #' + r.userId }}</div>
-                    <div style="font-size:.78rem;color:var(--text-muted);">{{ r.user?.email || '—' }}</div>
-                  </td>
-                  <td><span class="badge badge-warning">Organizer</span></td>
-                  <td><span class="badge" [class]="statusBadge(r.status)">{{ statusLabel(r.status) }}</span></td>
-                  <td style="color:var(--text-muted);">{{ r.requestedAt | date:'MMM d, y, h:mm a' }}</td>
-                  <td>
-                    @if (r.status === RequestStatus.PENDING) {
-                      <div style="display:flex;gap:8px;">
-                        <button type="button" class="btn btn-success btn-sm" [disabled]="approving() === r.requestId" (click)="approve(r)">
-                          @if (approving() === r.requestId) { <div class="spinner spinner-sm"></div> }
-                          @else { <span class="material-icons-round" style="font-size:15px;">check</span> Approve }
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" [disabled]="rejecting() === r.requestId" (click)="reject(r)">
-                          @if (rejecting() === r.requestId) { <div class="spinner spinner-sm"></div> }
-                          @else { <span class="material-icons-round" style="font-size:15px;">close</span> Reject }
-                        </button>
-                      </div>
-                    } @else {
-                      <span class="text-muted text-sm">Reviewed</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  templateUrl: './admin-role-requests.component.html',
+  styleUrl: './admin-role-requests.component.css'
 })
 export class AdminRoleRequestsComponent implements OnInit {
   private roleSvc = inject(RoleRequestService);
@@ -64,7 +21,12 @@ export class AdminRoleRequestsComponent implements OnInit {
   approving = signal<number | null>(null);
   rejecting = signal<number | null>(null);
 
-  ngOnInit() { this.roleSvc.getPending().subscribe({ next: rs => { this.requests.set(rs); this.loading.set(false); }, error: () => this.loading.set(false) }); }
+  ngOnInit() {
+    this.roleSvc.getPending().subscribe({
+      next: rs => { this.requests.set(rs); this.loading.set(false); },
+      error: () => this.loading.set(false)
+    });
+  }
 
   approve(r: RoleChangeRequest) {
     this.approving.set(r.requestId);

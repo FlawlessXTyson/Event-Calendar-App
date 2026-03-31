@@ -1,0 +1,16 @@
+@if (visible) {
+  <div class="modal-backdrop" (click)="cancel.emit()">
+    <div class="modal" style="max-width:420px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ title }}</h3>
+      </div>
+      <div class="modal-body">
+        <p>{{ message }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancel</button>
+        <button type="button" [class]="'btn btn-' + confirmClass" (click)="confirm.emit()">{{ confirmText }}</button>
+      </div>
+    </div>
+  </div>
+}

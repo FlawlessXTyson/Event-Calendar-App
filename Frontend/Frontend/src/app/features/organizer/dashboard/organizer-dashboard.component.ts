@@ -10,54 +10,8 @@ import { EventResponse, OrganizerEarnings, ApprovalStatus } from '../../../core/
   selector: 'app-organizer-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink],
-  template: `
-    <div>
-      <div style="margin-bottom:28px;">
-        <h1 style="font-size:1.5rem;">Welcome, {{ auth.userName() }}! 🎉</h1>
-        <p>Here's an overview of your events and earnings.</p>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon" style="background:var(--primary-light);"><span class="material-icons-round" style="color:var(--primary);">event</span></div><div class="stat-value">{{ myEvents().length }}</div><div class="stat-label">Total Events</div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:var(--success-light);"><span class="material-icons-round" style="color:var(--success);">check_circle</span></div><div class="stat-value">{{ approved() }}</div><div class="stat-label">Approved</div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:var(--warning-light);"><span class="material-icons-round" style="color:var(--warning);">pending</span></div><div class="stat-value">{{ pending() }}</div><div class="stat-label">Pending Review</div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:var(--info-light);"><span class="material-icons-round" style="color:var(--info);">account_balance_wallet</span></div><div class="stat-value">₹{{ earnings()?.netEarnings | number:'1.0-0' }}</div><div class="stat-label">Net Earnings</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px;" class="dash-grid-2">
-        <div class="card">
-          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <h3>My Events</h3><a routerLink="/organizer/my-events" class="btn btn-ghost btn-sm">View All →</a>
-          </div>
-          <div class="card-body" style="padding:0;">
-            @for (ev of myEvents().slice(0,5); track ev.eventId) {
-              <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-                <div><div style="font-weight:600;font-size:.9rem;">{{ ev.title }}</div><div style="font-size:.8rem;color:var(--text-muted);">{{ ev.eventDate | date:'MMM d, y' }}</div></div>
-                <span class="badge" [class]="approvalBadge(ev.approvalStatus)">{{ approvalLabel(ev.approvalStatus) }}</span>
-              </div>
-            }
-            @if (myEvents().length === 0) { <div class="empty-state" style="padding:24px;"><p>No events created yet.</p><a routerLink="/organizer/create-event" class="btn btn-primary btn-sm" style="margin-top:10px;">Create Your First Event</a></div> }
-          </div>
-        </div>
-        <div class="card card-body">
-          <h3 style="margin-bottom:16px;">Earnings Summary</h3>
-          @if (earnings()) {
-            <div style="display:flex;flex-direction:column;gap:14px;">
-              <div style="display:flex;justify-content:space-between;padding:12px;background:var(--success-light);border-radius:var(--r-sm);">
-                <span style="font-weight:600;color:var(--success);">Net Earnings</span>
-                <span style="font-weight:800;color:var(--success);">₹{{ earnings()!.netEarnings | number:'1.0-0' }}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:.9rem;"><span style="color:var(--text-muted);">Total Revenue</span><span style="font-weight:600;">₹{{ earnings()!.totalRevenue | number:'1.0-0' }}</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:.9rem;"><span style="color:var(--text-muted);">Platform Commission</span><span style="font-weight:600;color:var(--danger);">-₹{{ earnings()!.totalCommission | number:'1.0-0' }}</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:.9rem;"><span style="color:var(--text-muted);">Total Transactions</span><span style="font-weight:600;">{{ earnings()!.totalTransactions }}</span></div>
-              <a routerLink="/organizer/earnings" class="btn btn-outline btn-sm" style="text-align:center;">View Detailed Breakdown →</a>
-            </div>
-          } @else {
-            <div class="empty-state" style="padding:24px;"><span class="material-icons-round empty-icon" style="font-size:40px;">account_balance_wallet</span><p>No earnings data yet.</p></div>
-          }
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`@media(max-width:768px){ .dash-grid-2{ grid-template-columns:1fr!important; } }`]
+  templateUrl: './organizer-dashboard.component.html',
+  styleUrl: './organizer-dashboard.component.css'
 })
 export class OrganizerDashboardComponent implements OnInit {
   auth     = inject(AuthService);

@@ -1,0 +1,86 @@
+<div style="padding:32px max(5%,24px);">
+  <div class="section-header" style="margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:1.75rem;">Event Calendar</h1>
+      <p style="margin-top:4px;">Events, public holidays, cultural celebrations &amp; awareness days</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <button type="button" class="btn btn-ghost btn-icon" (click)="prevMonth()">
+        <span class="material-icons-round">chevron_left</span>
+      </button>
+      <h2 style="font-size:1.1rem;">{{ viewDate() | date:'MMMM yyyy' }}</h2>
+      <button type="button" class="btn btn-ghost btn-icon" (click)="nextMonth()">
+        <span class="material-icons-round">chevron_right</span>
+      </button>
+    </div>
+
+    <div class="card-body" style="padding:0;">
+      <!-- Day headers -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);">
+        @for (d of days; track d) {
+          <div style="padding:10px 0;text-align:center;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">{{ d }}</div>
+        }
+      </div>
+
+      <!-- Calendar grid -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);">
+        @for (cell of cells(); track cell.key) {
+          <div [style]="cellStyle(cell)"
+            style="min-height:96px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;overflow:hidden;">
+            @if (cell.day) {
+              <div [style]="dayNumStyle(cell)"
+                style="font-size:.8rem;font-weight:600;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">
+                {{ cell.day }}
+              </div>
+
+              @for (h of cell.holidays; track h.label) {
+                <div [title]="h.label"
+                  style="font-size:.65rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#FEE2E2;color:#991B1B;font-weight:600;">
+                  🏛 {{ h.label }}
+                </div>
+              }
+
+              @for (c of cell.cultural; track c.label) {
+                <div [title]="c.label"
+                  style="font-size:.65rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#FEF3C7;color:#92400E;font-weight:600;">
+                  🎉 {{ c.label }}
+                </div>
+              }
+
+              @for (a of cell.awareness; track a.label) {
+                <div [title]="a.label"
+                  style="font-size:.65rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#D1FAE5;color:#065F46;font-weight:600;">
+                  🌍 {{ a.label }}
+                </div>
+              }
+
+              @for (ev of cell.events.slice(0,2); track ev.eventId) {
+                <a [routerLink]="['/events', ev.eventId]" [title]="ev.title"
+                  style="display:block;font-size:.68rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:none;"
+                  [style.background]="evColor(ev.category).bg"
+                  [style.color]="evColor(ev.category).text">
+                  {{ ev.title }}
+                </a>
+              }
+              @if (cell.events.length > 2) {
+                <div style="font-size:.65rem;color:var(--text-muted);padding:1px 4px;">+{{ cell.events.length - 2 }} more</div>
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;">
+    @for (l of legend; track l.label) {
+      <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-secondary);">
+        <div style="width:12px;height:12px;border-radius:3px;" [style.background]="l.bg"></div>{{ l.label }}
+      </div>
+    }
+  </div>
+</div>

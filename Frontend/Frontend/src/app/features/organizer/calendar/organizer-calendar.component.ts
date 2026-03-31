@@ -5,6 +5,7 @@ import { DashboardCalendarComponent } from '../../../shared/components/dashboard
   selector: 'app-organizer-calendar',
   standalone: true,
   imports: [DashboardCalendarComponent],
-  template: `<app-dashboard-calendar eventRoutePrefix="/events" />`
+  templateUrl: './organizer-calendar.component.html',
+  styleUrl: './organizer-calendar.component.css'
 })
 export class OrganizerCalendarComponent {}
