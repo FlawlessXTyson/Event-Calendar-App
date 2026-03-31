@@ -5,7 +5,6 @@ import { RouterLink } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { EventResponse, ApprovalStatus, EventStatus } from '../../../core/models/models';
-
 @Component({
   selector: 'app-organizer-my-events',
   standalone: true,
@@ -223,12 +222,19 @@ export class OrganizerMyEventsComponent implements OnInit {
   clearDate()    { this.filterDate = ''; this.currentPage.set(1); this.load(); }
 
   cancelEvent(ev: EventResponse) {
-    if (!confirm(`Cancel "${ev.title}"? All paid attendees will be automatically refunded.`)) return;
+    const isPending = ev.approvalStatus === ApprovalStatus.PENDING;
+    const msg = isPending
+      ? `"${ev.title}" is currently under review.\n\nCancelling will withdraw it from approval. Are you sure?`
+      : `Cancel "${ev.title}"? All paid attendees will be automatically refunded.`;
+    if (!confirm(msg)) return;
     this.cancelling.set(ev.eventId);
     this.eventSvc.cancel(ev.eventId).subscribe({
       next: () => {
         this.events.update(es => es.map(e => e.eventId === ev.eventId ? { ...e, status: EventStatus.CANCELLED } : e));
-        this.toast.success(`"${ev.title}" cancelled. Refunds processed.`, 'Event Cancelled');
+        const toastMsg = isPending
+          ? `"${ev.title}" withdrawn from review.`
+          : `"${ev.title}" cancelled. Refunds processed.`;
+        this.toast.success(toastMsg, 'Event Cancelled');
         this.cancelling.set(null);
       },
       error: () => this.cancelling.set(null)

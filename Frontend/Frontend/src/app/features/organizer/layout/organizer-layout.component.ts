@@ -45,6 +45,7 @@ export class OrganizerLayoutComponent {
     { label:'Registrations',     icon:'people',                 route:'/organizer/registrations' },
     { label:'Earnings',          icon:'account_balance_wallet', route:'/organizer/earnings' },
     { label:'Refunds',           icon:'currency_rupee',         route:'/organizer/refunds' },
+    { label:'My Wallet',         icon:'wallet',                 route:'/organizer/wallet' },
     { label:'Calendar',          icon:'calendar_month',         route:'/organizer/calendar' },
     { label:'Profile',           icon:'manage_accounts',        route:'/organizer/profile' },
   ];

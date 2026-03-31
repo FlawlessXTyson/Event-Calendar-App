@@ -34,6 +34,9 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
 
         public DbSet<RefundRequest> RefundRequests { get; set; }
 
+        public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
+
         //  AUTO AUDIT LOG (ADDED ONLY THIS)
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -75,6 +78,12 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
             }
 
             return result;
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.ConfigureWarnings(w =>
+                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -195,6 +204,32 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasOne(r => r.Payment)
                 .WithMany()
                 .HasForeignKey(r => r.PaymentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            //================ WALLET =================
+            modelBuilder.Entity<Wallet>()
+                .HasOne(w => w.User)
+                .WithMany()
+                .HasForeignKey(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Wallet>()
+                .HasIndex(w => w.UserId)
+                .IsUnique(); // one wallet per user
+
+            modelBuilder.Entity<WalletTransaction>()
+                .HasKey(t => t.TransactionId);
+
+            modelBuilder.Entity<WalletTransaction>()
+                .HasOne(t => t.Wallet)
+                .WithMany()
+                .HasForeignKey(t => t.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<WalletTransaction>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

@@ -30,10 +30,18 @@ public interface IEventService
     Task<IEnumerable<EventResponseDTO>> GetRegisteredEventsAsync(int userId);
     Task<RefundSummaryDTO> GetRefundSummaryAsync(int eventId);
     Task<IEnumerable<EventResponseDTO>> GetPendingEventsAsync();
+    Task<PagedResultDTO<EventResponseDTO>> GetPendingEventsPagedAsync(int pageNumber, int pageSize);
 
     Task<IEnumerable<EventResponseDTO>> GetRejectedEventsAsync();
+    Task<PagedResultDTO<EventResponseDTO>> GetRejectedEventsPagedAsync(int pageNumber, int pageSize);
 
     Task<IEnumerable<EventResponseDTO>> GetApprovedEventsAsync();
+    Task<PagedResultDTO<EventResponseDTO>> GetApprovedEventsPagedAsync(int pageNumber, int pageSize);
 
     Task<IEnumerable<EventResponseDTO>> GetExpiredEventsAsync();
+    Task<PagedResultDTO<EventResponseDTO>> GetExpiredEventsPagedAsync(int pageNumber, int pageSize);
+
+    Task<PagedResultDTO<EventResponseDTO>> GetCancelledEventsPagedAsync(int pageNumber, int pageSize);
+
+    Task<PagedResultDTO<EventResponseDTO>> GetAllEventsPagedAsync(int pageNumber, int pageSize, string? search);
 }

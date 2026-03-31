@@ -114,7 +114,7 @@ const ACTION_STYLES: Record<string, { bg: string; color: string }> = {
                 @for (log of paginated(); track log.id) {
                   <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
                     <td style="padding:10px 16px;color:var(--text-muted);">#{{ log.id }}</td>
-                    <td style="padding:10px 16px;white-space:nowrap;">{{ log.createdAt | date:'MMM d, y, HH:mm:ss' }}</td>
+                    <td style="padding:10px 16px;white-space:nowrap;">{{ toIst(log.createdAt) | date:'MMM d, y, h:mm a' }}</td>
                     <td style="padding:10px 16px;">
                       <div style="font-weight:600;font-size:.88rem;">{{ log.userName || '—' }}</div>
                       <div style="font-size:.75rem;color:var(--text-muted);">ID #{{ log.userId }}</div>
@@ -214,6 +214,13 @@ export class AdminAuditLogsComponent implements OnInit {
 
   countAction(action: string) {
     return this.logs().filter(l => l.action === action).length;
+  }
+
+  /** Convert UTC datetime string to IST (UTC+5:30) */
+  toIst(utcStr: string): Date {
+    // Always treat as UTC by appending Z if no timezone info present
+    const s = utcStr.endsWith('Z') || utcStr.includes('+') ? utcStr : utcStr + 'Z';
+    return new Date(s);
   }
 
   actionStyle(action: string) {

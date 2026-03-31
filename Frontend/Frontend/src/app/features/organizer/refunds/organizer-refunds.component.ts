@@ -52,6 +52,7 @@ import { PaymentResponse, PaymentStatus, PagedResult } from '../../../core/model
                 <th>Amount Paid</th>
                 <th>Payment Date</th>
                 <th>Refunded Amount</th>
+                <th>Cancelled By</th>
                 <th>Refunded At</th>
               </tr>
             </thead>
@@ -71,6 +72,17 @@ import { PaymentResponse, PaymentStatus, PagedResult } from '../../../core/model
                       <span style="font-weight:700;color:var(--danger);">&#8377;{{ r.refundedAmount | number:'1.0-0' }}</span>
                     } @else {
                       <span style="color:var(--text-muted);">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (r.cancelledBy) {
+                      <span class="badge"
+                        [style.background]="r.cancelledBy === 'ADMIN' ? '#FEE2E2' : r.cancelledBy === 'ORGANIZER' ? '#FEF3C7' : '#DBEAFE'"
+                        [style.color]="r.cancelledBy === 'ADMIN' ? '#991B1B' : r.cancelledBy === 'ORGANIZER' ? '#92400E' : '#1E40AF'">
+                        {{ r.cancelledBy }}
+                      </span>
+                    } @else {
+                      <span style="color:var(--text-muted);">USER</span>
                     }
                   </td>
                   <td style="color:var(--text-muted);font-size:.82rem;">

@@ -8,6 +8,7 @@ import { PaymentService } from '../../../core/services/payment.service';
 import { TicketService } from '../../../core/services/ticket.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
+import { WalletService } from '../../../core/services/wallet.service';
 import {
   EventResponse, EventRegistrationResponse, PaymentResponse,
   ApprovalStatus, RegistrationStatus, PaymentStatus, TicketResponse
@@ -21,7 +22,6 @@ const PAY_METHODS: { key: PayMethod; label: string; icon: string; color: string 
   { key: 'card',       label: 'Credit / Debit', icon: '💳', color: '#0D9488' },
   { key: 'wallet',     label: 'Wallet',         icon: '👛', color: '#F59E0B' },
 ];
-
 @Component({
   selector: 'app-user-my-events',
   standalone: true,
@@ -547,6 +547,7 @@ export class UserMyEventsComponent implements OnInit {
   private regSvc    = inject(RegistrationService);
   private paySvc    = inject(PaymentService);
   private ticketSvc = inject(TicketService);
+  private walletSvc = inject(WalletService);
   private toast     = inject(ToastService);
   readonly regState = inject(RegistrationStateService);
   private router    = inject(Router);
@@ -737,23 +738,25 @@ export class UserMyEventsComponent implements OnInit {
     const ev = this.payModalEvent();
     if (!ev || !this.selectedPayMethod()) return;
     this.paying.set(ev.eventId);
-    this.paySvc.create({ eventId: ev.eventId }).subscribe({
-      next: p => {
-        this.myPayments.update(ps => [...ps, p]);
-        this.regState.clearPending();
-        this.toast.success(`₹${ev.ticketPrice} paid via ${this.selectedPayMethod().toUpperCase()} for "${ev.title}"!`, 'Payment Successful');
-        this.paying.set(null);
-        this.closePayModal();
-        // Auto-generate ticket after payment → show in corner widget
-        this.ticketSvc.generate(ev.eventId, p.paymentId).subscribe({
-          next: t => {
-            this.myTickets.update(ts => [...ts, t]);
-          },
-          error: () => {}
-        });
-      },
-      error: () => this.paying.set(null)
-    });
+
+    const onSuccess = (p: any) => {
+      this.myPayments.update(ps => [...ps, p]);
+      this.regState.clearPending();
+      this.toast.success(`₹${ev.ticketPrice} paid via ${this.selectedPayMethod().toUpperCase()} for "${ev.title}"!`, 'Payment Successful');
+      this.paying.set(null);
+      this.closePayModal();
+      this.ticketSvc.generate(ev.eventId, p.paymentId).subscribe({
+        next: t => { this.myTickets.update(ts => [...ts, t]); },
+        error: () => {}
+      });
+    };
+    const onError = () => this.paying.set(null);
+
+    if (this.selectedPayMethod() === 'wallet') {
+      this.walletSvc.payWithWallet({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    } else {
+      this.paySvc.create({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    }
   }
 
   // ── Registration ───────────────────────────────────────────────────────────

@@ -48,6 +48,7 @@ export class UserLayoutComponent {
     { label:'Dashboard',     icon:'dashboard',         route:'/user/dashboard' },
     { label:'Browse Events',    icon:'search',             route:'/user/my-events' },
     { label:'Events Attended',  icon:'verified',           route:'/user/events-attended' },
+    { label:'My Wallet',        icon:'account_balance_wallet', route:'/user/wallet' },
     { label:'My Payments',      icon:'payment',            route:'/user/payments' },
     { label:'Calendar',         icon:'calendar_month',     route:'/user/calendar' },
     { label:'Reminders',     icon:'notifications',      route:'/user/reminders' },

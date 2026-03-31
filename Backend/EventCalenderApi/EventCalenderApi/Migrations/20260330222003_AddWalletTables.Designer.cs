@@ -4,6 +4,7 @@ using EventCalenderApi.EventCalenderAppDataLibrary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCalenderApi.Migrations
 {
     [DbContext(typeof(EventCalendarDbContext))]
-    partial class EventCalendarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260330222003_AddWalletTables")]
+    partial class AddWalletTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,9 +213,6 @@ namespace EventCalenderApi.Migrations
 
                     b.Property<float>("AmountPaid")
                         .HasColumnType("real");
-
-                    b.Property<string>("CancelledBy")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<float>("CommissionAmount")
                         .HasColumnType("real");

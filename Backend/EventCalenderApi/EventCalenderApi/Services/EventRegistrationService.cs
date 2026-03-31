@@ -16,19 +16,22 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, Payment> _paymentRepo;
         private readonly IRepository<int, RefundRequest> _refundRepo;
         private readonly IAuditLogRepository _auditRepo;
+        private readonly IWalletService _walletSvc;
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, Payment> paymentRepo,
             IRepository<int, RefundRequest> refundRepo,
-            IAuditLogRepository auditRepo)
+            IAuditLogRepository auditRepo,
+            IWalletService walletSvc)
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
             _paymentRepo = paymentRepo;
             _refundRepo = refundRepo;
             _auditRepo = auditRepo;
+            _walletSvc = walletSvc;
         }
 
 
@@ -182,8 +185,19 @@ namespace EventCalenderApi.Services
                     payment.RefundedAt       = DateTime.UtcNow;
                     payment.CommissionAmount = Math.Max(0, payment.CommissionAmount - adminRefund);
                     payment.OrganizerAmount  = Math.Max(0, payment.OrganizerAmount  - orgRefund);
+                    payment.CancelledBy      = "USER";
 
                     await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+
+                    // ── Credit refund to USER wallet ──────────────────────
+                    if (refundAmount > 0)
+                    {
+                        await _walletSvc.CreditAsync(
+                            registration.UserId,
+                            refundAmount,
+                            "REFUND",
+                            $"Refund ({refundPct}%) for cancelling: {ev.Title}");
+                    }
 
                     await _auditRepo.AddAsync(new AuditLog
                     {

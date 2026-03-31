@@ -15,18 +15,24 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
+        private readonly IRepository<int, User> _userRepo;
         private readonly IAuditLogRepository _auditRepo;
+        private readonly IWalletService _walletSvc;
 
         public PaymentService(
             IRepository<int, Event> eventRepo,
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Payment> paymentRepo,
-            IAuditLogRepository auditRepo)
+            IRepository<int, User> userRepo,
+            IAuditLogRepository auditRepo,
+            IWalletService walletSvc)
         {
             _eventRepo = eventRepo;
             _registrationRepo = registrationRepo;
             _paymentRepo = paymentRepo;
+            _userRepo = userRepo;
             _auditRepo = auditRepo;
+            _walletSvc = walletSvc;
         }
 
         // ================= CREATE PAYMENT =================
@@ -147,6 +153,25 @@ namespace EventCalenderApi.Services
             };
 
             var created = await _paymentRepo.AddAsync(payment);
+
+            // ── Credit organizer wallet with their share ──────────────────
+            await _walletSvc.CreditAsync(
+                eventEntity.CreatedByUserId,
+                organizerAmount,
+                "ORGANIZER_EARNING",
+                $"Earnings from event: {eventEntity.Title} (Payment #{created.PaymentId})");
+
+            // ── Credit admin wallet with commission ───────────────────────
+            // Find admin: use ApprovedByUserId if set, else find any admin
+            int adminId = eventEntity.ApprovedByUserId ?? 0;
+            if (adminId > 0)
+            {
+                await _walletSvc.CreditAsync(
+                    adminId,
+                    commission,
+                    "COMMISSION",
+                    $"Commission from event: {eventEntity.Title} (Payment #{created.PaymentId})");
+            }
 
             // ================= AUDIT =================
             await _auditRepo.AddAsync(new AuditLog
@@ -332,19 +357,20 @@ namespace EventCalenderApi.Services
         {
             return new PaymentResponseDTO
             {
-                PaymentId = p.PaymentId,
-                EventId = p.EventId,
-                EventTitle = p.Event?.Title ?? string.Empty,
-                EventDate = p.Event?.EventDate,
-                UserId = p.UserId,
-                UserName  = p.User?.Name  ?? string.Empty,
-                UserEmail = p.User?.Email ?? string.Empty,
-                AmountPaid = p.AmountPaid,
+                PaymentId       = p.PaymentId,
+                EventId         = p.EventId,
+                EventTitle      = p.Event?.Title ?? string.Empty,
+                EventDate       = p.Event?.EventDate,
+                UserId          = p.UserId,
+                UserName        = p.User?.Name  ?? string.Empty,
+                UserEmail       = p.User?.Email ?? string.Empty,
+                AmountPaid      = p.AmountPaid,
                 OrganizerAmount = p.OrganizerAmount,
-                RefundedAmount = p.RefundedAmount,
-                Status = p.Status,
-                PaymentDate = p.PaymentDate,
-                RefundedAt = p.RefundedAt
+                RefundedAmount  = p.RefundedAmount,
+                Status          = p.Status,
+                PaymentDate     = p.PaymentDate,
+                RefundedAt      = p.RefundedAt,
+                CancelledBy     = p.CancelledBy
             };
         }
     }

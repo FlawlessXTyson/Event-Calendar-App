@@ -1,11 +1,10 @@
-﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+﻿﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
 using EventCalenderApi.Interfaces.ServiceInterfaces;
 using Microsoft.EntityFrameworkCore;
-
 using EventCalenderApi.Helpers;
 
 namespace EventCalenderApi.Services
@@ -17,19 +16,22 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, EventRegistration> _registrationRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
         private readonly IAuditLogRepository _auditRepo;
+        private readonly IWalletService _walletSvc;
 
         public EventService(
             IRepository<int, Event> eventRepo,
             IRepository<int, User> userRepo,
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Payment> paymentRepo,
-            IAuditLogRepository auditRepo)
+            IAuditLogRepository auditRepo,
+            IWalletService walletSvc)
         {
             _eventRepo = eventRepo;
             _userRepo = userRepo;
             _registrationRepo = registrationRepo;
             _paymentRepo = paymentRepo;
             _auditRepo = auditRepo;
+            _walletSvc = walletSvc;
         }
 
         // ================= CREATE =================
@@ -166,7 +168,6 @@ namespace EventCalenderApi.Services
             var ev = await _eventRepo.GetByIdAsync(eventId)
                 ?? throw new NotFoundException("Event not found");
 
-            // ── Block cancellation after event has started ──────────────────
             var eventStart = ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero);
             if (IstClock.Now >= eventStart)
                 throw new BadRequestException("Cannot cancel an event that has already started");
@@ -174,74 +175,98 @@ namespace EventCalenderApi.Services
             var hoursBeforeStart = (eventStart - IstClock.Now).TotalHours;
             bool isLessThan48h   = hoursBeforeStart < 48;
 
-            // ── Load all SUCCESS payments for this event ────────────────────
             var payments = await _paymentRepo.GetQueryable()
                 .Where(p => p.EventId == eventId && p.Status == PaymentStatus.SUCCESS)
                 .ToListAsync();
+
+            int adminId = ev.ApprovedByUserId ?? 0;
 
             if (role == "ADMIN")
             {
                 foreach (var payment in payments)
                 {
-                    // Users always get 100% refund
-                    payment.Status         = PaymentStatus.REFUNDED;
-                    payment.RefundedAmount = payment.AmountPaid;
-                    payment.RefundedAt     = DateTime.UtcNow;
+                    float refundAmount = payment.AmountPaid;
+                    float commission   = payment.CommissionAmount;
+                    float orgEarning   = payment.OrganizerAmount;
+
+                    payment.Status           = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount   = refundAmount;
+                    payment.RefundedAt       = DateTime.UtcNow;
                     payment.CommissionAmount = 0;
                     payment.OrganizerAmount  = 0;
+                    payment.CancelledBy      = "ADMIN";
                     await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+
+                    if (adminId > 0 && commission > 0)
+                        await _walletSvc.DebitAsync(adminId, commission, "REFUND",
+                            $"Admin cancel refund (commission) for event: {ev.Title}");
+                    if (orgEarning > 0)
+                        await _walletSvc.DebitAsync(ev.CreatedByUserId, orgEarning, "REFUND",
+                            $"Admin cancel refund (earnings) for event: {ev.Title}");
+                    await _walletSvc.CreditAsync(payment.UserId, refundAmount, "REFUND",
+                        $"Full refund — admin cancelled event: {ev.Title}");
 
                     await _auditRepo.AddAsync(new AuditLog
                     {
                         UserId = userId, Role = role,
-                        Action = "ADMIN_CANCEL_REFUND",
-                        Entity = "Payment", EntityId = payment.PaymentId
+                        Action = "ADMIN_CANCEL_REFUND", Entity = "Payment", EntityId = payment.PaymentId
                     });
                 }
 
-                // If < 48h before start → organizer gets 50% of ticket price as compensation
-                if (isLessThan48h && ev.IsPaidEvent && ev.TicketPrice > 0)
+                if (isLessThan48h && ev.IsPaidEvent && ev.TicketPrice > 0 && payments.Count > 0)
                 {
-                    float compensation = ev.TicketPrice * 0.5f;
-                    // Record compensation as a separate audit entry (platform pays organizer)
-                    await _auditRepo.AddAsync(new AuditLog
+                    float compensation = ev.TicketPrice * 0.5f * payments.Count;
+                    if (adminId > 0)
                     {
-                        UserId = userId, Role = role,
-                        Action = $"ORGANIZER_COMPENSATION|EventId:{eventId}|Amount:{compensation:F2}",
-                        Entity = "Event", EntityId = eventId
-                    });
+                        await _walletSvc.DebitAsync(adminId, compensation, "COMPENSATION",
+                            $"Organizer compensation (late cancel): {ev.Title}");
+                        await _walletSvc.CreditAsync(ev.CreatedByUserId, compensation, "COMPENSATION",
+                            $"Compensation (50%/ticket) — admin cancelled: {ev.Title}");
+                    }
                 }
             }
             else if (role == "ORGANIZER")
             {
-                // Verify organizer owns this event
                 if (ev.CreatedByUserId != userId)
                     throw new UnauthorizedException("You can only cancel your own events");
 
                 foreach (var payment in payments)
                 {
-                    payment.Status         = PaymentStatus.REFUNDED;
-                    payment.RefundedAmount = payment.AmountPaid;
-                    payment.RefundedAt     = DateTime.UtcNow;
+                    float refundAmount = payment.AmountPaid;
+                    float commission   = payment.CommissionAmount;
+                    float orgEarning   = payment.OrganizerAmount;
+
+                    payment.Status           = PaymentStatus.REFUNDED;
+                    payment.RefundedAmount   = refundAmount;
+                    payment.RefundedAt       = DateTime.UtcNow;
+                    payment.CommissionAmount = 0;
+                    payment.OrganizerAmount  = 0;
+                    payment.CancelledBy      = "ORGANIZER";
+                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
 
                     if (isLessThan48h)
                     {
-                        // < 48h: platform gives only 2% of commission; organizer bears the rest
-                        // Platform contribution = 2% of original commission
-                        float platformContribution = payment.CommissionAmount * 0.02f;
-                        // Organizer bears: full amount - platform contribution
-                        // (organizer's stored amount is already reduced)
-                        payment.CommissionAmount = Math.Max(0, payment.CommissionAmount - platformContribution);
-                        payment.OrganizerAmount  = 0; // organizer pays their share
+                        float adminContrib = commission * 0.02f;
+                        float orgPays      = refundAmount - adminContrib;
+                        if (adminId > 0 && adminContrib > 0)
+                            await _walletSvc.DebitAsync(adminId, adminContrib, "REFUND",
+                                $"2% commission refund — organizer cancelled: {ev.Title}");
+                        if (orgPays > 0)
+                            await _walletSvc.DebitAsync(ev.CreatedByUserId, orgPays, "REFUND",
+                                $"Penalty refund (late cancel): {ev.Title}");
                     }
                     else
                     {
-                        // ≥ 48h: normal full refund from commission + organizer earnings
-                        payment.CommissionAmount = 0;
-                        payment.OrganizerAmount  = 0;
+                        if (adminId > 0 && commission > 0)
+                            await _walletSvc.DebitAsync(adminId, commission, "REFUND",
+                                $"Commission refund — organizer cancelled: {ev.Title}");
+                        if (orgEarning > 0)
+                            await _walletSvc.DebitAsync(ev.CreatedByUserId, orgEarning, "REFUND",
+                                $"Earnings refund — organizer cancelled: {ev.Title}");
                     }
 
-                    await _paymentRepo.UpdateAsync(payment.PaymentId, payment);
+                    await _walletSvc.CreditAsync(payment.UserId, refundAmount, "REFUND",
+                        $"Full refund — organizer cancelled event: {ev.Title}");
 
                     await _auditRepo.AddAsync(new AuditLog
                     {
@@ -252,11 +277,9 @@ namespace EventCalenderApi.Services
                 }
             }
 
-            // ── Cancel all active registrations ────────────────────────────
             var registrations = await _registrationRepo.GetQueryable()
                 .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.REGISTERED)
                 .ToListAsync();
-
             foreach (var reg in registrations)
             {
                 reg.Status = RegistrationStatus.CANCELLED;
@@ -269,8 +292,7 @@ namespace EventCalenderApi.Services
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId = userId, Role = role,
-                Action = "CANCEL_EVENT",
-                Entity = "Event", EntityId = eventId
+                Action = "CANCEL_EVENT", Entity = "Event", EntityId = eventId
             });
 
             return MapToDTO(ev, 0);
@@ -427,10 +449,36 @@ namespace EventCalenderApi.Services
             var data = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING)
-                .OrderBy(e => e.EventDate)
+                .OrderByDescending(e => e.EventDate)
+                .ToListAsync();
+            // Filter upcoming only in memory (EF can't translate DateTime.Add to SQL)
+            var now = IstClock.Now;
+            return data.Where(e => e.EventDate.Add(e.StartTime ?? TimeSpan.Zero) > now)
+                       .Select(e => MapToDTO(e, 0));
+        }
+
+        public async Task<PagedResultDTO<EventResponseDTO>> GetPendingEventsPagedAsync(int pageNumber, int pageSize)
+        {
+            // Load all pending first, filter upcoming in memory, then paginate
+            var all = await _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING)
+                .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
 
-            return data.Select(e => MapToDTO(e, 0));
+            var now = IstClock.Now;
+            var upcoming = all.Where(e => e.EventDate.Add(e.StartTime ?? TimeSpan.Zero) > now).ToList();
+
+            var total = upcoming.Count;
+            var data  = upcoming.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+            return new PagedResultDTO<EventResponseDTO>
+            {
+                PageNumber   = pageNumber,
+                PageSize     = pageSize,
+                TotalRecords = total,
+                Data         = data.Select(e => MapToDTO(e, 0))
+            };
         }
 
         public async Task<IEnumerable<EventResponseDTO>> GetRejectedEventsAsync()
@@ -438,9 +486,20 @@ namespace EventCalenderApi.Services
             var data = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.REJECTED)
+                .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
-
             return data.Select(e => MapToDTO(e, 0));
+        }
+
+        public async Task<PagedResultDTO<EventResponseDTO>> GetRejectedEventsPagedAsync(int pageNumber, int pageSize)
+        {
+            var query = _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.REJECTED)
+                .OrderByDescending(e => e.EventDate);
+            var total = await query.CountAsync();
+            var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+            return new PagedResultDTO<EventResponseDTO> { PageNumber = pageNumber, PageSize = pageSize, TotalRecords = total, Data = data.Select(e => MapToDTO(e, 0)) };
         }
 
         public async Task<IEnumerable<EventResponseDTO>> GetApprovedEventsAsync()
@@ -448,34 +507,104 @@ namespace EventCalenderApi.Services
             var data = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
                 .Where(e => e.ApprovalStatus == ApprovalStatus.APPROVED)
+                .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
-
             return data.Select(e => MapToDTO(e, 0));
         }
 
+        public async Task<PagedResultDTO<EventResponseDTO>> GetApprovedEventsPagedAsync(int pageNumber, int pageSize)
+        {
+            var query = _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.APPROVED)
+                .OrderByDescending(e => e.EventDate);
+            var total = await query.CountAsync();
+            var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+            return new PagedResultDTO<EventResponseDTO> { PageNumber = pageNumber, PageSize = pageSize, TotalRecords = total, Data = data.Select(e => MapToDTO(e, 0)) };
+        }
+
         // ================= EXPIRED EVENTS =================
-        // Events whose date has passed (EventEndDate or EventDate < today)
         public async Task<IEnumerable<EventResponseDTO>> GetExpiredEventsAsync()
         {
             var today = DateTime.UtcNow.Date;
-
             var data = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
-                .Where(e =>
-                    (e.EventEndDate != null ? e.EventEndDate.Value.Date : e.EventDate.Date) < today)
+                .Where(e => (e.EventEndDate != null ? e.EventEndDate.Value.Date : e.EventDate.Date) < today)
                 .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
-
             var result = new List<EventResponseDTO>();
             foreach (var ev in data)
             {
                 int bookedCount = ev.IsPaidEvent
                     ? await _paymentRepo.GetQueryable().CountAsync(p => p.EventId == ev.EventId && p.Status == PaymentStatus.SUCCESS)
                     : await _registrationRepo.GetQueryable().CountAsync(r => r.EventId == ev.EventId && r.Status == RegistrationStatus.REGISTERED);
-
                 result.Add(MapToDTO(ev, bookedCount));
             }
             return result;
+        }
+
+        public async Task<PagedResultDTO<EventResponseDTO>> GetExpiredEventsPagedAsync(int pageNumber, int pageSize)
+        {
+            var today = DateTime.UtcNow.Date;
+            var query = _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e => (e.EventEndDate != null ? e.EventEndDate.Value.Date : e.EventDate.Date) < today)
+                .OrderByDescending(e => e.EventDate);
+            var total = await query.CountAsync();
+            var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+            var result = new List<EventResponseDTO>();
+            foreach (var ev in data)
+            {
+                int bookedCount = ev.IsPaidEvent
+                    ? await _paymentRepo.GetQueryable().CountAsync(p => p.EventId == ev.EventId && p.Status == PaymentStatus.SUCCESS)
+                    : await _registrationRepo.GetQueryable().CountAsync(r => r.EventId == ev.EventId && r.Status == RegistrationStatus.REGISTERED);
+                result.Add(MapToDTO(ev, bookedCount));
+            }
+            return new PagedResultDTO<EventResponseDTO> { PageNumber = pageNumber, PageSize = pageSize, TotalRecords = total, Data = result };
+        }
+
+        // ================= CANCELLED EVENTS PAGED =================
+        public async Task<PagedResultDTO<EventResponseDTO>> GetCancelledEventsPagedAsync(int pageNumber, int pageSize)
+        {
+            var query = _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .Where(e => e.Status == EventStatus.CANCELLED)
+                .OrderByDescending(e => e.EventDate);
+
+            var total = await query.CountAsync();
+            var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            return new PagedResultDTO<EventResponseDTO>
+            {
+                PageNumber   = pageNumber,
+                PageSize     = pageSize,
+                TotalRecords = total,
+                Data         = data.Select(e => MapToDTO(e, 0))
+            };
+        }
+
+        // ================= ALL EVENTS PAGED (ADMIN) =================
+        public async Task<PagedResultDTO<EventResponseDTO>> GetAllEventsPagedAsync(int pageNumber, int pageSize, string? search)
+        {
+            var query = _eventRepo.GetQueryable()
+                .Include(e => e.CreatedBy)
+                .OrderByDescending(e => e.EventDate)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(e => e.Title.Contains(search) ||
+                                         (e.Location != null && e.Location.Contains(search)));
+
+            var total = await query.CountAsync();
+            var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            return new PagedResultDTO<EventResponseDTO>
+            {
+                PageNumber   = pageNumber,
+                PageSize     = pageSize,
+                TotalRecords = total,
+                Data         = data.Select(e => MapToDTO(e, 0))
+            };
         }
 
         // ================= MAPPER =================

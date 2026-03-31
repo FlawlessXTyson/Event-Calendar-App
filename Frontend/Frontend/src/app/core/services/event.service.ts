@@ -68,15 +68,28 @@ export class EventService {
 
   /** GET /api/Event/pending */
   getPending()                  { return this.http.get<EventResponse[]>(`${this.base}/pending`); }
+  getPendingPaged(p: number, s: number) { return this.http.get<PagedResult<EventResponse>>(`${this.base}/pending/paged?pageNumber=${p}&pageSize=${s}`); }
 
   /** GET /api/Event/rejected */
   getRejected()                 { return this.http.get<EventResponse[]>(`${this.base}/rejected`); }
+  getRejectedPaged(p: number, s: number) { return this.http.get<PagedResult<EventResponse>>(`${this.base}/rejected/paged?pageNumber=${p}&pageSize=${s}`); }
 
   /** GET /api/Event/approved */
   getApproved()                 { return this.http.get<EventResponse[]>(`${this.base}/approved`); }
+  getApprovedPaged(p: number, s: number) { return this.http.get<PagedResult<EventResponse>>(`${this.base}/approved/paged?pageNumber=${p}&pageSize=${s}`); }
 
   /** GET /api/Event/expired — ADMIN only */
   getExpired()                  { return this.http.get<EventResponse[]>(`${this.base}/expired`); }
+  getExpiredPaged(p: number, s: number) { return this.http.get<PagedResult<EventResponse>>(`${this.base}/expired/paged?pageNumber=${p}&pageSize=${s}`); }
+
+  getCancelledPaged(p: number, s: number) { return this.http.get<PagedResult<EventResponse>>(`${this.base}/cancelled/paged?pageNumber=${p}&pageSize=${s}`); }
+
+  /** GET /api/Event/all/paged — ADMIN all events with optional search */
+  getAllPaged(p: number, s: number, search?: string) {
+    let url = `${this.base}/all/paged?pageNumber=${p}&pageSize=${s}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return this.http.get<PagedResult<EventResponse>>(url);
+  }
 
   // ── USER ONLY ────────────────────────────────────────────────────────────
   /** GET /api/Event/registered — events user is registered for */

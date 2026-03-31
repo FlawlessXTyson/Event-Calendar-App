@@ -15,7 +15,8 @@ interface EvItem {
   payments: PaymentResponse[];
   page: number;
   pageSize: number;
-  total: number;
+  total: number;       // total registrations (all statuses) for pagination
+  activeTotal: number; // active registrations only — for badge
   loading: boolean;
   expanded: boolean;
 }
@@ -134,9 +135,9 @@ interface EvItem {
                     <span class="badge" [class]="approvalBadge(item.event.approvalStatus)">
                       {{ approvalLabel(item.event.approvalStatus) }}
                     </span>
-                    @if (item.total > 0) {
+                    @if (item.activeTotal > 0) {
                       <span style="background:var(--primary);color:#fff;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:var(--r-full);">
-                        {{ item.total }} attendee{{ item.total !== 1 ? 's' : '' }}
+                        {{ item.activeTotal }} attendee{{ item.activeTotal !== 1 ? 's' : '' }}
                       </span>
                     } @else if (!item.loading) {
                       <span style="background:var(--surface-2);color:var(--text-muted);font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:var(--r-full);">
@@ -170,7 +171,8 @@ interface EvItem {
                           <thead>
                             <tr>
                               <th>#</th><th>Attendee</th><th>Email</th>
-                              <th>Registered At</th><th>Status</th><th>Payment</th><th>Net Earning</th>
+                              <th>Registered At</th><th>Status</th><th>Payment</th>
+                             
                             </tr>
                           </thead>
                           <tbody>
@@ -196,15 +198,7 @@ interface EvItem {
                                     <span class="badge badge-success">Free</span>
                                   }
                                 </td>
-                                <td>
-                                  @if (getPayment(item, r.userId); as pay) {
-                                    <span style="font-weight:700;color:var(--success);">
-                                      &#8377;{{ netEarning(pay) | number:'1.0-0' }}
-                                    </span>
-                                  } @else {
-                                    <span style="color:var(--text-muted);">—</span>
-                                  }
-                                </td>
+                              
                               </tr>
                             }
                           </tbody>
@@ -266,7 +260,7 @@ export class EventRegistrationsComponent implements OnInit {
     return this.allItems().filter(i => i.event.eventDate.startsWith(d));
   });
 
-  totalRegs = computed(() => this.allItems().reduce((s, i) => s + i.total, 0));
+  totalRegs = computed(() => this.allItems().reduce((s, i) => s + i.activeTotal, 0));
   totalRev  = computed(() =>
     this.allItems().reduce((s, i) =>
       s + i.payments.filter(p => p.status === PaymentStatus.SUCCESS).reduce((a, p) => a + p.amountPaid, 0), 0)
@@ -281,7 +275,7 @@ export class EventRegistrationsComponent implements OnInit {
       next: evs => {
         this.allItems.set(evs.map(ev => ({
           event: ev, regs: [], payments: [],
-          page: 1, pageSize: 10, total: 0,
+          page: 1, pageSize: 10, total: 0, activeTotal: 0,
           loading: false, expanded: false
         })));
         this.loadingEvents.set(false);
@@ -312,8 +306,18 @@ export class EventRegistrationsComponent implements OnInit {
       next: (res: PagedResult<EventRegistrationResponse>) => {
         item.regs    = res.data;
         item.total   = res.totalRecords;
+        // Count active registrations from loaded page + update activeTotal
+        // Load all regs to get accurate active count for badge
         item.loading = false;
         this.allItems.update(l => [...l]);
+        // Load all regs to compute active count accurately
+        this.regSvc.getByEvent(item.event.eventId).subscribe({
+          next: allRegs => {
+            item.activeTotal = allRegs.filter(r => r.status === RegistrationStatus.REGISTERED).length;
+            this.allItems.update(l => [...l]);
+          },
+          error: () => {}
+        });
       },
       error: () => { item.loading = false; this.allItems.update(l => [...l]); }
     });

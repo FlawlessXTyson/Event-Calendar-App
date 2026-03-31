@@ -8,6 +8,7 @@ import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
+import { WalletService } from '../../../core/services/wallet.service';
 import {
   EventResponse, EventRegistrationResponse, PaymentResponse,
   RegistrationStatus, PaymentStatus, ApprovalStatus, EventCategory, TicketResponse
@@ -387,6 +388,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   private regSvc     = inject(RegistrationService);
   private paySvc     = inject(PaymentService);
   private ticketSvc  = inject(TicketService);
+  private walletSvc  = inject(WalletService);
   private toast      = inject(ToastService);
 
   ApprovalStatus = ApprovalStatus;
@@ -459,21 +461,25 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     const ev = this.event()!;
     if (!this.selectedPayMethod()) return;
     this.payLoading.set(true);
-    this.paySvc.create({ eventId: ev.eventId }).subscribe({
-      next: payment => {
-        this.myPayment.set(payment);
-        this.regState.clearPending();
-        this.toast.success(`Payment of ₹${ev.ticketPrice} successful!`, 'Payment Successful');
-        this.payLoading.set(false);
-        this.closePayModal();
-        // Auto-generate ticket
-        this.ticketSvc.generate(ev.eventId, payment.paymentId).subscribe({
-          next: t => { this.myTicket.set(t); this.toast.info('Your ticket is ready!', '🎟 Ticket Generated'); },
-          error: () => {}
-        });
-      },
-      error: () => this.payLoading.set(false)
-    });
+
+    const onSuccess = (payment: any) => {
+      this.myPayment.set(payment);
+      this.regState.clearPending();
+      this.toast.success(`Payment of ₹${ev.ticketPrice} successful!`, 'Payment Successful');
+      this.payLoading.set(false);
+      this.closePayModal();
+      this.ticketSvc.generate(ev.eventId, payment.paymentId).subscribe({
+        next: t => { this.myTicket.set(t); this.toast.info('Your ticket is ready!', '🎟 Ticket Generated'); },
+        error: () => {}
+      });
+    };
+    const onError = () => this.payLoading.set(false);
+
+    if (this.selectedPayMethod() === 'wallet') {
+      this.walletSvc.payWithWallet({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    } else {
+      this.paySvc.create({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    }
   }
 
   printTicket() { window.print(); }

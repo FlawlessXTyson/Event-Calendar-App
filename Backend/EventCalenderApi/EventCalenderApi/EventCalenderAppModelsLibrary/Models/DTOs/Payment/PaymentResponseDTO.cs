@@ -23,5 +23,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Payment
         public DateTime PaymentDate { get; set; }
 
         public DateTime? RefundedAt { get; set; }
+
+        public string? CancelledBy { get; set; }  // "USER", "ADMIN", "ORGANIZER"
     }
 }

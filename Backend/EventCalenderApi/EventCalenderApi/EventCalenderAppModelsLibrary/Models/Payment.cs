@@ -18,6 +18,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models
 
         public float? RefundedAmount { get; set; }
         public DateTime? RefundedAt { get; set; }
+        public string? CancelledBy { get; set; }  // "USER", "ADMIN", "ORGANIZER"
 
         public PaymentStatus Status { get; set; } = PaymentStatus.PENDING;
 
