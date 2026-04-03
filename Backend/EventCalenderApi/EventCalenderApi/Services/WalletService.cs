@@ -135,6 +135,24 @@ namespace EventCalenderApi.Services
                 PaymentDate      = DateTime.UtcNow
             });
 
+            // ── Credit organizer wallet with their share ──────────────────
+            await CreditAsync(
+                ev.CreatedByUserId,
+                organizerAmount,
+                "ORGANIZER_EARNING",
+                $"Earnings from event: {ev.Title} (Payment #{payment.PaymentId})");
+
+            // ── Credit admin wallet with commission ───────────────────────
+            int adminId = ev.ApprovedByUserId ?? 0;
+            if (adminId > 0 && commission > 0)
+            {
+                await CreditAsync(
+                    adminId,
+                    commission,
+                    "COMMISSION",
+                    $"Commission from event: {ev.Title} (Payment #{payment.PaymentId})");
+            }
+
             await _auditRepo.AddAsync(new AuditLog
             {
                 UserId   = userId,
@@ -199,13 +217,22 @@ namespace EventCalenderApi.Services
             wallet.UpdatedAt  = DateTime.UtcNow;
             await _walletRepo.UpdateAsync(wallet.WalletId, wallet);
 
+            var txSource = source switch
+            {
+                "REFUND"        => WalletTransactionSource.REFUND,
+                "COMPENSATION"  => WalletTransactionSource.COMPENSATION,
+                "PENALTY"       => WalletTransactionSource.PENALTY,
+                "COMMISSION"    => WalletTransactionSource.COMMISSION,
+                _               => WalletTransactionSource.PAYMENT
+            };
+
             await _txRepo.AddAsync(new WalletTransaction
             {
                 WalletId    = wallet.WalletId,
                 UserId      = userId,
                 Amount      = amount,
                 Type        = WalletTransactionType.DEBIT,
-                Source      = WalletTransactionSource.PAYMENT,
+                Source      = txSource,
                 Description = description
             });
         }
