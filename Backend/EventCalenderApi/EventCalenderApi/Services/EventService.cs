@@ -516,7 +516,7 @@ namespace EventCalenderApi.Services
         {
             var query = _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
-                .Where(e => e.ApprovalStatus == ApprovalStatus.APPROVED)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.APPROVED && e.Status != EventStatus.CANCELLED)
                 .OrderByDescending(e => e.EventDate);
             var total = await query.CountAsync();
             var data  = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
