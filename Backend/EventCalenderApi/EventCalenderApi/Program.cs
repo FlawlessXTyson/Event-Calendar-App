@@ -83,6 +83,7 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IRefundRequestService, RefundRequestService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddHttpContextAccessor();
 // CORS
