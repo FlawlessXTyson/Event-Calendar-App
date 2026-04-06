@@ -1,0 +1,23 @@
+<div class="dash-layout">
+  @if (sidebarOpen()) { <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;" (click)="sidebarOpen.set(false)"></div> }
+  <app-sidebar [items]="nav" roleLabel="Organizer" [open]="sidebarOpen()" (navClick)="sidebarOpen.set(false)" />
+  <div class="dash-main">
+    <header class="dash-header">
+      <button type="button" class="btn btn-ghost btn-icon hamburger" (click)="sidebarOpen.set(true)">
+        <span class="material-icons-round">menu</span>
+      </button>
+      <div class="page-title">Organizer Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="text-align:right;">
+          <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">{{ auth.userName() }}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);">{{ auth.userEmail() }}</div>
+        </div>
+        <span class="badge badge-warning">ORGANIZER</span>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Sign Out" (click)="auth.logout()" style="color:var(--danger);">
+          <span class="material-icons-round">logout</span>
+        </button>
+      </div>
+    </header>
+    <div class="dash-content"><router-outlet /></div>
+  </div>
+</div>

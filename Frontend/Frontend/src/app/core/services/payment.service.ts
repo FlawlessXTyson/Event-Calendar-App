@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   PaymentRequest, PaymentResponse,
-  CommissionSummary, OrganizerEarnings, EventWiseEarnings
+  CommissionSummary, OrganizerEarnings, EventWiseEarnings, PagedResult
 } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
@@ -64,5 +64,13 @@ export class PaymentService {
    */
   getEventWiseEarnings() {
     return this.http.get<EventWiseEarnings[]>(`${this.base}/organizer-event-earnings`);
+  }
+
+  /** GET /api/Payment/organizer-refunds — ORGANIZER only, paginated */
+  getOrganizerRefunds(pageNumber: number, pageSize: number) {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber)
+      .set('pageSize', pageSize);
+    return this.http.get<PagedResult<PaymentResponse>>(`${this.base}/organizer-refunds`, { params });
   }
 }

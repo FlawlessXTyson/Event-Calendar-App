@@ -293,39 +293,53 @@ namespace EventCalenderApi.Controllers
         [Authorize(Roles = "ADMIN")]
         [HttpGet("pending")]
         public async Task<IActionResult> GetPendingEvents()
-        {
-            return Ok(await _service.GetPendingEventsAsync());
-        }
+            => Ok(await _service.GetPendingEventsAsync());
 
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("pending/paged")]
+        public async Task<IActionResult> GetPendingEventsPaged(int pageNumber = 1, int pageSize = 10)
+            => Ok(await _service.GetPendingEventsPagedAsync(pageNumber, pageSize));
 
-        /// <summary>
-        /// Retrieves a list of events that have been rejected and are accessible only to users with the ADMIN role.
-        /// </summary>
-        /// <remarks>This endpoint is restricted to users with the ADMIN role. Use this method to review
-        /// or manage events that have been marked as rejected.</remarks>
-        /// <returns>An IActionResult containing the collection of rejected events. The result is an HTTP 200 response with the
-        /// list of rejected events if successful.</returns>
         // ================= ADMIN: REJECTED EVENTS =================
         [Authorize(Roles = "ADMIN")]
         [HttpGet("rejected")]
         public async Task<IActionResult> GetRejectedEvents()
-        {
-            return Ok(await _service.GetRejectedEventsAsync());
-        }
+            => Ok(await _service.GetRejectedEventsAsync());
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("rejected/paged")]
+        public async Task<IActionResult> GetRejectedEventsPaged(int pageNumber = 1, int pageSize = 10)
+            => Ok(await _service.GetRejectedEventsPagedAsync(pageNumber, pageSize));
 
         [Authorize(Roles = "ADMIN")]
         [HttpGet("approved")]
         public async Task<IActionResult> GetApprovedEvents()
-        {
-            return Ok(await _service.GetApprovedEventsAsync());
-        }
+            => Ok(await _service.GetApprovedEventsAsync());
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("approved/paged")]
+        public async Task<IActionResult> GetApprovedEventsPaged(int pageNumber = 1, int pageSize = 10)
+            => Ok(await _service.GetApprovedEventsPagedAsync(pageNumber, pageSize));
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("all/paged")]
+        public async Task<IActionResult> GetAllEventsPaged(int pageNumber = 1, int pageSize = 10, string? search = null)
+            => Ok(await _service.GetAllEventsPagedAsync(pageNumber, pageSize, search));
 
         // ================= EXPIRED EVENTS =================
         [Authorize(Roles = "ADMIN")]
         [HttpGet("expired")]
         public async Task<IActionResult> GetExpiredEvents()
-        {
-            return Ok(await _service.GetExpiredEventsAsync());
-        }
+            => Ok(await _service.GetExpiredEventsAsync());
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("expired/paged")]
+        public async Task<IActionResult> GetExpiredEventsPaged(int pageNumber = 1, int pageSize = 10)
+            => Ok(await _service.GetExpiredEventsPagedAsync(pageNumber, pageSize));
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("cancelled/paged")]
+        public async Task<IActionResult> GetCancelledEventsPaged(int pageNumber = 1, int pageSize = 10)
+            => Ok(await _service.GetCancelledEventsPagedAsync(pageNumber, pageSize));
     }
 }

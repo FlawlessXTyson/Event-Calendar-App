@@ -8,9 +8,9 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideZoneChangeDetection({ eventCoalescing: true }), // tells angular when to render the ui
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions()), // smooth trnasition whn routes
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])), //
     provideAnimationsAsync(),
   ]
 };

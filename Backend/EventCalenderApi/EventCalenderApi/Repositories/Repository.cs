@@ -17,7 +17,7 @@ namespace EventCalenderApi.Repositories
 
         public IQueryable<T> GetQueryable()
         {
-            return _dbSet;
+            return _dbSet; //  it returns the query builder , it returns an IQueryable<T> which can be further queried by the caller
         }
 
         

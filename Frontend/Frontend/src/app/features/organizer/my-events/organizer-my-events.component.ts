@@ -10,141 +10,8 @@ import { EventResponse, ApprovalStatus, EventStatus } from '../../../core/models
   selector: 'app-organizer-my-events',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  template: `
-    <div>
-      <div class="section-header" style="margin-bottom:24px;">
-        <div><h1 style="font-size:1.5rem;">My Events</h1><p>{{ totalRecords() }} events created</p></div>
-        <a routerLink="/organizer/create-event" class="btn btn-primary btn-sm"><span class="material-icons-round">add</span> New Event</a>
-      </div>
-
-      <!-- Date filter + clear -->
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="material-icons-round" style="color:var(--text-muted);">calendar_today</span>
-          <input type="date" class="form-control" style="width:180px;"
-            [(ngModel)]="filterDate"
-            (change)="onDateChange()"
-            placeholder="Filter by date" />
-        </div>
-        @if (filterDate) {
-          <button type="button" class="btn btn-ghost btn-sm" (click)="clearDate()">
-            <span class="material-icons-round" style="font-size:16px;">close</span> Clear
-          </button>
-          <span style="font-size:.85rem;color:var(--text-muted);">
-            Showing events on {{ filterDate | date:'EEE, MMM d, y' }}
-          </span>
-        }
-      </div>
-
-      @if (loading()) { <div class="loading-center"><div class="spinner"></div></div> }
-      @else if (events().length === 0) {
-        <div class="empty-state">
-          <span class="material-icons-round empty-icon">event_busy</span>
-          <h3>{{ filterDate ? 'No events on this date' : 'No events yet' }}</h3>
-          @if (!filterDate) { <a routerLink="/organizer/create-event" class="btn btn-primary btn-sm" style="margin-top:16px;">Create Event</a> }
-        </div>
-      } @else {
-        <div class="table-wrapper">
-          <table>
-            <thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Location</th><th>Type</th><th>Approval</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              @for (ev of events(); track ev.eventId) {
-                <tr>
-                  <td style="font-weight:600;max-width:180px;" class="truncate">{{ ev.title }}</td>
-                  <td style="white-space:nowrap;">{{ ev.eventDate | date:'MMM d, y' }}</td>
-                  <td style="white-space:nowrap;color:var(--text-muted);font-size:.82rem;">
-                    @if (ev.startTime) { {{ fmt(ev.startTime) }}{{ ev.endTime ? ' – ' + fmt(ev.endTime) : '' }} }
-                    @else { — }
-                  </td>
-                  <td style="color:var(--text-muted);max-width:160px;" class="truncate">{{ ev.location || '—' }}</td>
-                  <td>@if (ev.isPaidEvent) { <span class="badge badge-warning">₹{{ ev.ticketPrice | number:'1.0-0' }}</span> } @else { <span class="badge badge-success">Free</span> }</td>
-                  <td><span class="badge" [class]="approvalBadge(ev.approvalStatus)">{{ approvalLabel(ev.approvalStatus) }}</span></td>
-                  <td>
-                    @if ((ev.status ?? 1) === EventStatus.CANCELLED) {
-                      <span class="badge badge-danger">Cancelled</span>
-                    } @else if (ev.hasEnded) {
-                      <span class="badge badge-info">Completed</span>
-                    } @else if (ev.hasStarted) {
-                      <span class="badge" style="background:#FEF3C7;color:#92400E;">🟡 Ongoing</span>
-                    } @else {
-                      <span class="badge badge-success">Active</span>
-                    }
-                  </td>
-                  <td>
-                    <div style="display:flex;gap:6px;">
-                      @if ((ev.status ?? 1) === EventStatus.ACTIVE && !ev.hasEnded) {
-                        <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling() === ev.eventId" (click)="cancelEvent(ev)">
-                          @if (cancelling() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
-                        </button>
-                      }
-                      @if (ev.hasEnded) {
-                        <span class="badge badge-info" style="font-size:.78rem;padding:4px 10px;">✓ Completed</span>
-                      }
-                      @if (ev.isPaidEvent) {
-                        <button type="button" class="btn btn-ghost btn-sm btn-icon" (click)="viewRefund(ev)" title="Refund Summary">
-                          <span class="material-icons-round" style="font-size:18px;">summarize</span>
-                        </button>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        @if (totalPages() > 1) {
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;flex-wrap:wrap;gap:8px;">
-            <span style="font-size:.82rem;color:var(--text-muted);">
-              Page {{ currentPage() }} of {{ totalPages() }} &nbsp;·&nbsp; {{ totalRecords() }} events
-            </span>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <button type="button" class="btn btn-ghost btn-sm" [disabled]="currentPage() === 1" (click)="goPage(1)">
-                <span class="material-icons-round" style="font-size:16px;">first_page</span>
-              </button>
-              <button type="button" class="btn btn-ghost btn-sm" [disabled]="currentPage() === 1" (click)="goPage(currentPage() - 1)">
-                <span class="material-icons-round" style="font-size:16px;">chevron_left</span>
-              </button>
-              @for (p of pageNumbers(); track p) {
-                <button type="button" class="btn btn-sm"
-                  [class]="p === currentPage() ? 'btn-primary' : 'btn-ghost'"
-                  (click)="goPage(p)">{{ p }}</button>
-              }
-              <button type="button" class="btn btn-ghost btn-sm" [disabled]="currentPage() === totalPages()" (click)="goPage(currentPage() + 1)">
-                <span class="material-icons-round" style="font-size:16px;">chevron_right</span>
-              </button>
-              <button type="button" class="btn btn-ghost btn-sm" [disabled]="currentPage() === totalPages()" (click)="goPage(totalPages())">
-                <span class="material-icons-round" style="font-size:16px;">last_page</span>
-              </button>
-            </div>
-          </div>
-        }
-      }
-
-      <!-- Refund Summary Modal -->
-      @if (refundModal()) {
-        <div class="modal-backdrop" (click)="refundModal.set(null)">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header"><h3>Refund Summary</h3></div>
-            <div class="modal-body">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div style="text-align:center;padding:20px;background:var(--surface-2);border-radius:var(--r-sm);">
-                  <div style="font-size:2rem;font-weight:800;">{{ refundModal()!.totalUsersRefunded }}</div>
-                  <div style="color:var(--text-muted);font-size:.85rem;">Users Refunded</div>
-                </div>
-                <div style="text-align:center;padding:20px;background:var(--success-light);border-radius:var(--r-sm);">
-                  <div style="font-size:2rem;font-weight:800;color:var(--success);">₹{{ refundModal()!.totalRefundAmount | number:'1.0-0' }}</div>
-                  <div style="color:var(--text-muted);font-size:.85rem;">Total Refunded</div>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" (click)="refundModal.set(null)">Close</button></div>
-          </div>
-        </div>
-      }
-    </div>
-  `
+  templateUrl: './organizer-my-events.component.html',
+  styleUrl: './organizer-my-events.component.css'
 })
 export class OrganizerMyEventsComponent implements OnInit {
   private eventSvc = inject(EventService);
@@ -154,7 +21,7 @@ export class OrganizerMyEventsComponent implements OnInit {
   events       = signal<EventResponse[]>([]);
   loading      = signal(true);
   cancelling   = signal<number | null>(null);
-  refundModal  = signal<{ totalUsersRefunded: number; totalRefundAmount: number } | null>(null);
+  refundModal  = signal<{ totalUsersRefunded: number; totalRefundAmount: number; ticketPrice: number; eventTitle: string } | null>(null);
 
   currentPage  = signal(1);
   totalRecords = signal(0);
@@ -214,12 +81,19 @@ export class OrganizerMyEventsComponent implements OnInit {
   clearDate()    { this.filterDate = ''; this.currentPage.set(1); this.load(); }
 
   cancelEvent(ev: EventResponse) {
-    if (!confirm(`Cancel "${ev.title}"? All paid attendees will be automatically refunded.`)) return;
+    const isPending = ev.approvalStatus === ApprovalStatus.PENDING;
+    const msg = isPending
+      ? `"${ev.title}" is currently under review.\n\nCancelling will withdraw it from approval. Are you sure?`
+      : `Cancel "${ev.title}"? All paid attendees will be automatically refunded.`;
+    if (!confirm(msg)) return;
     this.cancelling.set(ev.eventId);
     this.eventSvc.cancel(ev.eventId).subscribe({
       next: () => {
         this.events.update(es => es.map(e => e.eventId === ev.eventId ? { ...e, status: EventStatus.CANCELLED } : e));
-        this.toast.success(`"${ev.title}" cancelled. Refunds processed.`, 'Event Cancelled');
+        const toastMsg = isPending
+          ? `"${ev.title}" withdrawn from review.`
+          : `"${ev.title}" cancelled. Refunds processed.`;
+        this.toast.success(toastMsg, 'Event Cancelled');
         this.cancelling.set(null);
       },
       error: () => this.cancelling.set(null)
@@ -227,7 +101,10 @@ export class OrganizerMyEventsComponent implements OnInit {
   }
 
   viewRefund(ev: EventResponse) {
-    this.eventSvc.getRefundSummary(ev.eventId).subscribe({ next: s => this.refundModal.set(s), error: () => {} });
+    this.eventSvc.getRefundSummary(ev.eventId).subscribe({
+      next: s => this.refundModal.set({ ...s, ticketPrice: ev.ticketPrice, eventTitle: ev.title }),
+      error: () => {}
+    });
   }
 
   fmt(t: string): string {

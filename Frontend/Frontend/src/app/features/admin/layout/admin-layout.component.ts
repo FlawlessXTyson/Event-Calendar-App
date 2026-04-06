@@ -8,26 +8,8 @@ import { AuthService } from '../../../core/services/auth.service';
   selector: 'app-admin-layout',
   standalone: true,
   imports: [RouterOutlet, CommonModule, SidebarComponent],
-  template: `
-    <div class="dash-layout">
-      @if (sidebarOpen()) { <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;" (click)="sidebarOpen.set(false)"></div> }
-      <app-sidebar [items]="nav" roleLabel="Administrator" [open]="sidebarOpen()" (navClick)="sidebarOpen.set(false)" />
-      <div class="dash-main">
-        <header class="dash-header">
-          <button type="button" class="btn btn-ghost btn-icon" style="display:none;" id="hamburger" (click)="sidebarOpen.set(true)">
-            <span class="material-icons-round">menu</span>
-          </button>
-          <div class="page-title">Admin Panel</div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:.85rem;color:var(--text-muted);">{{ auth.userEmail() }}</span>
-            <span class="badge badge-danger">ADMIN</span>
-          </div>
-        </header>
-        <div class="dash-content"><router-outlet /></div>
-      </div>
-    </div>
-  `,
-  styles: [`@media(max-width:768px){ #hamburger{ display:flex!important; } }`]
+  templateUrl: './admin-layout.component.html',
+  styleUrls: ['./admin-layout.component.css']
 })
 export class AdminLayoutComponent {
   auth        = inject(AuthService);
@@ -38,9 +20,9 @@ export class AdminLayoutComponent {
     { label: 'Users',         icon: 'group',              route: '/admin/users' },
     { label: 'Calendar',      icon: 'calendar_month',     route: '/admin/calendar' },
     { label: 'Payments',      icon: 'account_balance',    route: '/admin/payments' },
+    { label: 'My Wallet',     icon: 'wallet',             route: '/admin/wallet' },
     { label: 'Role Requests', icon: 'upgrade',            route: '/admin/role-requests' },
-    { label: 'Audit Logs',      icon: 'receipt_long',        route: '/admin/audit-logs' },
-    { label: 'Refund Requests', icon: 'currency_rupee',       route: '/admin/refund-requests' },
-    { label: 'Profile',         icon: 'manage_accounts',      route: '/admin/profile' },
+    { label: 'Audit Logs',    icon: 'receipt_long',     route: '/admin/audit-logs' },
+    { label: 'Profile',       icon: 'manage_accounts',  route: '/admin/profile' },
   ];
 }

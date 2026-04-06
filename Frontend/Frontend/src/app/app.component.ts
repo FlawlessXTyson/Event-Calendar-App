@@ -8,10 +8,8 @@ import { ReminderNotificationService } from './core/services/reminder-notificati
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastContainerComponent],
-  template: `
-    <router-outlet />
-    <app-toast-container />
-  `
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
   private auth            = inject(AuthService);

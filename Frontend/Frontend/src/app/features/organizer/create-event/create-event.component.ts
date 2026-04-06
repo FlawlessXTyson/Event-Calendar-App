@@ -51,170 +51,8 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
   selector: 'app-create-event',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div style="max-width:760px;">
-      <div style="margin-bottom:24px;">
-        <h1 style="font-size:1.5rem;">Create New Event</h1>
-        <p>Fill in the details. Events are reviewed by an admin before going live.</p>
-      </div>
-      <div class="alert alert-info" style="margin-bottom:20px;background:linear-gradient(135deg,var(--primary-light),#E0F2FE);border-left:4px solid var(--primary);border-radius:var(--r);">
-        <span class="material-icons-round" style="color:var(--primary);">auto_awesome</span>
-        <div>
-          <div style="font-weight:700;color:var(--primary);font-size:.95rem;">✨ Bring your vision to life!</div>
-          <div style="font-size:.85rem;color:var(--text-secondary);margin-top:2px;">Create an event that inspires, connects, and leaves a lasting impression. Your next great event starts here.</div>
-        </div>
-      </div>
-      <div class="card card-body">
-        <form [formGroup]="form" (ngSubmit)="submit()">
-
-          <!-- Basic Info -->
-          <h3 style="margin-bottom:16px;font-size:1rem;">Basic Information</h3>
-          <div class="form-group">
-            <label class="form-label">Event Title <span style="color:var(--danger)">*</span></label>
-            <input formControlName="title" type="text" class="form-control" [class.is-invalid]="fi('title')"
-              placeholder="e.g. Annual Tech Conference 2025" maxlength="200" />
-            @if (fi('title')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Title is required</div> }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea formControlName="description" class="form-control"
-              placeholder="Describe your event, agenda, speakers..." rows="4"></textarea>
-          </div>
-
-          <!-- Location Dropdowns -->
-          <h3 style="margin-bottom:12px;font-size:1rem;">Location</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Country <span style="color:var(--danger)">*</span></label>
-              <select formControlName="country" class="form-control" [class.is-invalid]="fi('country')"
-                (change)="onCountryChange()">
-                <option value="">-- Select Country --</option>
-                @for (c of countries; track c) {
-                  <option [value]="c">{{ c }}</option>
-                }
-              </select>
-              @if (fi('country')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Country is required</div> }
-            </div>
-            <div class="form-group">
-              <label class="form-label">State <span style="color:var(--danger)">*</span></label>
-              <select formControlName="state" class="form-control" [class.is-invalid]="fi('state')"
-                [disabled]="!form.get('country')?.value"
-                (change)="onStateChange()">
-                <option value="">-- Select State --</option>
-                @for (s of availableStates(); track s) {
-                  <option [value]="s">{{ s }}</option>
-                }
-              </select>
-              @if (fi('state')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>State is required</div> }
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">City <span style="color:var(--danger)">*</span></label>
-              <select formControlName="city" class="form-control" [class.is-invalid]="fi('city')"
-                [disabled]="!form.get('state')?.value">
-                <option value="">-- Select City --</option>
-                @for (c of availableCities(); track c) {
-                  <option [value]="c">{{ c }}</option>
-                }
-              </select>
-              @if (fi('city')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>City is required</div> }
-            </div>
-            <div class="form-group">
-              <label class="form-label">Address / Venue</label>
-              <input formControlName="address" type="text" class="form-control"
-                placeholder="e.g. Trade Centre, Hall A, 2nd Floor" />
-              <div class="form-hint">Detailed venue address (optional)</div>
-            </div>
-          </div>
-          @if (locationPreview()) {
-            <div class="form-group">
-              <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:10px 14px;font-size:.875rem;color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-right:4px;">location_on</span>
-                <strong>Location:</strong> {{ locationPreview() }}
-              </div>
-            </div>
-          }
-
-          <div class="divider"></div>
-          <h3 style="margin-bottom:16px;font-size:1rem;">Date &amp; Time <span style="color:var(--text-muted);font-size:.8rem;">(All times in local timezone)</span></h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Start Date <span style="color:var(--danger)">*</span></label>
-              <input formControlName="eventDate" type="date" class="form-control" [class.is-invalid]="fi('eventDate')" [min]="today" />
-              @if (fi('eventDate')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>{{ dateError() }}</div> }
-            </div>
-            <div class="form-group">
-              <label class="form-label">End Date <span style="color:var(--text-muted);">(multi-day, optional)</span></label>
-              <input formControlName="eventEndDate" type="date" class="form-control"
-                [class.is-invalid]="fi('eventEndDate')"
-                [min]="form.get('eventDate')?.value || today" />
-              @if (fi('eventEndDate')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>End date must be on or after start date</div> }
-              <div class="form-hint">Leave blank for single-day events</div>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Start Time <span style="color:var(--danger)">*</span></label>
-              <input formControlName="startTime" type="time" class="form-control" [class.is-invalid]="fi('startTime')" />
-              @if (fi('startTime')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Start time is required</div> }
-            </div>
-            <div class="form-group">
-              <label class="form-label">End Time <span style="color:var(--danger)">*</span></label>
-              <input formControlName="endTime" type="time" class="form-control" [class.is-invalid]="fi('endTime')" />
-              @if (fi('endTime')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>{{ endTimeError() }}</div> }
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Registration Deadline <span style="color:var(--text-muted);">(optional)</span></label>
-            <input formControlName="registrationDeadline" type="datetime-local" class="form-control"
-              [class.is-invalid]="fi('registrationDeadline')" />
-            @if (fi('registrationDeadline')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>{{ deadlineError() }}</div> }
-            <div class="form-hint">Must be in the future and before the event start date/time.</div>
-          </div>
-
-          <div class="divider"></div>
-          <h3 style="margin-bottom:16px;font-size:1rem;">Capacity &amp; Pricing</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Seats Limit <span style="color:var(--danger)">*</span></label>
-              <input formControlName="seatsLimit" type="number" class="form-control"
-                [class.is-invalid]="fi('seatsLimit')"
-                placeholder="e.g. 100" min="1" />
-              @if (fi('seatsLimit')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Seats limit is required and must be at least 1</div> }
-              <div class="form-hint">Number of seats available for this event.</div>
-            </div>
-            <div></div>
-          </div>
-          <div class="form-group">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-              <input formControlName="isPaidEvent" type="checkbox" style="width:18px;height:18px;accent-color:var(--primary);" />
-              <span class="form-label" style="margin:0;">This is a paid event</span>
-            </label>
-          </div>
-          @if (form.get('isPaidEvent')?.value) {
-            <div class="form-group">
-              <label class="form-label">Ticket Price (&#8377;) <span style="color:var(--danger)">*</span></label>
-              <input formControlName="ticketPrice" type="number" class="form-control"
-                [class.is-invalid]="fi('ticketPrice')"
-                placeholder="e.g. 499" min="1" step="0.01" />
-              @if (fi('ticketPrice')) { <div class="form-error"><span class="material-icons-round" style="font-size:14px;">error</span>Ticket price must be greater than 0 for paid events</div> }
-              <div class="form-hint">Platform deducts 10% commission. You receive 90%.</div>
-            </div>
-          }
-
-          <div style="display:flex;gap:12px;margin-top:8px;">
-            <button type="submit" class="btn btn-primary" [disabled]="saving()">
-              @if (saving()) { <div class="spinner spinner-sm"></div> }
-              @else { <span class="material-icons-round">send</span> }
-              Submit for Review
-            </button>
-            <button type="button" class="btn btn-ghost" (click)="router.navigate(['/organizer/my-events'])">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `
+  templateUrl: './create-event.component.html',
+  styleUrl: './create-event.component.css'
 })
 export class CreateEventComponent implements OnInit {
   private eventSvc = inject(EventService);
@@ -240,7 +78,7 @@ export class CreateEventComponent implements OnInit {
     eventEndDate:         [''],
     startTime:            ['', Validators.required],
     endTime:              ['', Validators.required],
-    registrationDeadline: [''],
+    registrationDeadline: ['', Validators.required],
     seatsLimit:           [null as number|null, [Validators.required, Validators.min(1)]],
     isPaidEvent:          [false],
     ticketPrice:          [0]
@@ -301,9 +139,11 @@ export class CreateEventComponent implements OnInit {
       g.get('ticketPrice')?.setErrors(null);
     }
 
-    // Registration deadline must be in future and before event start
+    // Registration deadline — required + must be in future and before event start
     const deadline = g.get('registrationDeadline')?.value as string;
-    if (deadline) {
+    if (!deadline) {
+      g.get('registrationDeadline')?.setErrors({ required: true });
+    } else {
       const now = new Date();
       const dl  = new Date(deadline);
       if (dl <= now) {
@@ -337,7 +177,8 @@ export class CreateEventComponent implements OnInit {
 
   deadlineError() {
     const e = this.form.get('registrationDeadline')?.errors;
-    if (e?.['pastDeadline']) return 'Registration deadline must be in the future';
+    if (e?.['required'])           return 'Registration deadline is required';
+    if (e?.['pastDeadline'])       return 'Registration deadline must be in the future';
     if (e?.['deadlineAfterEvent']) return 'Registration deadline must be before the event start';
     return '';
   }
@@ -380,18 +221,20 @@ export class CreateEventComponent implements OnInit {
       return;
     }
 
-    if (v.registrationDeadline) {
-      const dl = new Date(v.registrationDeadline);
-      if (dl <= new Date()) {
-        this.toast.error('Registration deadline must be in the future.', 'Validation Error');
+    if (!v.registrationDeadline) {
+      this.toast.error('Registration deadline is required.', 'Validation Error');
+      return;
+    }
+    const dl = new Date(v.registrationDeadline);
+    if (dl <= new Date()) {
+      this.toast.error('Registration deadline must be in the future.', 'Validation Error');
+      return;
+    }
+    if (v.eventDate && v.startTime) {
+      const eventStart = new Date(`${v.eventDate}T${v.startTime}`);
+      if (dl >= eventStart) {
+        this.toast.error('Registration deadline must be before the event start.', 'Validation Error');
         return;
-      }
-      if (v.eventDate && v.startTime) {
-        const eventStart = new Date(`${v.eventDate}T${v.startTime}`);
-        if (dl >= eventStart) {
-          this.toast.error('Registration deadline must be before the event start.', 'Validation Error');
-          return;
-        }
       }
     }
 

@@ -5,6 +5,6 @@ import { DashboardCalendarComponent } from '../../../shared/components/dashboard
   selector: 'app-admin-calendar',
   standalone: true,
   imports: [DashboardCalendarComponent],
-  template: `<app-dashboard-calendar eventRoutePrefix="/events" />`
+  templateUrl: './admin-calendar.component.html'
 })
 export class AdminCalendarComponent {}

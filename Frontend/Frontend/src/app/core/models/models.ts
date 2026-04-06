@@ -221,8 +221,14 @@ export interface PaymentResponse {
   paymentId: number;
   eventId: number;
   eventTitle?: string;
+  eventDate?: string;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
   amountPaid: number;
+  organizerAmount?: number;
   refundedAmount?: number;
+  cancelledBy?: string;  // 'USER' | 'ADMIN' | 'ORGANIZER'
   status: PaymentStatus;
   paymentDate: string;
   refundedAt?: string;
@@ -365,6 +371,30 @@ export interface AuditLog {
   entity: string;
   entityId: number;
   createdAt: string;
+}
+
+// ─── WALLET ───────────────────────────────────────────────────────────────────
+
+export interface WalletDto {
+  walletId: number;
+  userId: number;
+  balance: number;
+  updatedAt: string;
+}
+
+export interface WalletTransactionDto {
+  transactionId: number;
+  userId: number;
+  amount: number;
+  type: string;       // CREDIT / DEBIT
+  source: string;     // PAYMENT, REFUND, ADD_MONEY, etc.
+  description: string;
+  createdAt: string;
+}
+
+export interface AddMoneyRequest {
+  amount: number;
+  paymentMethod: string;
 }
 
 // ─── API ERROR ────────────────────────────────────────────────────────────────

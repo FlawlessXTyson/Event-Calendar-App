@@ -211,6 +211,9 @@ namespace EventCalenderApi.Migrations
                     b.Property<float>("AmountPaid")
                         .HasColumnType("real");
 
+                    b.Property<string>("CancelledBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<float>("CommissionAmount")
                         .HasColumnType("real");
 
@@ -454,6 +457,73 @@ namespace EventCalenderApi.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Wallet", b =>
+                {
+                    b.Property<int>("WalletId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WalletId"));
+
+                    b.Property<float>("Balance")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WalletId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets");
+                });
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.WalletTransaction", b =>
+                {
+                    b.Property<int>("TransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TransactionId"));
+
+                    b.Property<float>("Amount")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TransactionId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("WalletTransactions");
+                });
+
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Event", b =>
                 {
                     b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "ApprovedBy")
@@ -600,6 +670,36 @@ namespace EventCalenderApi.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Wallet", b =>
+                {
+                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.WalletTransaction", b =>
+                {
+                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("EventCalenderApi.EventCalenderAppModelsLibrary.Models.Event", b =>

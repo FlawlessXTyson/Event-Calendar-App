@@ -4,13 +4,23 @@ import { Router, RouterLink } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { RegistrationService } from '../../../core/services/registration.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
+import { WalletService } from '../../../core/services/wallet.service';
 import {
   EventResponse, EventRegistrationResponse, PaymentResponse,
-  RegistrationStatus, PaymentStatus, ApprovalStatus, EventCategory
+  RegistrationStatus, PaymentStatus, ApprovalStatus, EventCategory, TicketResponse
 } from '../../../core/models/models';
+
+type PayMethod = 'upi' | 'netbanking' | 'card' | 'wallet' | '';
+const PAY_METHODS = [
+  { key: 'upi'        as PayMethod, label: 'UPI',           icon: '⚡', color: '#6366F1' },
+  { key: 'netbanking' as PayMethod, label: 'Net Banking',    icon: '🏦', color: '#0EA5E9' },
+  { key: 'card'       as PayMethod, label: 'Credit / Debit', icon: '💳', color: '#0D9488' },
+  { key: 'wallet'     as PayMethod, label: 'Wallet',         icon: '👛', color: '#F59E0B' },
+];
 
 @Component({
   selector: 'app-event-detail',
@@ -138,13 +148,23 @@ import {
                         <span style="font-weight:600;font-size:.9rem;">Payment confirmed &#8212; &#8377;{{ myPayment()!.amountPaid | number }}</span>
                         <span class="badge badge-success" style="margin-left:auto;">Paid</span>
                       </div>
+                      @if (myTicket()) {
+                        <div style="margin-top:12px;">
+                          <button type="button" class="btn btn-sm"
+                            (click)="ticketModal.set(myTicket()!)"
+                            style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border:none;border-radius:var(--r-sm);padding:8px 16px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;">
+                            <span class="material-icons-round" style="font-size:18px;">confirmation_number</span>
+                            View / Download Ticket
+                          </button>
+                        </div>
+                      }
                     } @else {
                       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:var(--warning-light);border-radius:var(--r-sm);">
                         <span class="material-icons-round" style="color:var(--warning);font-size:20px;">payment</span>
                         <span style="font-size:.9rem;font-weight:600;color:#92400E;">Payment pending &#8212; &#8377;{{ event()!.ticketPrice | number }}</span>
                       </div>
                       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button type="button" class="btn btn-primary" [disabled]="payLoading()" (click)="pay()">
+                        <button type="button" class="btn btn-primary" [disabled]="payLoading()" (click)="openPayModal()">
                           @if (payLoading()) { <div class="spinner spinner-sm"></div> }
                           @else { <span class="material-icons-round">payment</span> }
                           Pay &#8377;{{ event()!.ticketPrice | number }}
@@ -158,6 +178,16 @@ import {
                       </div>
                     }
                   } @else {
+                    @if (myTicket()) {
+                      <div style="margin-bottom:12px;">
+                        <button type="button" class="btn btn-sm"
+                          (click)="ticketModal.set(myTicket()!)"
+                          style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border:none;border-radius:var(--r-sm);padding:8px 16px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;">
+                          <span class="material-icons-round" style="font-size:18px;">confirmation_number</span>
+                          View / Download Ticket
+                        </button>
+                      </div>
+                    }
                     <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);"
                       [disabled]="cancelLoading()" (click)="cancelRegistration()">
                       @if (cancelLoading()) { <div class="spinner spinner-sm"></div> }
@@ -196,6 +226,156 @@ import {
         </div>
       }
     </div>
+
+    <!-- Cancel Confirm Modal -->
+    @if (showCancelModal() && event()) {
+      <div class="modal-backdrop" (click)="showCancelModal.set(false)">
+        <div class="modal" (click)="$event.stopPropagation()" style="max-width:420px;">
+          <div class="modal-header" style="background:linear-gradient(135deg,#FEE2E2,#FECACA);border-radius:var(--r-lg) var(--r-lg) 0 0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="material-icons-round" style="color:#DC2626;font-size:26px;">cancel</span>
+              <div style="font-weight:700;font-size:1rem;color:#7F1D1D;">Cancel Registration</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="showCancelModal.set(false)">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <p style="font-size:.95rem;margin-bottom:20px;">
+              Are you sure you want to cancel your registration for
+              <strong>{{ event()!.title }}</strong>?
+            </p>
+            @if (event()!.isPaidEvent && myPayment()) {
+              <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border);">
+                <div style="background:var(--surface-2);padding:10px 14px;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Refund Breakdown</div>
+                <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+                  <div style="display:flex;justify-content:space-between;font-size:.9rem;">
+                    <span style="color:var(--text-secondary);">Amount Paid</span>
+                    <span style="font-weight:600;">&#8377;{{ myPayment()!.amountPaid | number }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:.9rem;">
+                    <span style="color:var(--text-secondary);">Refund %</span>
+                    <span style="font-weight:600;">{{ refundPercent(event()!) }}%</span>
+                  </div>
+                  <div style="height:1px;background:var(--border);"></div>
+                  <div style="display:flex;justify-content:space-between;font-size:1rem;">
+                    <span style="font-weight:700;">You will get back</span>
+                    <span style="font-weight:800;font-size:1.1rem;"
+                      [style.color]="calcRefund(event()!) > 0 ? 'var(--success)' : 'var(--danger)'">
+                      &#8377;{{ calcRefund(event()!) | number }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              @if (refundPercent(event()!) < 100) {
+                <div style="margin-top:12px;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#FEF3C7;border-radius:var(--r-sm);">
+                  <span class="material-icons-round" style="font-size:16px;color:#92400E;flex-shrink:0;margin-top:1px;">info</span>
+                  <span style="font-size:.8rem;color:#78350F;">
+                    @if (refundPercent(event()!) === 0) {
+                      The event has already started. No refund will be issued.
+                    } @else {
+                      Partial refund applies because the event starts in less than
+                      @if (refundPercent(event()!) === 25) { 12 hours. }
+                      @else if (refundPercent(event()!) === 50) { 24 hours. }
+                      @else { 48 hours. }
+                    }
+                  </span>
+                </div>
+              }
+            } @else if (event()!.isPaidEvent && !myPayment()) {
+              <!-- Paid event but not yet paid — simple message -->
+              <div style="display:flex;align-items:center;gap:8px;padding:12px;background:#FEF3C7;border-radius:var(--r-sm);">
+                <span class="material-icons-round" style="font-size:18px;color:#92400E;">info</span>
+                <span style="font-size:.9rem;color:#78350F;">You haven't paid yet — cancelling will simply remove your registration.</span>
+              </div>
+            } @else {
+              <!-- Free event — no message needed -->
+            }
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" (click)="showCancelModal.set(false)">Keep Registration</button>
+            <button type="button" class="btn btn-danger" [disabled]="cancelLoading()" (click)="confirmCancel()">
+              @if (cancelLoading()) { <div class="spinner spinner-sm"></div> }
+              @else { <span class="material-icons-round">cancel</span> }
+              Yes, Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Payment Method Modal -->
+    @if (showPayModal()) {
+      <div class="modal-backdrop" (click)="closePayModal()">
+        <div class="modal" (click)="$event.stopPropagation()" style="max-width:420px;">
+          <div class="modal-header">
+            <div>
+              <div style="font-weight:700;font-size:1rem;">Complete Payment</div>
+              <div style="font-size:.85rem;color:var(--text-muted);">{{ event()!.title }}</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="closePayModal()"><span class="material-icons-round">close</span></button>
+          </div>
+          <div class="modal-body">
+            <div style="text-align:center;margin-bottom:20px;">
+              <div style="font-size:2rem;font-weight:800;color:var(--primary);">&#8377;{{ event()!.ticketPrice | number }}</div>
+              <div style="font-size:.85rem;color:var(--text-muted);">Select a payment method to continue</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              @for (m of payMethods; track m.key) {
+                <button type="button" (click)="selectedPayMethod.set(m.key)"
+                  style="padding:14px 10px;border-radius:var(--r);border:2px solid;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:.85rem;transition:all .15s;background:var(--surface);"
+                  [style.borderColor]="selectedPayMethod() === m.key ? m.color : 'var(--border)'"
+                  [style.background]="selectedPayMethod() === m.key ? m.color + '18' : 'var(--surface)'"
+                  [style.color]="selectedPayMethod() === m.key ? m.color : 'var(--text-secondary)'">
+                  <span style="font-size:1.6rem;">{{ m.icon }}</span>{{ m.label }}
+                  @if (selectedPayMethod() === m.key) { <span class="material-icons-round" style="font-size:16px;">check_circle</span> }
+                </button>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" (click)="closePayModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" [disabled]="!selectedPayMethod() || payLoading()" (click)="confirmPay()">
+              @if (payLoading()) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round">payment</span> }
+              Pay &#8377;{{ event()!.ticketPrice | number }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Ticket Modal -->
+    @if (ticketModal()) {
+      <div class="modal-backdrop" (click)="ticketModal.set(null)">
+        <div class="modal" (click)="$event.stopPropagation()" style="max-width:480px;">
+          <div class="modal-header" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="material-icons-round" style="font-size:28px;">confirmation_number</span>
+              <div><div style="font-weight:800;font-size:1rem;">Event Ticket</div><div style="font-size:.78rem;opacity:.8;">Ticket #{{ ticketModal()!.ticketId }}</div></div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" style="color:#fff;" (click)="ticketModal.set(null)"><span class="material-icons-round">close</span></button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <h2 style="font-size:1.2rem;margin-bottom:4px;">{{ ticketModal()!.eventTitle }}</h2>
+            <p style="font-size:.875rem;color:var(--text-secondary);margin-bottom:20px;">{{ ticketModal()!.eventDescription }}</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+              <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;"><div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Date</div><div style="font-weight:600;font-size:.9rem;">{{ ticketModal()!.eventDate | date:'EEE, MMM d, y' }}</div></div>
+              <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;"><div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Location</div><div style="font-weight:600;font-size:.9rem;">{{ ticketModal()!.eventLocation || '—' }}</div></div>
+              <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;"><div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Amount</div><div style="font-weight:700;font-size:.9rem;color:var(--primary);">{{ ticketModal()!.isPaidEvent ? '₹' + ticketModal()!.amountPaid : 'Free' }}</div></div>
+              <div style="background:var(--surface-2);border-radius:var(--r-sm);padding:12px;"><div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Attendee</div><div style="font-weight:700;font-size:.9rem;">{{ ticketModal()!.userName }}</div></div>
+            </div>
+            <div style="border:2px dashed var(--border);border-radius:var(--r-sm);padding:14px;text-align:center;">
+              <div style="font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Ticket ID</div>
+              <div style="font-weight:700;font-family:monospace;font-size:1.2rem;color:var(--primary);">#{{ ticketModal()!.ticketId }}</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" (click)="printTicket()"><span class="material-icons-round">print</span> Print</button>
+            <button type="button" class="btn btn-primary" (click)="downloadTicket()"><span class="material-icons-round">download</span> Download</button>
+          </div>
+        </div>
+      </div>
+    }
   `
 })
 export class EventDetailComponent implements OnInit, OnDestroy {
@@ -204,20 +384,34 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   router   = inject(Router);
   auth     = inject(AuthService);
   regState = inject(RegistrationStateService);
-  private eventSvc = inject(EventService);
-  private regSvc   = inject(RegistrationService);
-  private paySvc   = inject(PaymentService);
-  private toast    = inject(ToastService);
+  private eventSvc   = inject(EventService);
+  private regSvc     = inject(RegistrationService);
+  private paySvc     = inject(PaymentService);
+  private ticketSvc  = inject(TicketService);
+  private walletSvc  = inject(WalletService);
+  private toast      = inject(ToastService);
 
   ApprovalStatus = ApprovalStatus;
+  payMethods     = PAY_METHODS;
 
   event          = signal<EventResponse | null>(null);
   myRegistration = signal<EventRegistrationResponse | null>(null);
   myPayment      = signal<PaymentResponse | null>(null);
+  myTicket       = signal<TicketResponse | null>(null);
   loading        = signal(true);
   regLoading     = signal(false);
   payLoading     = signal(false);
   cancelLoading  = signal(false);
+
+  // Payment modal
+  showPayModal      = signal(false);
+  selectedPayMethod = signal<PayMethod>('');
+
+  // Ticket modal
+  ticketModal = signal<TicketResponse | null>(null);
+
+  // Cancel confirm modal
+  showCancelModal = signal(false);
 
   ngOnInit() {
     const id = parseInt(this.id, 10);
@@ -247,14 +441,68 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       next: pays => {
         const p = pays.find(p => p.eventId === eventId && p.status === PaymentStatus.SUCCESS);
         this.myPayment.set(p ?? null);
-        // If registered for paid event without payment, block navigation
-        const reg = this.myRegistration();
-        if (reg && this.event()?.isPaidEvent && !p) {
+        if (this.myRegistration() && this.event()?.isPaidEvent && !p) {
           this.regState.setPending(eventId, true);
         }
       },
       error: () => {}
     });
+    // Load ticket if exists
+    this.ticketSvc.getByEvent(eventId).subscribe({
+      next: t => this.myTicket.set(t),
+      error: () => {}
+    });
+  }
+
+  openPayModal()  { this.selectedPayMethod.set(''); this.showPayModal.set(true); }
+  closePayModal() { this.showPayModal.set(false); this.selectedPayMethod.set(''); }
+
+  confirmPay() {
+    const ev = this.event()!;
+    if (!this.selectedPayMethod()) return;
+    this.payLoading.set(true);
+
+    const onSuccess = (payment: any) => {
+      this.myPayment.set(payment);
+      this.regState.clearPending();
+      this.toast.success(`Payment of ₹${ev.ticketPrice} successful!`, 'Payment Successful');
+      this.payLoading.set(false);
+      this.closePayModal();
+      this.ticketSvc.generate(ev.eventId, payment.paymentId).subscribe({
+        next: t => { this.myTicket.set(t); this.toast.info('Your ticket is ready!', '🎟 Ticket Generated'); },
+        error: () => {}
+      });
+    };
+    const onError = () => this.payLoading.set(false);
+
+    if (this.selectedPayMethod() === 'wallet') {
+      this.walletSvc.payWithWallet({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    } else {
+      this.paySvc.create({ eventId: ev.eventId }).subscribe({ next: onSuccess, error: onError });
+    }
+  }
+
+  printTicket() { window.print(); }
+
+  downloadTicket() {
+    const t = this.ticketModal();
+    if (!t) return;
+    const content = [
+      'EVENT TICKET', '============',
+      `Ticket ID  : #${t.ticketId}`,
+      `Event      : ${t.eventTitle}`,
+      `Location   : ${t.eventLocation}`,
+      `Date       : ${new Date(t.eventDate).toDateString()}`,
+      `Attendee   : ${t.userName}`,
+      `Amount Paid: ${t.isPaidEvent ? '₹' + t.amountPaid : 'Free'}`,
+      `Generated  : ${new Date(t.generatedAt).toLocaleString()}`,
+      '============',
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `ticket-${t.ticketId}.txt`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   seatsDisplay(): string {
@@ -295,7 +543,12 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       this.toast.warning('Please complete payment or cancel registration before leaving.', 'Navigation Blocked');
       return;
     }
-    this.router.navigate(['/events']);
+    // Go back to wherever the user came from (Browse Events in dashboard, or public events page)
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.router.navigate([this.auth.isLoggedIn() ? '/user/my-events' : '/events']);
+    }
   }
 
   register() {
@@ -310,48 +563,75 @@ export class EventDetailComponent implements OnInit, OnDestroy {
             `Registered for "${ev.title}". Please complete payment or cancel registration.`,
             'Registration Confirmed'
           );
+          this.regLoading.set(false);
         } else {
-          this.toast.success(`Successfully registered for "${ev.title}"! \uD83C\uDF89`, 'Registration Confirmed');
+          // Free event — auto-generate ticket immediately
+          this.ticketSvc.generate(ev.eventId).subscribe({
+            next: t => {
+              this.myTicket.set(t);
+              this.toast.success(`Successfully registered for "${ev.title}"! 🎉`, 'Registration Confirmed');
+              this.toast.info('Your ticket is ready!', '🎟 Ticket Generated');
+            },
+            error: () => this.toast.success(`Successfully registered for "${ev.title}"! 🎉`, 'Registration Confirmed')
+          });
+          this.regLoading.set(false);
         }
-        this.regLoading.set(false);
       },
       error: () => this.regLoading.set(false)
     });
   }
 
-  pay() {
-    const ev = this.event()!;
-    this.payLoading.set(true);
-    this.paySvc.create({ eventId: ev.eventId }).subscribe({
-      next: payment => {
-        this.myPayment.set(payment);
-        this.regState.clearPending();
-        this.toast.success(`Payment of \u20B9${ev.ticketPrice} successful! Your seat is confirmed.`, 'Payment Successful');
-        this.payLoading.set(false);
-      },
-      error: () => this.payLoading.set(false)
-    });
-  }
+
 
   cancelRegistration() {
+    // Open the cancel confirm modal instead of native confirm()
+    this.showCancelModal.set(true);
+  }
+
+  confirmCancel() {
     const reg = this.myRegistration()!;
     const ev  = this.event()!;
     const hasPay = !!this.myPayment();
-    if (!confirm(`Cancel your registration for "${ev.title}"?${hasPay ? '\n\nYour payment will be refunded.' : ''}`)) return;
+    this.showCancelModal.set(false);
     this.cancelLoading.set(true);
     this.regSvc.cancel(reg.registrationId).subscribe({
       next: () => {
         this.myRegistration.set(null);
         this.myPayment.set(null);
+        this.myTicket.set(null);
         this.regState.clearPending();
         const msg = hasPay
-          ? `Registration cancelled. Your payment will be refunded.`
+          ? `Registration cancelled. Your refund of ₹${this.calcRefund(ev)} will be processed.`
           : `Registration for "${ev.title}" cancelled.`;
         this.toast.info(msg, 'Registration Cancelled');
         this.cancelLoading.set(false);
       },
       error: () => this.cancelLoading.set(false)
     });
+  }
+
+  /** Calculate refund amount based on hours before event start */
+  calcRefund(ev: EventResponse): number {
+    if (!ev.isPaidEvent || !this.myPayment()) return 0;
+    const paid = this.myPayment()!.amountPaid;
+    const eventStart = new Date(`${ev.eventDate.split('T')[0]}T${ev.startTime ?? '00:00:00'}`);
+    const hoursLeft = (eventStart.getTime() - Date.now()) / 3600000;
+    let pct = 0;
+    if (hoursLeft >= 48)      pct = 100;
+    else if (hoursLeft >= 24) pct = 75;
+    else if (hoursLeft >= 12) pct = 50;
+    else if (hoursLeft > 0)   pct = 25;
+    return Math.round(paid * pct / 100);
+  }
+
+  refundPercent(ev: EventResponse): number {
+    const eventStart = new Date(`${ev.eventDate.split('T')[0]}T${ev.startTime ?? '00:00:00'}`);
+    const hoursLeft = (eventStart.getTime() - Date.now()) / 3600000;
+    if (hoursLeft >= 48)      return 100;
+    if (hoursLeft >= 24)      return 75;
+    if (hoursLeft >= 12)      return 50;
+    if (hoursLeft > 0)        return 25;
+    return 0;
   }
 
   categoryLabel(c: EventCategory): string {

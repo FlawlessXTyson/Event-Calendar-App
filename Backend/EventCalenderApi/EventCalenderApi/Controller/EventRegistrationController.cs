@@ -92,6 +92,17 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetByEventAsync(eventId));
         }
 
+        // GET /api/EventRegistration/event/{eventId}/paged?pageNumber=1&pageSize=10&filterDate=2026-03-28
+        [Authorize(Roles = "ADMIN,ORGANIZER")]
+        [HttpGet("event/{eventId}/paged")]
+        public async Task<IActionResult> GetByEventPaged(int eventId, int pageNumber = 1, int pageSize = 10, string? filterDate = null)
+        {
+            DateTime? date = null;
+            if (!string.IsNullOrEmpty(filterDate) && DateTime.TryParse(filterDate, out var parsed))
+                date = parsed;
+            return Ok(await _service.GetByEventPagedAsync(eventId, pageNumber, pageSize, date));
+        }
+
         [HttpGet("my")]
         public async Task<IActionResult> GetMyRegistrations()
         {

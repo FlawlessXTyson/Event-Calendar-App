@@ -5,24 +5,8 @@ import { CommonModule } from '@angular/common';
   selector: 'app-confirm-modal',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    @if (visible) {
-      <div class="modal-backdrop" (click)="cancel.emit()">
-        <div class="modal" style="max-width:420px" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>{{ title }}</h3>
-          </div>
-          <div class="modal-body">
-            <p>{{ message }}</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancel</button>
-            <button type="button" [class]="'btn btn-' + confirmClass" (click)="confirm.emit()">{{ confirmText }}</button>
-          </div>
-        </div>
-      </div>
-    }
-  `
+  templateUrl: './confirm-modal.component.html',
+  styleUrls: ['./confirm-modal.component.css']
 })
 export class ConfirmModalComponent {
   @Input() visible      = false;

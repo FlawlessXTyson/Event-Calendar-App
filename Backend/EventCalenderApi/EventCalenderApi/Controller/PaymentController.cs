@@ -66,6 +66,15 @@ namespace EventCalenderApi.Controllers
             return Ok(await _service.GetCommissionSummaryAsync());
         }
 
+        // ================= ORGANIZER REFUNDS PAGED =================
+        [Authorize(Roles = "ORGANIZER")]
+        [HttpGet("organizer-refunds")]
+        public async Task<IActionResult> GetOrganizerRefunds(int pageNumber = 1, int pageSize = 10)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await _service.GetOrganizerRefundsPagedAsync(userId, pageNumber, pageSize));
+        }
+
         // ================= ORGANIZER EARNINGS =================
         [Authorize(Roles = "ORGANIZER")]
         [HttpGet("organizer-earnings")]

@@ -40,6 +40,7 @@ export const routes: Routes = [
       { path: 'request-role', canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/request-role/request-role.component').then(m => m.RequestRoleComponent) },
       { path: 'calendar',     canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/calendar/user-calendar.component').then(m => m.UserCalendarComponent) },
       { path: 'events-attended', canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/events-attended/events-attended.component').then(m => m.EventsAttendedComponent) },
+      { path: 'wallet',          canDeactivate: [registrationPendingGuard], loadComponent: () => import('./features/user/wallet/user-wallet.component').then(m => m.UserWalletComponent) },
     ]
   },
 
@@ -55,6 +56,8 @@ export const routes: Routes = [
       { path: 'my-events',     loadComponent: () => import('./features/organizer/my-events/organizer-my-events.component').then(m => m.OrganizerMyEventsComponent) },
       { path: 'earnings',      loadComponent: () => import('./features/organizer/earnings/organizer-earnings.component').then(m => m.OrganizerEarningsComponent) },
       { path: 'registrations', loadComponent: () => import('./features/organizer/event-registrations/event-registrations.component').then(m => m.EventRegistrationsComponent) },
+      { path: 'refunds',       loadComponent: () => import('./features/organizer/refunds/organizer-refunds.component').then(m => m.OrganizerRefundsComponent) },
+      { path: 'wallet',        loadComponent: () => import('./features/user/wallet/user-wallet.component').then(m => m.UserWalletComponent) },
       { path: 'profile',       loadComponent: () => import('./features/organizer/profile/organizer-profile.component').then(m => m.OrganizerProfileComponent) },
       { path: 'calendar',      loadComponent: () => import('./features/organizer/calendar/organizer-calendar.component').then(m => m.OrganizerCalendarComponent) },
     ]
@@ -75,7 +78,7 @@ export const routes: Routes = [
       { path: 'profile',       loadComponent: () => import('./features/admin/profile/admin-profile.component').then(m => m.AdminProfileComponent) },
       { path: 'calendar',      loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent) },
       { path: 'audit-logs',       loadComponent: () => import('./features/admin/audit-logs/admin-audit-logs.component').then(m => m.AdminAuditLogsComponent) },
-      { path: 'refund-requests',  loadComponent: () => import('./features/admin/refund-requests/admin-refund-requests.component').then(m => m.AdminRefundRequestsComponent) },
+      { path: 'wallet',           loadComponent: () => import('./features/user/wallet/user-wallet.component').then(m => m.UserWalletComponent) },
     ]
   },
 

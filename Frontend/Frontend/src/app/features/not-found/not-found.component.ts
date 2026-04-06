@@ -5,23 +5,8 @@ import { AuthService } from '../../core/services/auth.service';
 @Component({
   selector: 'app-not-found',
   standalone: true,
-  template: `
-    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;text-align:center;">
-      <div style="font-size:120px;font-weight:900;color:var(--border);line-height:1;font-family:var(--font-display);">404</div>
-      <h1 style="font-size:1.75rem;margin:16px 0 8px;">Page Not Found</h1>
-      <p style="color:var(--text-muted);max-width:400px;margin-bottom:32px;">
-        Oops! The page you're looking for doesn't exist or you may not have access to it.
-      </p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
-        <button type="button" class="btn btn-primary" (click)="goBack()">
-          <span class="material-icons-round">arrow_back</span> Go Back
-        </button>
-        <button type="button" class="btn btn-secondary" (click)="goHome()">
-          <span class="material-icons-round">home</span> Home
-        </button>
-      </div>
-    </div>
-  `
+  templateUrl: './not-found.component.html',
+  styleUrls: ['./not-found.component.css']
 })
 export class NotFoundComponent {
   private router = inject(Router);
