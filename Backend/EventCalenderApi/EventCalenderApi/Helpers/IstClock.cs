@@ -16,10 +16,10 @@ namespace EventCalenderApi.Helpers
             catch { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"); }
         }
 
-        /// <summary>Current IST time — use for event start/end comparisons.</summary>
+       
         public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _ist);
 
-        /// <summary>Current UTC time — use for registration deadline comparisons.</summary>
+       
         public static DateTime UtcNow => DateTime.UtcNow;
     }
 }

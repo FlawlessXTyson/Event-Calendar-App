@@ -37,7 +37,7 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
 
-        //  AUTO AUDIT LOG (ADDED ONLY THIS)
+        //  AUTO AUDIT LOG 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             var auditLogs = new List<AuditLog>();
@@ -120,13 +120,13 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasOne(r => r.User)
                 .WithMany(u => u.Registrations)
                 .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade); 
 
             modelBuilder.Entity<EventRegistration>()
                 .HasOne(r => r.Event)
                 .WithMany(e => e.Registrations)
                 .HasForeignKey(r => r.EventId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade); // delete event ->delete registrations
 
             //================ PAYMENT =================
             modelBuilder.Entity<Payment>()
@@ -162,6 +162,7 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            //One user can have ONLY ONE active request (Status = 1)
             modelBuilder.Entity<RoleChangeRequest>()
                 .HasIndex(r => r.UserId)
                 .HasFilter("[Status] = 1")

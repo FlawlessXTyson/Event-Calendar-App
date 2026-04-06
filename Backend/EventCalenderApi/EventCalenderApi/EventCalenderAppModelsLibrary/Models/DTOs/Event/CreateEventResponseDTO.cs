@@ -37,10 +37,10 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
         /// </summary>
         public bool IsRegistrationOpen { get; set; }
 
-        /// <summary>True once event start time has passed (UTC).</summary>
+        /// <summary>True once event start time has passed .</summary>
         public bool HasStarted { get; set; }
 
-        /// <summary>True once event end time has passed (UTC).</summary>
+        /// <summary>True once event end time has passed.</summary>
         public bool HasEnded { get; set; }
     }
 }
