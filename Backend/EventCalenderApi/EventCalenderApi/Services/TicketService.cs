@@ -14,19 +14,22 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, User> _userRepo;
         private readonly IRepository<int, Payment> _paymentRepo;
         private readonly IAuditLogRepository _auditRepo;
+        private readonly IEmailService _emailService;
 
         public TicketService(
             IRepository<int, Ticket> ticketRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, User> userRepo,
             IRepository<int, Payment> paymentRepo,
-            IAuditLogRepository auditRepo)
+            IAuditLogRepository auditRepo,
+            IEmailService emailService)
         {
             _ticketRepo = ticketRepo;
             _eventRepo = eventRepo;
             _userRepo = userRepo;
             _paymentRepo = paymentRepo;
             _auditRepo = auditRepo;
+            _emailService = emailService;
         }
 
         public async Task<TicketResponseDTO> GenerateTicketAsync(int userId, int eventId, int? paymentId)
@@ -73,7 +76,22 @@ namespace EventCalenderApi.Services
                 EntityId = created.TicketId
             });
 
-            return MapToDTO(full);
+            var dto = MapToDTO(full);
+
+            // Send ticket email — fire-and-forget so SMTP issues never break the booking flow
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendTicketEmailAsync(user.Email, user.Name, dto);
+                }
+                catch
+                {
+                    // Email failure is non-critical; ticket is already saved
+                }
+            });
+
+            return dto;
         }
 
         public async Task<TicketResponseDTO?> GetTicketAsync(int userId, int eventId)
