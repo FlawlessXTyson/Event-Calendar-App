@@ -682,7 +682,8 @@ namespace EventCalenderApi.Services
         {
             var data = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
-                .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING
+                         && e.Status != EventStatus.CANCELLED)
                 .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
             
@@ -704,7 +705,8 @@ namespace EventCalenderApi.Services
             // Load all pending first, filter upcoming in memory, then paginate
             var all = await _eventRepo.GetQueryable()
                 .Include(e => e.CreatedBy)
-                .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING)
+                .Where(e => e.ApprovalStatus == ApprovalStatus.PENDING
+                         && e.Status != EventStatus.CANCELLED)
                 .OrderByDescending(e => e.EventDate)
                 .ToListAsync();
 
