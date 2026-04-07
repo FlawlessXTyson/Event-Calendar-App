@@ -11,10 +11,12 @@ namespace EventCalenderApi.Controllers
     public class TicketController : ControllerBase
     {
         private readonly ITicketService _ticketService;
+        private readonly IEmailService _emailService;
 
-        public TicketController(ITicketService ticketService)
+        public TicketController(ITicketService ticketService, IEmailService emailService)
         {
             _ticketService = ticketService;
+            _emailService = emailService;
         }
 
         // POST /api/Ticket/generate — generate ticket after registration/payment
@@ -42,11 +44,35 @@ namespace EventCalenderApi.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             return Ok(await _ticketService.GetMyTicketsAsync(userId));
         }
+
+        // POST /api/Ticket/send-email — send ticket confirmation email with HTML rendered by frontend
+        [HttpPost("send-email")]
+        public async Task<IActionResult> SendEmail([FromBody] SendTicketEmailRequest req)
+        {
+            try
+            {
+                await _emailService.SendEmailAsync(req.ToEmail, req.ToName, req.Subject, req.HtmlBody);
+                return Ok(new { message = "Email sent successfully" });
+            }
+            catch
+            {
+                // Non-critical — ticket already exists, email failure should not surface as error
+                return Ok(new { message = "Email delivery skipped" });
+            }
+        }
     }
 
     public class GenerateTicketRequest
     {
         public int EventId { get; set; }
         public int? PaymentId { get; set; }
+    }
+
+    public class SendTicketEmailRequest
+    {
+        public string ToEmail { get; set; } = string.Empty;
+        public string ToName { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string HtmlBody { get; set; } = string.Empty;
     }
 }

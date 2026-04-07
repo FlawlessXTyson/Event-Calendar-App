@@ -9,6 +9,7 @@ import { TicketService } from '../../../core/services/ticket.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
 import { WalletService } from '../../../core/services/wallet.service';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   EventResponse, EventRegistrationResponse, PaymentResponse,
   ApprovalStatus, RegistrationStatus, PaymentStatus, TicketResponse
@@ -37,6 +38,7 @@ export class UserMyEventsComponent implements OnInit {
   private ticketSvc = inject(TicketService);
   private walletSvc = inject(WalletService);
   private toast     = inject(ToastService);
+  private authSvc   = inject(AuthService);
   readonly regState = inject(RegistrationStateService);
   private router    = inject(Router);
 
@@ -234,7 +236,10 @@ export class UserMyEventsComponent implements OnInit {
       this.paying.set(null);
       this.closePayModal();
       this.ticketSvc.generate(ev.eventId, p.paymentId).subscribe({
-        next: t => { this.myTickets.update(ts => [...ts, t]); },
+        next: t => {
+          this.myTickets.update(ts => [...ts, t]);
+          this.ticketSvc.sendTicketEmail(t, this.authSvc.userEmail()).subscribe();
+        },
         error: () => {}
       });
     };
@@ -257,7 +262,10 @@ export class UserMyEventsComponent implements OnInit {
           // Free event (isPaidEvent=false OR ticketPrice=0): no lock, auto-generate ticket
           this.toast.success(`Registered for "${ev.title}"!`, 'Registered!');
           this.ticketSvc.generate(ev.eventId).subscribe({
-            next: t => { this.myTickets.update(ts => [...ts, t]); },
+            next: t => {
+              this.myTickets.update(ts => [...ts, t]);
+              this.ticketSvc.sendTicketEmail(t, this.authSvc.userEmail()).subscribe();
+            },
             error: () => {}
           });
         } else {

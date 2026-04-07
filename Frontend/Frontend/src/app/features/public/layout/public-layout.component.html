@@ -1,0 +1,49 @@
+<nav class="pub-nav">
+  <a class="brand" routerLink="/">
+    <div class="logo"><span class="material-icons-round" style="color:#fff;font-size:18px;">calendar_month</span></div>
+    <span class="brand-name">EventCalenderApp</span>
+  </a>
+
+  <!-- Desktop nav -->
+  <nav style="display:flex;gap:4px;margin-left:auto;align-items:center;" class="desk-nav">
+    <a routerLink="/"        routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a>
+    <a routerLink="/events"  routerLinkActive="active">Events</a>
+    <a routerLink="/calendar"routerLinkActive="active">Calendar</a>
+  </nav>
+
+  <div class="nav-actions">
+    @if (auth.isLoggedIn()) {
+      <button type="button" class="btn btn-secondary btn-sm" (click)="auth.redirectByRole()">
+        <span class="material-icons-round">dashboard</span> Dashboard
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="auth.logout()">Sign Out</button>
+    } @else {
+      <a routerLink="/auth/login"    class="btn btn-ghost btn-sm">Sign In</a>
+      <a routerLink="/auth/register" class="btn btn-primary btn-sm">Get Started</a>
+    }
+  </div>
+
+  <!-- Mobile menu btn -->
+  <button type="button" class="mobile-menu-btn" (click)="mobileOpen.set(!mobileOpen())"
+    style="display:none;background:none;border:none;cursor:pointer;color:var(--text-secondary);margin-left:8px;">
+    <span class="material-icons-round">{{ mobileOpen() ? 'close' : 'menu' }}</span>
+  </button>
+</nav>
+
+@if (mobileOpen()) {
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;flex-direction:column;gap:4px;">
+    <a routerLink="/"        routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" style="padding:10px 12px;border-radius:8px;font-weight:500;color:var(--text-secondary);text-decoration:none;" (click)="mobileOpen.set(false)">Home</a>
+    <a routerLink="/events"  routerLinkActive="active" style="padding:10px 12px;border-radius:8px;font-weight:500;color:var(--text-secondary);text-decoration:none;" (click)="mobileOpen.set(false)">Events</a>
+    <a routerLink="/calendar"routerLinkActive="active" style="padding:10px 12px;border-radius:8px;font-weight:500;color:var(--text-secondary);text-decoration:none;" (click)="mobileOpen.set(false)">Calendar</a>
+  </div>
+}
+
+<main><router-outlet /></main>
+
+<footer style="background:var(--primary-dark);color:rgba(255,255,255,.7);padding:28px max(5%,24px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:auto;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span class="material-icons-round" style="color:var(--primary-mid);">calendar_month</span>
+    <span style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:.9rem;">EventCalenderApp</span>
+  </div>
+  <span style="font-size:.8rem;">© 2025 EventCalenderApp. All rights reserved.</span>
+</footer>
