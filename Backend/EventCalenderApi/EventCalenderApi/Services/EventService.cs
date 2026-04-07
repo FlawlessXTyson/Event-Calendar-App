@@ -949,7 +949,8 @@ namespace EventCalenderApi.Services
                     : null,
                 IsRegistrationOpen = ComputeIsRegistrationOpen(ev),
                 HasStarted = IstClock.Now >= ev.EventDate.Add(ev.StartTime ?? TimeSpan.Zero),
-                HasEnded   = IstClock.Now >  (ev.EventEndDate ?? ev.EventDate).Add(ev.EndTime ?? new TimeSpan(23, 59, 59))
+                HasEnded   = IstClock.Now >  (ev.EventEndDate ?? ev.EventDate).Add(ev.EndTime ?? new TimeSpan(23, 59, 59)),
+                Status     = ev.Status
             };
         }
 

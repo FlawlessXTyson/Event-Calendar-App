@@ -42,5 +42,7 @@ namespace EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event
 
         /// <summary>True once event end time has passed.</summary>
         public bool HasEnded { get; set; }
+
+        public EventStatus Status { get; set; }
     }
 }
