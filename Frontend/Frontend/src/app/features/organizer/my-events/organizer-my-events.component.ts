@@ -17,6 +17,7 @@ export class OrganizerMyEventsComponent implements OnInit {
   private eventSvc = inject(EventService);
   private toast    = inject(ToastService);
   EventStatus      = EventStatus;
+  ApprovalStatus   = ApprovalStatus;
 
   events       = signal<EventResponse[]>([]);
   loading      = signal(true);

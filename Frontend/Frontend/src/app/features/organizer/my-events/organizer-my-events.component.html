@@ -53,13 +53,15 @@
                   <span class="badge badge-info">Completed</span>
                 } @else if (ev.hasStarted) {
                   <span class="badge" style="background:#FEF3C7;color:#92400E;">🟡 Ongoing</span>
+                } @else if (ev.approvalStatus === ApprovalStatus.REJECTED) {
+                  <span class="badge badge-orange">Not Approved</span>
                 } @else {
                   <span class="badge badge-success">Active</span>
                 }
               </td>
               <td>
                 <div style="display:flex;gap:6px;">
-                  @if ((ev.status ?? 1) === EventStatus.ACTIVE && !ev.hasEnded) {
+                  @if ((ev.status ?? 1) === EventStatus.ACTIVE && !ev.hasEnded && ev.approvalStatus !== ApprovalStatus.REJECTED) {
                     <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling() === ev.eventId" (click)="cancelEvent(ev)">
                       @if (cancelling() === ev.eventId) { <div class="spinner spinner-sm"></div> } @else { Cancel }
                     </button>
