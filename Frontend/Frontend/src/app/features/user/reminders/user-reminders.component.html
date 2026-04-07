@@ -27,37 +27,61 @@
         <!-- Mode toggle -->
         <div style="display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
           <button type="button"
-            (click)="mode.set('datetime')"
+            (click)="mode.set('datetime'); form.patchValue({ eventId: null }); selectedEventInfo.set(null)"
             [style.background]="mode() === 'datetime' ? 'var(--primary)' : 'var(--surface)'"
             [style.color]="mode() === 'datetime' ? '#fff' : 'var(--text-secondary)'"
             style="flex:1;padding:10px;font-size:.875rem;font-weight:600;border:none;cursor:pointer;">
             📅 Date &amp; Time
           </button>
           <button type="button"
-            (click)="mode.set('minutes')"
-            [style.background]="mode() === 'minutes' ? 'var(--primary)' : 'var(--surface)'"
-            [style.color]="mode() === 'minutes' ? '#fff' : 'var(--text-secondary)'"
+            (click)="mode.set('event'); form.patchValue({ reminderDateTime: '' })"
+            [style.background]="mode() === 'event' ? 'var(--primary)' : 'var(--surface)'"
+            [style.color]="mode() === 'event' ? '#fff' : 'var(--text-secondary)'"
             style="flex:1;padding:10px;font-size:.875rem;font-weight:600;border:none;cursor:pointer;">
-            ⏱ Minutes Before
+            🎫 My Events
           </button>
         </div>
 
-        @if (mode() === 'datetime') {
+        @if (mode() === 'event') {
+          <!-- Event dropdown -->
           <div class="form-group">
-            <label class="form-label">Date &amp; Time <span style="color:var(--danger)">*</span></label>
-            <input formControlName="reminderDateTime" type="datetime-local" class="form-control" />
-          </div>
-        } @else {
-          <div class="form-group">
-            <label class="form-label">Event ID</label>
-            <input formControlName="eventId" type="number" class="form-control" placeholder="e.g. 5" min="1" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Minutes Before Event Start <span style="color:var(--danger)">*</span></label>
-            <input formControlName="minutesBefore" type="number" class="form-control" placeholder="e.g. 30" min="1" />
-            <div class="form-hint">Reminder will fire this many minutes before the event starts.</div>
+            <label class="form-label">Select Your Event <span style="color:var(--danger)">*</span></label>
+            <select formControlName="eventId" class="form-control"
+              (change)="onEventSelected($any($event.target).value)">
+              <option [ngValue]="null" disabled selected>-- Select a registered event --</option>
+              @for (ev of registeredEvents(); track ev.eventId) {
+                <option [ngValue]="ev.eventId">{{ ev.title }}</option>
+              }
+            </select>
+            @if (registeredEvents().length === 0) {
+              <div class="form-hint" style="color:var(--warning);">No registered events found.</div>
+            }
+            @if (selectedEventInfo()) {
+              <div class="form-hint" style="color:var(--primary);">
+                <span class="material-icons-round" style="font-size:13px;vertical-align:middle;">event</span>
+                {{ selectedEventInfo()!.dateTime }}
+              </div>
+            }
           </div>
         }
+
+        <!-- Date & Time picker — shown in both modes -->
+        <div class="form-group">
+          <label class="form-label">
+            @if (mode() === 'event') { Remind Me At <span style="color:var(--danger)">*</span> }
+            @else { Date &amp; Time <span style="color:var(--danger)">*</span> }
+          </label>
+          @if (mode() === 'event') {
+            <input formControlName="reminderDateTime" type="datetime-local" class="form-control"
+              [min]="nowDateTime()"
+              [max]="eventMaxDateTime()" />
+            <div class="form-hint">You can only set a reminder before the event starts.</div>
+          } @else {
+            <input formControlName="reminderDateTime" type="datetime-local" class="form-control"
+              [min]="nowDateTime()" />
+          }
+        </div>
+
         <div style="display:flex;gap:10px;">
           <button type="submit" class="btn btn-primary" [disabled]="saving()">
             @if (saving()) { <div class="spinner spinner-sm"></div> } @else { <span class="material-icons-round">save</span> }
@@ -71,7 +95,11 @@
   @if (loading()) {
     <div class="loading-center"><div class="spinner"></div></div>
   } @else if (reminders().length === 0) {
-    <div class="empty-state"><span class="material-icons-round empty-icon">notifications_off</span><h3>No reminders set</h3><p>Create reminders to get notified before events.</p></div>
+    <div class="empty-state">
+      <span class="material-icons-round empty-icon">notifications_off</span>
+      <h3>No reminders set</h3>
+      <p>Create reminders to get notified before events.</p>
+    </div>
   } @else {
     <div style="display:flex;flex-direction:column;gap:12px;">
       @for (r of reminders(); track r.reminderId) {
@@ -84,12 +112,18 @@
               <div style="font-weight:600;">{{ r.reminderTitle }}</div>
               <div style="font-size:.82rem;color:var(--text-muted);">
                 <span class="material-icons-round" style="font-size:14px;vertical-align:middle;">schedule</span>
-                {{ r.reminderDateTime | date:'MMM d, y, h:mm a' }}
-                @if (r.eventId) { &nbsp;·&nbsp; Event #{{ r.eventId }} }
+                {{ (r.reminderDateTime.endsWith('Z') ? r.reminderDateTime : r.reminderDateTime + 'Z') | date:'MMM d, y, h:mm a' }}
+                @if (r.eventId) {
+                  &nbsp;·&nbsp;
+                  <span class="material-icons-round" style="font-size:13px;vertical-align:middle;">event</span>
+                  {{ getEventTitle(r.eventId) }}
+                }
               </div>
             </div>
           </div>
-          <button type="button" class="btn btn-ghost btn-icon" [disabled]="deleting() === r.reminderId" (click)="del(r.reminderId)" title="Delete">
+          <button type="button" class="btn btn-ghost btn-icon"
+            [disabled]="deleting() === r.reminderId"
+            (click)="del(r.reminderId)" title="Delete">
             @if (deleting() === r.reminderId) { <div class="spinner spinner-sm"></div> }
             @else { <span class="material-icons-round" style="color:var(--danger);">delete</span> }
           </button>
