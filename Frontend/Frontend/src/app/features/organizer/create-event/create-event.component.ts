@@ -114,6 +114,22 @@ export class CreateEventComponent implements OnInit {
     const eDate      = g.get('eventDate')?.value as string;
     const eEndDate   = g.get('eventEndDate')?.value as string;
 
+    // Start time must be in the future when event date is today
+    if (eDate && start) {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      if (eDate === todayStr) {
+        const eventStart = new Date(`${eDate}T${start}`);
+        if (eventStart <= now) {
+          g.get('startTime')?.setErrors({ pastTime: true });
+        } else if (g.get('startTime')?.hasError('pastTime')) {
+          g.get('startTime')?.setErrors(null);
+        }
+      } else if (g.get('startTime')?.hasError('pastTime')) {
+        g.get('startTime')?.setErrors(null);
+      }
+    }
+
     // End time vs start time — only validate when it's a SINGLE-DAY event
     // (no eventEndDate, or eventEndDate === eventDate)
     const isSameDay = !eEndDate || eEndDate === eDate;
@@ -198,6 +214,16 @@ export class CreateEventComponent implements OnInit {
     if (eventDate < today) {
       this.toast.error('Event date cannot be in the past.', 'Validation Error');
       return;
+    }
+
+    // If event is today, start time must be in the future
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (v.eventDate === todayStr && v.startTime) {
+      const eventStart = new Date(`${v.eventDate}T${v.startTime}`);
+      if (eventStart <= new Date()) {
+        this.toast.error('Start time cannot be in the past for today\'s events.', 'Validation Error');
+        return;
+      }
     }
 
     const isSameDay = !v.eventEndDate || v.eventEndDate === v.eventDate;

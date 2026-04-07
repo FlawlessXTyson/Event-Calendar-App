@@ -1,6 +1,7 @@
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.Exceptions;
 using EventCalenderApi.Interfaces;
+using EventCalenderApi.Interfaces.ServiceInterfaces;
 using EventCalenderApi.Services;
 using MockQueryable.Moq;
 using Moq;
@@ -15,6 +16,7 @@ public class TicketServiceTests
     private readonly Mock<IRepository<int, User>> _userRepoMock = new();
     private readonly Mock<IRepository<int, Payment>> _paymentRepoMock = new();
     private readonly Mock<IAuditLogRepository> _auditRepoMock = new();
+    private readonly Mock<IEmailService> _emailServiceMock = new();
     private readonly TicketService _sut;
 
     public TicketServiceTests()
@@ -24,7 +26,8 @@ public class TicketServiceTests
             _eventRepoMock.Object,
             _userRepoMock.Object,
             _paymentRepoMock.Object,
-            _auditRepoMock.Object);
+            _auditRepoMock.Object,
+            _emailServiceMock.Object);
         _auditRepoMock.Setup(r => r.AddAsync(It.IsAny<AuditLog>())).ReturnsAsync(new AuditLog());
     }
 
