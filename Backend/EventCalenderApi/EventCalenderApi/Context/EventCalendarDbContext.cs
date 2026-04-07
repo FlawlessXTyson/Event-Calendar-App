@@ -37,6 +37,8 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
 
+        public DbSet<Notification> Notifications { get; set; }
+
         //  AUTO AUDIT LOG 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -232,6 +234,13 @@ namespace EventCalenderApi.EventCalenderAppDataLibrary
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            //================ NOTIFICATION =================
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

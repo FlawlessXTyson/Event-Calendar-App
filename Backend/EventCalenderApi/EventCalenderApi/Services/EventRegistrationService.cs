@@ -17,6 +17,8 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, RefundRequest> _refundRepo;
         private readonly IAuditLogRepository _auditRepo;
         private readonly IWalletService _walletSvc;
+        private readonly INotificationService _notifSvc;
+        private readonly IRepository<int, User> _userRepo;
 
         public EventRegistrationService(
             IRepository<int, EventRegistration> registrationRepo,
@@ -24,7 +26,9 @@ namespace EventCalenderApi.Services
             IRepository<int, Payment> paymentRepo,
             IRepository<int, RefundRequest> refundRepo,
             IAuditLogRepository auditRepo,
-            IWalletService walletSvc)
+            IWalletService walletSvc,
+            INotificationService notifSvc,
+            IRepository<int, User> userRepo)
         {
             _registrationRepo = registrationRepo;
             _eventRepo = eventRepo;
@@ -32,6 +36,8 @@ namespace EventCalenderApi.Services
             _refundRepo = refundRepo;
             _auditRepo = auditRepo;
             _walletSvc = walletSvc;
+            _notifSvc = notifSvc;
+            _userRepo = userRepo;
         }
 
 
@@ -126,6 +132,18 @@ namespace EventCalenderApi.Services
                 EntityId = created.RegistrationId
             });
 
+            // ── Notify ORGANIZER for free event registration ──────────────
+            if (!ev.IsPaidEvent)
+            {
+                var user = await _userRepo.GetByIdAsync(userId);
+                string userName = user?.Name ?? "A user";
+                await _notifSvc.CreateNotificationAsync(
+                    ev.CreatedByUserId,
+                    "New Registration",
+                    $"{userName} registered for your free event '{ev.Title}'.",
+                    NotificationType.INFO);
+            }
+
             return MapToDTO(created);
         }
 
@@ -204,6 +222,37 @@ namespace EventCalenderApi.Services
                         UserId = userId, Role = role,
                         Action = "REFUND", Entity = "Payment", EntityId = payment.PaymentId
                     });
+
+                    // ── Notify USER about their refund ────────────────────
+                    string refundMsg = refundAmount > 0
+                        ? $"You cancelled your registration for '{ev.Title}'. " +
+                          $"Refund of ₹{refundAmount:F2} ({refundPct}%) has been credited to your wallet."
+                        : $"You cancelled your registration for '{ev.Title}'. No refund was applicable (within cutoff window).";
+
+                    await _notifSvc.CreateNotificationAsync(
+                        registration.UserId,
+                        "Registration Cancelled",
+                        refundMsg,
+                        refundAmount > 0 ? NotificationType.REFUND : NotificationType.INFO);
+
+                    // ── Notify ORGANIZER about user cancellation ──────────
+                    await _notifSvc.CreateNotificationAsync(
+                        ev.CreatedByUserId,
+                        "User Cancelled Registration",
+                        $"A user cancelled their registration for your event '{ev.Title}'. " +
+                        $"Refund of ₹{refundAmount:F2} ({refundPct}%) was processed.",
+                        NotificationType.INFO);
+
+                    // ── Notify ADMIN if late cancellation (< 12h) ─────────
+                    if (hoursBeforeEvent < 12 && ev.ApprovedByUserId.HasValue)
+                    {
+                        await _notifSvc.CreateNotificationAsync(
+                            ev.ApprovedByUserId.Value,
+                            "Late User Cancellation",
+                            $"A user cancelled their registration for '{ev.Title}' with {hoursBeforeEvent:F1}h remaining. " +
+                            $"Refund: ₹{refundAmount:F2} ({refundPct}%).",
+                            NotificationType.WARNING);
+                    }
                 }
                 // NOTE: Admin/Organizer event-level cancellation is handled by EventService.CancelEventAsync
                 // This path (CancelAsync) is for individual USER registration cancellation only

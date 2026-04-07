@@ -3,11 +3,12 @@ import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { SidebarComponent, NavItem } from '../../../shared/components/sidebar/sidebar.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationBellComponent } from '../../../shared/components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-organizer-layout',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, SidebarComponent],
+  imports: [RouterOutlet, CommonModule, SidebarComponent, NotificationBellComponent],
   templateUrl: './organizer-layout.component.html',
   styleUrl: './organizer-layout.component.css'
 })

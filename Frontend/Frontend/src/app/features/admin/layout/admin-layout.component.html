@@ -13,6 +13,7 @@
               <div style="font-size:.75rem;color:var(--text-muted);">{{ auth.userEmail() }}</div>
             </div>
             <span class="badge badge-danger">ADMIN</span>
+            <app-notification-bell />
             <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Sign Out" (click)="auth.logout()" style="color:var(--danger);">
               <span class="material-icons-round">logout</span>
             </button>

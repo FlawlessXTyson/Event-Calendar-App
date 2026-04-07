@@ -5,11 +5,12 @@ import { SidebarComponent, NavItem } from '../../../shared/components/sidebar/si
 import { AuthService } from '../../../core/services/auth.service';
 import { RegistrationStateService } from '../../../core/services/registration-state.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { NotificationBellComponent } from '../../../shared/components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-user-layout',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, SidebarComponent],
+  imports: [RouterOutlet, CommonModule, SidebarComponent, NotificationBellComponent],
   templateUrl: './user-layout.component.html',
   styleUrl: './user-layout.component.css'
 })

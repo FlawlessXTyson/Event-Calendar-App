@@ -18,6 +18,8 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, Event> _eventRepo;
         private readonly IRepository<int, EventRegistration> _regRepo;
         private readonly IAuditLogRepository _auditRepo;
+        private readonly INotificationService _notifSvc;
+        private readonly IRepository<int, User> _userRepo;
 
         public WalletService(
             IRepository<int, Wallet> walletRepo,
@@ -25,7 +27,9 @@ namespace EventCalenderApi.Services
             IRepository<int, Payment> paymentRepo,
             IRepository<int, Event> eventRepo,
             IRepository<int, EventRegistration> regRepo,
-            IAuditLogRepository auditRepo)
+            IAuditLogRepository auditRepo,
+            INotificationService notifSvc,
+            IRepository<int, User> userRepo)
         {
             _walletRepo  = walletRepo;
             _txRepo      = txRepo;
@@ -33,6 +37,8 @@ namespace EventCalenderApi.Services
             _eventRepo   = eventRepo;
             _regRepo     = regRepo;
             _auditRepo   = auditRepo;
+            _notifSvc    = notifSvc;
+            _userRepo    = userRepo;
         }
 
         // ── Get or create wallet ──────────────────────────────────────────
@@ -161,6 +167,15 @@ namespace EventCalenderApi.Services
                 Entity   = "Payment",
                 EntityId = payment.PaymentId
             });
+
+            // ── Notify ORGANIZER about paid registration ──────────────────
+            var payer = await _userRepo.GetByIdAsync(userId);
+            string payerName = payer?.Name ?? "A user";
+            await _notifSvc.CreateNotificationAsync(
+                ev.CreatedByUserId,
+                "New Paid Registration",
+                $"{payerName} paid ₹{ev.TicketPrice:F2} for your event '{ev.Title}'. Your earnings: ₹{organizerAmount:F2}.",
+                NotificationType.REFUND);
 
             return MapPayment(payment, ev);
         }

@@ -1,4 +1,4 @@
-﻿﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
+﻿using EventCalenderApi.EventCalenderAppModelsLibrary.Models;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.DTOs.Event;
 using EventCalenderApi.EventCalenderAppModelsLibrary.Models.Enums;
 using EventCalenderApi.Exceptions;
@@ -17,6 +17,7 @@ namespace EventCalenderApi.Services
         private readonly IRepository<int, Payment> _paymentRepo;
         private readonly IAuditLogRepository _auditRepo;
         private readonly IWalletService _walletSvc;
+        private readonly INotificationService _notifSvc;
 
         public EventService(
             IRepository<int, Event> eventRepo,
@@ -24,7 +25,8 @@ namespace EventCalenderApi.Services
             IRepository<int, EventRegistration> registrationRepo,
             IRepository<int, Payment> paymentRepo,
             IAuditLogRepository auditRepo,
-            IWalletService walletSvc)
+            IWalletService walletSvc,
+            INotificationService notifSvc)
         {
             _eventRepo = eventRepo;
             _userRepo = userRepo;
@@ -32,6 +34,7 @@ namespace EventCalenderApi.Services
             _paymentRepo = paymentRepo;
             _auditRepo = auditRepo;
             _walletSvc = walletSvc;
+            _notifSvc = notifSvc;
         }
         /// <summary>
         /// Creates a new event based on the specified event details.
@@ -342,8 +345,109 @@ namespace EventCalenderApi.Services
                 Action = "CANCEL_EVENT", Entity = "Event", EntityId = eventId
             });
 
+            // ── NOTIFICATIONS ──────────────────────────────────────────────
+            await _SendCancellationNotificationsAsync(ev, role, userId, payments, adminId, isLessThan48h);
+
             return MapToDTO(ev, 0);
         }
+
+        // ── Notification helper for event cancellation ────────────────────
+        private async Task _SendCancellationNotificationsAsync(
+            Event ev, string role, int cancelledByUserId,
+            List<Payment> payments, int adminId, bool isLessThan48h)
+        {
+            float totalRefunded = payments.Sum(p => p.AmountPaid);
+
+            if (role == "ADMIN")
+            {
+                // Notify ORGANIZER
+                string orgMsg = isLessThan48h && ev.IsPaidEvent && payments.Count > 0
+                    ? $"Your event '{ev.Title}' was cancelled by Admin. All users have been refunded. " +
+                      $"Total refunded: ₹{totalRefunded:F2}. You received 50% compensation per ticket."
+                    : $"Your event '{ev.Title}' was cancelled by Admin. All users have been refunded. " +
+                      $"Total refunded: ₹{totalRefunded:F2}.";
+
+                await _notifSvc.CreateNotificationAsync(
+                    ev.CreatedByUserId,
+                    "Event Cancelled by Admin",
+                    orgMsg,
+                    NotificationType.EVENT_UPDATE);
+
+                // Notify each USER who had a payment
+                foreach (var p in payments)
+                {
+                    await _notifSvc.CreateNotificationAsync(
+                        p.UserId,
+                        "Event Cancelled — Refund Processed",
+                        $"Event '{ev.Title}' was cancelled by Admin. You have received a full refund of ₹{p.AmountPaid:F2}.",
+                        NotificationType.REFUND);
+                }
+            }
+            else if (role == "ORGANIZER")
+            {
+                // Lookup organizer name
+                var organizer = await _userRepo.GetByIdAsync(cancelledByUserId);
+                string orgName = organizer?.Name ?? "Organizer";
+
+                if (isLessThan48h)
+                {
+                    // Penalty scenario
+                    float totalPenalty = payments.Sum(p => p.AmountPaid - (p.CommissionAmount * 0.02f));
+                    float totalDeducted = payments.Sum(p => p.AmountPaid);
+
+                    // Notify ORGANIZER
+                    await _notifSvc.CreateNotificationAsync(
+                        cancelledByUserId,
+                        "Event Cancelled — Late Penalty Applied",
+                        $"You cancelled the event '{ev.Title}' within 48 hours. " +
+                        $"You paid ₹{totalPenalty:F2} as penalty. Total deducted: ₹{totalDeducted:F2}.",
+                        NotificationType.WARNING);
+
+                    // Notify ADMIN
+                    if (adminId > 0)
+                    {
+                        float commission = payments.Sum(p => p.CommissionAmount * 0.02f);
+                        await _notifSvc.CreateNotificationAsync(
+                            adminId,
+                            "Late Event Cancellation by Organizer",
+                            $"Late cancellation by Organizer '{orgName}' for event '{ev.Title}'. " +
+                            $"Commission earned: ₹{commission:F2}.",
+                            NotificationType.INFO);
+                    }
+                }
+                else
+                {
+                    // Normal cancellation
+                    // Notify ORGANIZER
+                    await _notifSvc.CreateNotificationAsync(
+                        cancelledByUserId,
+                        "Event Cancelled",
+                        $"You cancelled the event '{ev.Title}'. Refunds have been processed successfully.",
+                        NotificationType.INFO);
+
+                    // Notify ADMIN
+                    if (adminId > 0)
+                    {
+                        await _notifSvc.CreateNotificationAsync(
+                            adminId,
+                            "Organizer Cancelled Event",
+                            $"Organizer '{orgName}' cancelled event '{ev.Title}'. All users were refunded successfully.",
+                            NotificationType.INFO);
+                    }
+                }
+
+                // Notify each USER who had a payment (both scenarios)
+                foreach (var p in payments)
+                {
+                    await _notifSvc.CreateNotificationAsync(
+                        p.UserId,
+                        "Event Cancelled — Refund Processed",
+                        $"Event '{ev.Title}' was cancelled by Organizer. You have received a full refund of ₹{p.AmountPaid:F2}.",
+                        NotificationType.REFUND);
+                }
+            }
+        }
+
         /// <summary>
         /// Approves the specified event and records the approval action by the given administrator.
         /// </summary>
@@ -373,6 +477,12 @@ namespace EventCalenderApi.Services
                 Entity = "Event",
                 EntityId = eventId
             });
+
+            await _notifSvc.CreateNotificationAsync(
+                ev.CreatedByUserId,
+                "Event Approved",
+                $"Your event '{ev.Title}' has been approved by Admin. It is now live and visible to users.",
+                NotificationType.INFO);
 
             return MapToDTO(updated!, 0);
         }
@@ -404,6 +514,12 @@ namespace EventCalenderApi.Services
                 Entity = "Event",
                 EntityId = eventId
             });
+
+            await _notifSvc.CreateNotificationAsync(
+                ev.CreatedByUserId,
+                "Event Rejected",
+                $"Your event '{ev.Title}' has been rejected by Admin. Please review and resubmit if needed.",
+                NotificationType.WARNING);
 
             return MapToDTO(updated!, 0);
         }

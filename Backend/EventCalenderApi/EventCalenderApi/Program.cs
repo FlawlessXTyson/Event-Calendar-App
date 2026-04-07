@@ -85,6 +85,7 @@ builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IRefundRequestService, RefundRequestService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHttpContextAccessor();
 // CORS
 builder.Services.AddCors(options =>

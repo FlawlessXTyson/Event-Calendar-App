@@ -425,3 +425,22 @@ export interface JwtPayload {
   exp: number;
   iat: number;
 }
+
+// ─── NOTIFICATION ─────────────────────────────────────────────────────────────
+
+export enum NotificationType {
+  INFO         = 'INFO',
+  WARNING      = 'WARNING',
+  REFUND       = 'REFUND',
+  EVENT_UPDATE = 'EVENT_UPDATE'
+}
+
+export interface NotificationDto {
+  notificationId: number;
+  userId: number;
+  title: string;
+  message: string;
+  type: string;   // 'INFO' | 'WARNING' | 'REFUND' | 'EVENT_UPDATE'
+  isRead: boolean;
+  createdAt: string;
+}
